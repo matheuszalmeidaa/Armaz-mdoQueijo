@@ -1,19 +1,27 @@
 // Catálogo de exemplo — dados reais da loja Fusqueijão (viriam da espinha).
-// Produtos por PESO têm preco_por_kg + faixas de desconto por volume.
-// Produtos por UNIDADE têm preco fixo.
+// Fotos baixadas em /public/produtos (offline). Produtos por PESO têm
+// preco_por_kg + faixas de desconto; por UNIDADE têm preco fixo.
 
 export type Faixa = { min: number; kg: number };
 
-export type Produto = {
+type Base = {
   id: string;
   nome: string;
   produtor?: string;
   categoria: string;
-  icone: string; // Material Symbol (placeholder no lugar da foto)
-} & (
-  | { tipo: "peso"; pesos: number[]; faixas: Faixa[] }
-  | { tipo: "unidade"; preco: number }
-);
+  icone: string; // fallback quando a imagem falha
+  img: string;
+  descricao?: string;
+  nota?: string; // aviso "Atenção..."
+  origem?: string;
+  intensidade?: string;
+};
+
+export type Produto = Base &
+  (
+    | { tipo: "peso"; pesos: number[]; faixas: Faixa[] }
+    | { tipo: "unidade"; preco: number; precoAntigo?: number }
+  );
 
 export const CATEGORIAS = ["Queijos", "Doces", "Mel", "Charcutaria"] as const;
 
@@ -24,6 +32,11 @@ export const CATALOGO: Produto[] = [
     produtor: "Queijaria Bela Vista",
     categoria: "Queijos",
     icone: "nutrition",
+    img: "/produtos/figueira.png",
+    descricao:
+      "Um meia cura de leite cru, casca natural e massa amanteigada. Derrete na boca e combina com geleias e um bom tinto.",
+    origem: "Serra da Canastra, MG",
+    intensidade: "Média",
     tipo: "peso",
     pesos: [200, 300, 400, 500, 750, 1000],
     faixas: [
@@ -38,6 +51,11 @@ export const CATALOGO: Produto[] = [
     produtor: "Canastra",
     categoria: "Queijos",
     icone: "nutrition",
+    img: "/produtos/canastra.png",
+    descricao:
+      "Gouda cremoso com pesto de manjericão, ideal para tábuas e sanduíches quentes.",
+    origem: "Pomerode, SC",
+    intensidade: "Média-Alta",
     tipo: "peso",
     pesos: [200, 300, 400, 500],
     faixas: [
@@ -47,10 +65,16 @@ export const CATALOGO: Produto[] = [
   },
   {
     id: "morro-azul",
-    nome: "Queijo Morro Azul",
+    nome: "Queijo Morro Azul com Trufas Negras",
     produtor: "Canastra",
     categoria: "Queijos",
     icone: "nutrition",
+    img: "/produtos/meiacura.png",
+    descricao:
+      "Uma obra-prima da queijaria brasileira, com trufas negras que criam um sabor terroso e sofisticado que derrete na boca.",
+    nota: "Atenção: este queijo pode apresentar aroma forte e textura extremamente cremosa devido à maturação e presença de trufas negras.",
+    origem: "Pomerode, SC",
+    intensidade: "Média-Alta",
     tipo: "peso",
     pesos: [120, 240, 360, 480],
     faixas: [
@@ -64,6 +88,11 @@ export const CATALOGO: Produto[] = [
     produtor: "Canastra",
     categoria: "Queijos",
     icone: "nutrition",
+    img: "/produtos/canastra.png",
+    descricao:
+      "Queijo de casca lavada, macio e de sabor marcante. Um clássico da roça para quem gosta de intensidade.",
+    origem: "Serra da Canastra, MG",
+    intensidade: "Alta",
     tipo: "peso",
     pesos: [200, 270, 400, 540],
     faixas: [
@@ -77,8 +106,11 @@ export const CATALOGO: Produto[] = [
     produtor: "Doce Vida",
     categoria: "Doces",
     icone: "icecream",
+    img: "/produtos/geleia.png",
+    descricao: "Geleia artesanal de frutas da estação. Par perfeito para queijos curados.",
     tipo: "unidade",
     preco: 28.5,
+    precoAntigo: 34.0,
   },
   {
     id: "mel-silvestre",
@@ -86,6 +118,8 @@ export const CATALOGO: Produto[] = [
     produtor: "Apiário do Vale",
     categoria: "Mel",
     icone: "water_drop",
+    img: "/produtos/mel.png",
+    descricao: "Mel puro e natural, de florada silvestre. Sem adição de açúcares.",
     tipo: "unidade",
     preco: 32.0,
   },
@@ -95,6 +129,8 @@ export const CATALOGO: Produto[] = [
     produtor: "Seleção da Casa",
     categoria: "Charcutaria",
     icone: "restaurant",
+    img: "/produtos/tabua.png",
+    descricao: "Seleção artesanal de queijos e frios montada para receber bem.",
     tipo: "unidade",
     preco: 124.9,
   },
@@ -104,6 +140,8 @@ export const CATALOGO: Produto[] = [
     produtor: "Seleção da Casa",
     categoria: "Charcutaria",
     icone: "outdoor_grill",
+    img: "/produtos/defumados.png",
+    descricao: "Lombo e costelinha defumados, prontos para a tábua.",
     tipo: "unidade",
     preco: 68.0,
   },

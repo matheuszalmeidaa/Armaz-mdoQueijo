@@ -11,6 +11,8 @@ import {
   type Produto,
 } from "@/lib/catalogo";
 import { useCart } from "@/lib/cart";
+import { REGRAS } from "@/lib/regras";
+import { ProdutoImagem } from "@/components/ProdutoImagem";
 
 export default function ProdutoPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,12 +36,16 @@ export default function ProdutoPage() {
       <Header nome={produto.produtor ?? "Fusqueijão"} />
 
       {/* Imagem */}
-      <div className="relative m-md flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-secondary-container to-primary-container/30">
-        <span className="material-symbols-outlined text-[96px] text-primary/40">
-          {produto.icone}
-        </span>
+      <div className="relative m-md overflow-hidden rounded-xl">
+        <ProdutoImagem
+          src={produto.img}
+          alt={produto.nome}
+          icone={produto.icone}
+          className="aspect-square w-full"
+          iconSize={96}
+        />
         {produto.tipo === "peso" && (
-          <span className="absolute left-3 top-3 rounded-full bg-warning-amber px-3 py-1 text-label-sm font-semibold text-on-secondary-fixed">
+          <span className="absolute left-3 top-3 rounded-full bg-warning-amber px-3 py-1 text-label-sm font-semibold text-on-secondary-fixed shadow-sm">
             Corte na hora
           </span>
         )}
@@ -58,8 +64,77 @@ export default function ProdutoPage() {
         ) : (
           <SeletorUnidade produto={produto} />
         )}
+
+        <Detalhes produto={produto} />
       </div>
     </main>
+  );
+}
+
+function Detalhes({ produto }: { produto: Produto }) {
+  return (
+    <section className="mt-lg">
+      {produto.nota && (
+        <div className="mb-md rounded-lg border-l-4 border-warning-amber bg-cream-surface px-md py-3">
+          <p className="text-body-md italic text-on-surface-variant">
+            {produto.nota}
+          </p>
+        </div>
+      )}
+
+      {produto.descricao && (
+        <>
+          <h2 className="font-headline-md text-headline-md text-primary">
+            Sobre este produto
+          </h2>
+          <p className="mt-sm text-body-md leading-relaxed text-on-surface-variant">
+            {produto.descricao}
+          </p>
+        </>
+      )}
+
+      {(produto.origem || produto.intensidade) && (
+        <div className="mt-md grid grid-cols-2 gap-sm">
+          {produto.origem && (
+            <InfoCard icone="location_on" rotulo="Origem" valor={produto.origem} />
+          )}
+          {produto.intensidade && (
+            <InfoCard
+              icone="eco"
+              rotulo="Intensidade"
+              valor={produto.intensidade}
+            />
+          )}
+        </div>
+      )}
+
+      <button className="mt-md flex w-full items-center justify-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest py-3 text-label-md text-primary active:scale-[0.99]">
+        <span className="material-symbols-outlined text-[20px]">share</span>
+        Compartilhar com amigos
+      </button>
+    </section>
+  );
+}
+
+function InfoCard({
+  icone,
+  rotulo,
+  valor,
+}: {
+  icone: string;
+  rotulo: string;
+  valor: string;
+}) {
+  return (
+    <div className="flex items-center gap-sm rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-md py-3">
+      <span className="material-symbols-outlined text-secondary">{icone}</span>
+      <div className="leading-tight">
+        <span className="block text-label-sm text-on-surface-variant">
+          {rotulo}
+        </span>
+        <span className="block text-label-md text-on-surface">{valor}</span>
+      </div>
+    </div>
   );
 }
 
@@ -136,6 +211,11 @@ function SeletorPeso({
             (desconto de volume aplicado)
           </span>
         )}
+      </p>
+      <p className="mt-1 flex items-center gap-1 text-label-md text-tertiary">
+        <span className="material-symbols-outlined text-[16px]">qr_code_2</span>
+        {brl(total * (1 - REGRAS.descontoPix))} com{" "}
+        {Math.round(REGRAS.descontoPix * 100)}% no Pix
       </p>
 
       <div className="mt-lg">
@@ -236,8 +316,18 @@ function SeletorUnidade({
   return (
     <>
       <p className="mt-sm font-headline-md text-headline-md text-primary">
+        {produto.precoAntigo && (
+          <span className="mr-2 text-body-md font-normal text-on-surface-variant line-through">
+            {brl(produto.precoAntigo)}
+          </span>
+        )}
         {brl(produto.preco)}
         <span className="ml-1 text-body-md text-on-surface-variant">/un</span>
+      </p>
+      <p className="mt-1 flex items-center gap-1 text-label-md text-tertiary">
+        <span className="material-symbols-outlined text-[16px]">qr_code_2</span>
+        {brl(total * (1 - REGRAS.descontoPix))} com{" "}
+        {Math.round(REGRAS.descontoPix * 100)}% no Pix
       </p>
 
       <div className="mt-lg flex items-center gap-md">
