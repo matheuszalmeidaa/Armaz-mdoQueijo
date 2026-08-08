@@ -22,18 +22,39 @@ create table lojas (
 );
 
 -- ---------- Produtos (catálogo único: PDV + delivery) ----------
+-- Dois modos de precificação:
+--   'unidade' -> preço fixo por item (usa preco_venda)
+--   'peso'    -> preço por kg; cliente escolhe um preset (pesos_sugeridos)
+--                e o sistema calcula. Desconto por volume vem de faixas_preco.
+create type tipo_preco as enum ('unidade', 'peso');
+
 create table produtos (
-  id           uuid primary key default gen_random_uuid(),
-  nome         text not null,
-  descricao    text,
-  categoria    text,                         -- Queijos, Doces, Vinho, Mel, Charcutaria...
-  codigo_barras text unique,                 -- para o scanner (fase futura)
-  unidade      text not null default 'un',   -- 'un' | 'kg'
-  preco_venda  numeric(10,2) not null default 0,
-  foto_url     text,
-  ativo        boolean not null default true,
-  criado_em    timestamptz not null default now()
+  id             uuid primary key default gen_random_uuid(),
+  nome           text not null,
+  descricao      text,
+  categoria      text,                       -- Queijos, Doces, Vinho, Mel, Charcutaria...
+  codigo_barras  text unique,                -- para o scanner (fase futura)
+  tipo_preco     tipo_preco not null default 'unidade',
+  preco_venda    numeric(10,2),              -- usado quando tipo_preco = 'unidade'
+  preco_por_kg   numeric(10,2),              -- preço base quando tipo_preco = 'peso'
+  -- Presets em GRAMAS que o cliente toca (não digita peso livre)
+  pesos_sugeridos integer[] not null default '{200,300,400,500}',
+  foto_url       text,
+  ativo          boolean not null default true,
+  criado_em      timestamptz not null default now()
 );
+
+-- ---------- Faixas de preço por volume (desconto que sobe o ticket) ----------
+-- Poucas faixas por produto. Ex.: 200g→410/kg, 500g→385/kg, 1000g→360/kg.
+-- O preço/kg aplicado é o da maior faixa cujo peso_min_g <= peso escolhido.
+create table faixas_preco (
+  id           uuid primary key default gen_random_uuid(),
+  produto_id   uuid not null references produtos(id) on delete cascade,
+  peso_min_g   integer not null,             -- vale a partir deste peso
+  preco_por_kg numeric(10,2) not null,
+  unique (produto_id, peso_min_g)
+);
+create index idx_faixas_produto on faixas_preco (produto_id, peso_min_g);
 
 -- ---------- Lotes de estoque (por produto, por loja, com validade) ----------
 -- O saldo de um produto numa loja é a soma dos saldos dos seus lotes ativos.
@@ -102,8 +123,11 @@ create table itens_venda (
   id             uuid primary key default gen_random_uuid(),
   venda_id       uuid not null references vendas(id) on delete cascade,
   produto_id     uuid not null references produtos(id),
-  quantidade     numeric(10,3) not null,
-  preco_unit     numeric(10,2) not null,   -- preço congelado no momento da venda
+  quantidade     numeric(10,3) not null default 1, -- itens por unidade
+  -- Produtos por peso: cliente escolhe o preset (estimado); balança grava o real.
+  peso_estimado_g integer,                  -- preset escolhido no pedido
+  peso_real_g     integer,                  -- pesado ao cortar/embalar (PDV/expedição)
+  preco_unit     numeric(10,2) not null,    -- preço/un OU preço/kg congelado na venda
   subtotal       numeric(10,2) not null
 );
 create index idx_itens_venda on itens_venda (venda_id);
