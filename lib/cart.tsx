@@ -18,6 +18,13 @@ export type ItemCarrinho = {
   precoLinha: number; // preço já calculado desta linha
 };
 
+export type DadosCheckout = {
+  nome?: string;
+  telefone?: string;
+  endereco?: string;
+  pagamento?: "pix" | "cartao";
+};
+
 type CartCtx = {
   itens: ItemCarrinho[];
   add: (item: ItemCarrinho) => void;
@@ -25,13 +32,17 @@ type CartCtx = {
   limpar: () => void;
   total: number;
   qtdItens: number;
+  dados: DadosCheckout;
+  setDados: (patch: Partial<DadosCheckout>) => void;
 };
 
 const Ctx = createContext<CartCtx | null>(null);
 const STORAGE_KEY = "armazem-carrinho";
+const DADOS_KEY = "armazem-checkout";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [itens, setItens] = useState<ItemCarrinho[]>([]);
+  const [dados, setDadosState] = useState<DadosCheckout>({ pagamento: "pix" });
   const [hidratado, setHidratado] = useState(false);
 
   // Carrega do localStorage no cliente
@@ -39,6 +50,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) setItens(JSON.parse(raw));
+      const rawDados = localStorage.getItem(DADOS_KEY);
+      if (rawDados) setDadosState(JSON.parse(rawDados));
     } catch {}
     setHidratado(true);
   }, []);
@@ -47,6 +60,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (hidratado) localStorage.setItem(STORAGE_KEY, JSON.stringify(itens));
   }, [itens, hidratado]);
+
+  useEffect(() => {
+    if (hidratado) localStorage.setItem(DADOS_KEY, JSON.stringify(dados));
+  }, [dados, hidratado]);
+
+  const setDados = (patch: Partial<DadosCheckout>) =>
+    setDadosState((prev) => ({ ...prev, ...patch }));
 
   function add(item: ItemCarrinho) {
     setItens((prev) => {
@@ -71,7 +91,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const qtdItens = itens.reduce((s, x) => s + x.qtd, 0);
 
   return (
-    <Ctx.Provider value={{ itens, add, remover, limpar, total, qtdItens }}>
+    <Ctx.Provider
+      value={{ itens, add, remover, limpar, total, qtdItens, dados, setDados }}
+    >
       {children}
     </Ctx.Provider>
   );

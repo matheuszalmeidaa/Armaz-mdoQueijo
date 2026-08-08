@@ -1,50 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { CATALOGO, brl, gramas } from "@/lib/catalogo";
-
-const FRETE = 15.0;
-const DESCONTO_PIX = 0.05;
-
-type Pagamento = "pix" | "cartao";
+import { REGRAS } from "@/lib/regras";
 
 export default function Carrinho() {
-  const { itens, add, remover, limpar, total } = useCart();
-  const [finalizado, setFinalizado] = useState(false);
-  const [pagamento, setPagamento] = useState<Pagamento>("pix");
+  const router = useRouter();
+  const { itens, add, remover, limpar, total, dados, setDados } = useCart();
+  const pagamento = dados.pagamento ?? "pix";
 
-  const descontoPix = pagamento === "pix" ? total * DESCONTO_PIX : 0;
-  const totalFinal = total + FRETE - descontoPix;
+  const descontoPix = pagamento === "pix" ? total * REGRAS.descontoPix : 0;
+  const totalFinal = total + REGRAS.frete - descontoPix;
 
   // Upsell: produtos por unidade que ainda não estão no carrinho
   const sugestoes = CATALOGO.filter(
     (p) => p.tipo === "unidade" && !itens.some((i) => i.produtoId === p.id)
   ).slice(0, 2);
-
-  if (finalizado) {
-    return (
-      <main className="mx-auto flex min-h-full max-w-md flex-col items-center justify-center px-md py-xl text-center">
-        <span className="material-symbols-outlined mb-md text-[72px] text-tertiary">
-          check_circle
-        </span>
-        <h1 className="font-headline-lg text-headline-lg text-primary">
-          Pedido enviado!
-        </h1>
-        <p className="mt-sm text-body-md text-on-surface-variant">
-          Assim que ligarmos na espinha (Supabase), este pedido cai no PDV e no
-          dashboard em tempo real — e você acompanha o status pela timeline.
-        </p>
-        <Link
-          href="/loja"
-          className="mt-lg rounded-lg bg-primary px-lg py-3 text-on-primary"
-        >
-          Voltar à loja
-        </Link>
-      </main>
-    );
-  }
 
   return (
     <main className="mx-auto min-h-full max-w-md pb-40">
@@ -128,15 +101,15 @@ export default function Carrinho() {
             <div className="flex flex-col gap-sm">
               <OpcaoPagamento
                 ativo={pagamento === "pix"}
-                onClick={() => setPagamento("pix")}
+                onClick={() => setDados({ pagamento: "pix" })}
                 icone="qr_code_2"
                 titulo="Pix"
-                sub="5% de desconto extra"
+                sub={`${Math.round(REGRAS.descontoPix * 100)}% de desconto extra`}
                 destaque
               />
               <OpcaoPagamento
                 ativo={pagamento === "cartao"}
-                onClick={() => setPagamento("cartao")}
+                onClick={() => setDados({ pagamento: "cartao" })}
                 icone="credit_card"
                 titulo="Cartão de Crédito"
                 sub="Até 6x sem juros"
@@ -197,7 +170,7 @@ export default function Carrinho() {
           <section className="mt-lg px-md">
             <div className="rounded-xl bg-cream-surface p-md">
               <Linha rotulo="Subtotal" valor={brl(total)} />
-              <Linha rotulo="Frete" valor={brl(FRETE)} />
+              <Linha rotulo="Frete" valor={brl(REGRAS.frete)} />
               {descontoPix > 0 && (
                 <Linha
                   rotulo="Desconto Pix (5%)"
@@ -217,11 +190,11 @@ export default function Carrinho() {
           {/* Finalizar */}
           <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
             <button
-              onClick={() => setFinalizado(true)}
+              onClick={() => router.push("/checkout/identificacao")}
               className="flex w-full items-center justify-between rounded-lg bg-primary px-lg py-4 text-on-primary shadow-lg transition-transform active:scale-[0.98]"
             >
               <span className="flex items-center gap-2 text-body-lg font-semibold">
-                Finalizar Compra
+                Continuar
                 <span className="material-symbols-outlined">arrow_forward</span>
               </span>
               <span className="font-headline-md text-headline-md">
