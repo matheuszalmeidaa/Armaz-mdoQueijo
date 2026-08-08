@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { CartProvider } from "@/lib/cart";
 
 export const metadata: Metadata = {
   title: "Armazém do Queijo",
@@ -28,7 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full bg-background text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed">
-        {children}
+        <CartProvider>{children}</CartProvider>
       </body>
     </html>
   );

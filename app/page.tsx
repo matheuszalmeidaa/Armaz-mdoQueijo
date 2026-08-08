@@ -35,7 +35,7 @@ const modulos: Modulo[] = [
     descricao:
       "A loja do cliente (Fusqueijão), reusando o mesmo catálogo. Substitui o OlaClick.",
     fase: "Fase 3",
-    ativo: false,
+    ativo: true,
   },
 ];
 
