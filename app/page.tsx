@@ -63,11 +63,11 @@ export default function Home() {
           <p className="text-label-md uppercase tracking-wide text-primary-fixed-dim">
             Uma plataforma. Três frentes.
           </p>
-          <h2 className="mt-sm max-w-xl text-headline-lg leading-tight text-cream-surface">
+          <h2 className="mt-sm max-w-[36rem] text-headline-lg leading-tight text-cream-surface">
             Delivery, PDV e estoque das duas lojas — no mesmo lugar, com os
             mesmos dados.
           </h2>
-          <p className="mt-sm max-w-xl text-body-md text-primary-fixed">
+          <p className="mt-sm max-w-[36rem] text-body-md text-primary-fixed">
             A espinha guarda produtos, estoque por loja e cada venda. PDV,
             delivery e dashboard são só janelas para o mesmo livro-caixa.
           </p>

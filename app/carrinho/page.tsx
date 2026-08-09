@@ -20,7 +20,7 @@ export default function Carrinho() {
   ).slice(0, 2);
 
   return (
-    <main className="mx-auto min-h-full max-w-md pb-40">
+    <main className="mx-auto min-h-full max-w-[28rem] pb-40">
       <header className="sticky top-0 z-50 flex items-center justify-between border-b border-outline-variant/30 bg-surface/90 px-md py-sm backdrop-blur-md">
         <Link
           href="/loja"
@@ -188,7 +188,7 @@ export default function Carrinho() {
           </section>
 
           {/* Finalizar */}
-          <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
+          <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
             <button
               onClick={() => router.push("/checkout/identificacao")}
               className="flex w-full items-center justify-between rounded-lg bg-primary px-lg py-4 text-on-primary shadow-lg transition-transform active:scale-[0.98]"

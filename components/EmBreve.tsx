@@ -15,7 +15,7 @@ export function EmBreve({
       <h1 className="mt-md font-headline-lg text-headline-lg text-primary">
         {titulo}
       </h1>
-      <p className="mt-sm max-w-md text-body-md text-on-surface-variant">
+      <p className="mt-sm max-w-[28rem] text-body-md text-on-surface-variant">
         {descricao}
       </p>
       <span className="mt-md rounded-full bg-secondary-container px-3 py-1 text-label-sm text-on-secondary-container">

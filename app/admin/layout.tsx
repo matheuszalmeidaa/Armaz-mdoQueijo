@@ -67,7 +67,7 @@ export default function AdminLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar */}
         <header className="sticky top-0 z-40 flex items-center gap-md border-b border-outline-variant/30 bg-surface px-md py-sm lg:px-lg">
-          <div className="flex flex-grow items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 lg:max-w-md">
+          <div className="flex flex-grow items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 lg:max-w-[28rem]">
             <span className="material-symbols-outlined text-on-surface-variant">
               search
             </span>

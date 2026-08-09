@@ -14,7 +14,7 @@ export default function LojaHome() {
     cat === "Todos" ? CATALOGO : CATALOGO.filter((p) => p.categoria === cat);
 
   return (
-    <main className="mx-auto min-h-full max-w-md pb-24">
+    <main className="mx-auto min-h-full max-w-[28rem] pb-24">
       {/* Cabeçalho */}
       <header className="sticky top-0 z-50 flex items-center justify-between border-b border-outline-variant/30 bg-surface/90 px-md py-sm shadow-sm backdrop-blur-md">
         <button className="flex h-9 w-9 items-center justify-center rounded-full text-primary active:scale-95">

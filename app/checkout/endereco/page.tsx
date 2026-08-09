@@ -23,7 +23,7 @@ export default function Endereco() {
   }
 
   return (
-    <main className="mx-auto min-h-full max-w-md pb-28">
+    <main className="mx-auto min-h-full max-w-[28rem] pb-28">
       <header className="sticky top-0 z-50 flex items-center gap-md border-b border-outline-variant/30 bg-surface/90 px-md py-sm backdrop-blur-md">
         <Link
           href="/checkout/identificacao"
@@ -94,7 +94,7 @@ export default function Endereco() {
       </div>
 
       {/* Botão */}
-      <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
+      <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
         <button
           onClick={confirmar}
           disabled={endereco.trim().length < 8}

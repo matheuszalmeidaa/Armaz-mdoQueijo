@@ -20,7 +20,7 @@ export default function AcompanhamentoPedido() {
   const numero = "#" + Math.floor(1000 + Math.random() * 9000);
 
   return (
-    <main className="mx-auto min-h-full max-w-md pb-24">
+    <main className="mx-auto min-h-full max-w-[28rem] pb-24">
       <header className="sticky top-0 z-50 flex items-center justify-between border-b border-outline-variant/30 bg-surface/90 px-md py-sm backdrop-blur-md">
         <Link
           href="/loja"

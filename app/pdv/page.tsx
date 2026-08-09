@@ -936,7 +936,7 @@ function ModalCaixa({
 function ModalCupom({ cupom, onFechar }: { cupom: Cupom; onFechar: () => void }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="w-full max-w-sm rounded-t-xl bg-surface-container-lowest sm:rounded-xl">
+      <div className="w-full max-w-[24rem] rounded-t-xl bg-surface-container-lowest sm:rounded-xl">
         {/* Cabeçalho (não imprime) */}
         <div className="no-print flex items-center justify-between border-b border-outline-variant/20 px-md py-sm">
           <span className="flex items-center gap-1 font-headline-md text-headline-md text-tertiary">
@@ -1026,7 +1026,7 @@ function Overlay({
       onClick={onFechar}
     >
       <div
-        className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-xl bg-surface-container-low p-md sm:rounded-xl"
+        className="max-h-[92dvh] w-full max-w-[28rem] overflow-y-auto rounded-t-xl bg-surface-container-low p-md sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {children}

@@ -20,7 +20,7 @@ export default function ProdutoPage() {
 
   if (!produto) {
     return (
-      <main className="mx-auto max-w-md p-lg text-center">
+      <main className="mx-auto max-w-[28rem] p-lg text-center">
         <p className="text-body-lg text-on-surface-variant">
           Produto não encontrado.
         </p>
@@ -32,7 +32,7 @@ export default function ProdutoPage() {
   }
 
   return (
-    <main className="mx-auto min-h-full max-w-md pb-32">
+    <main className="mx-auto min-h-full max-w-[28rem] pb-32">
       <Header nome={produto.produtor ?? "Fusqueijão"} />
 
       {/* Imagem */}
@@ -372,7 +372,7 @@ function BarraAdicionar({
   onClick: () => void;
 }) {
   return (
-    <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
+    <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
       <button
         onClick={onClick}
         className="flex w-full items-center justify-between rounded-lg bg-primary px-lg py-4 text-on-primary shadow-lg transition-transform active:scale-[0.98]"
