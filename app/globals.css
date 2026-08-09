@@ -163,3 +163,27 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Impressão de cupom (impressora térmica ~80mm) */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .cupom-print,
+  .cupom-print * {
+    visibility: visible;
+  }
+  .cupom-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    padding: 4mm;
+    color: #000;
+    background: #fff;
+    font-family: "Be Vietnam Pro", monospace;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
