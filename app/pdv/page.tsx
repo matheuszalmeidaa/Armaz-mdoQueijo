@@ -162,6 +162,14 @@ export default function PDV() {
             />
             {aberta ? "Aberta" : "Fechada"}
           </button>
+          {/* Gestão: config, produtos, relatórios */}
+          <Link
+            href="/admin"
+            title="Gerenciar (produtos, configurações)"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant text-primary hover:bg-surface-container active:scale-95"
+          >
+            <span className="material-symbols-outlined">settings</span>
+          </Link>
         </div>
       </header>
 

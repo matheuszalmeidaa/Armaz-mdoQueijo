@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CATALOGO, brl } from "@/lib/catalogo";
 
 export default function AdminProdutos() {
@@ -12,10 +13,13 @@ export default function AdminProdutos() {
             {CATALOGO.length} produtos no catálogo — usados no delivery e no PDV.
           </p>
         </div>
-        <button className="flex items-center gap-1 rounded-lg bg-primary px-md py-2.5 text-label-md text-on-primary shadow active:scale-[0.98]">
+        <Link
+          href="/admin/produtos/novo"
+          className="flex items-center gap-1 rounded-lg bg-primary px-md py-2.5 text-label-md text-on-primary shadow active:scale-[0.98]"
+        >
           <span className="material-symbols-outlined text-[20px]">add</span>
           Novo produto
-        </button>
+        </Link>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
