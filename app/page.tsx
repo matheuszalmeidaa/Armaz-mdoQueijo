@@ -22,11 +22,11 @@ const modulos: Modulo[] = [
   {
     href: "/admin",
     icon: "dashboard",
-    titulo: "Dashboard",
+    titulo: "Gestão (Painel do Lojista)",
     descricao:
-      "Vendas por loja e por canal, ticket médio, mais vendidos e alertas de validade.",
+      "Dashboard, produtos e as regras da loja (taxa, Pix, tolerância de corte). Vendas por loja e canal.",
     fase: "Fase 2",
-    ativo: false,
+    ativo: true,
   },
   {
     href: "/loja",
