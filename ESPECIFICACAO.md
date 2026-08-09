@@ -54,12 +54,27 @@ Um painel só, que comanda PDV e delivery.
 - ⬜ Financeiro (plano, faturas, repasses, saldo)
 - ⬜ Usuários e permissões (dono × operador)
 
-### Estoque & Validade
-- ⬜ Lotes por loja com validade (schema pronto)
-- ⬜ Movimentações (entrada/venda/perda/ajuste/transferência)
-- ⬜ Estoque cruzado entre lojas (tempo real)
-- ⬜ Alerta de validade (7 dias) · baixa automática na venda
-- ⬜ Sugestão de compra pelo histórico
+### Estoque & Inteligência (por loja) — REQUISITOS DETALHADOS
+> **Inventário SEPARADO por loja.** Cada loja tem seu próprio saldo. (Schema já
+> prevê: `lotes` por `loja_id`.) **Tudo abaixo exige o Supabase para ser real.**
+
+- ⬜ **Entrada de mercadoria com destino** — ao chegar produto, distribuir
+  quantas unidades vão para cada loja (controle de quanto tem em cada uma).
+- ⬜ **Baixa automática na venda** — venda no PDV ou delivery reduz o saldo da
+  loja correspondente.
+- ⬜ **Esgotado automático no catálogo** — quando o saldo zera (via vendas da
+  loja), o produto some/vira "esgotado" no delivery, sozinho.
+- ⬜ **Validação de pedido por estoque** — cliente pede 3, só há 2 → sistema
+  alerta e pede confirmação antes de aceitar o pedido.
+- ⬜ **Validade / FEFO (vence primeiro, sai primeiro)** — lista de todas as
+  validades; alerta de produto perto de vencer; orientar a vender o lote de
+  validade mais próxima primeiro, para o item não ficar parado até vencer.
+- ⬜ **Controle de perda** — registrar vencido/quebra; relatório de perdas.
+- ⬜ **Sazonalidade** — análise de vendas por época (ex.: gorgonzola vende muito
+  no mês X → sugerir comprar mais nesse mês).
+- ⬜ **Estoque mínimo por produto/loja** — alerta e sugestão de reposição quando
+  abaixo do mínimo.
+- ⬜ **Análises comparativas entre as duas lojas.**
 
 ### Fiscal & Hardware
 - ✅ Cupom (layout térmico) · ✅ scanner (campo pronto)
