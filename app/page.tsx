@@ -15,9 +15,9 @@ const modulos: Modulo[] = [
     icon: "point_of_sale",
     titulo: "PDV",
     descricao:
-      "Registra a venda em ≤3 toques, baixa o estoque na hora e aposenta o caderninho.",
+      "Registra a venda em poucos toques, baixa o estoque na hora e aposenta o caderninho.",
     fase: "Fase 1",
-    ativo: false,
+    ativo: true,
   },
   {
     href: "/admin",
