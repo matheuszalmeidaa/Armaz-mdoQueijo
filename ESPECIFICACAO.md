@@ -39,8 +39,9 @@ contradizem.
 - ✅ Carrinho + upsell · pagamento + desconto Pix
 - ✅ Identificação (nome + WhatsApp) · endereço · revisão
 - ✅ Acompanhamento (timeline de status)
-- ⬜ Zonas de entrega + taxa por zona
-- ⬜ Cupons/promoções · retirada na loja
+- ✅ Zonas de entrega + taxa por zona
+- ✅ Retirada na loja (grátis, pula endereço)
+- ✅ Cupons de desconto (código no checkout)
 - ⬜ Aviso no WhatsApp · Salvar (Supabase)
 
 ### Gestão — Painel do Lojista (dono)
