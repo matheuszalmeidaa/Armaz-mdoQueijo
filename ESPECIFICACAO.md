@@ -57,25 +57,23 @@ Um painel só, que comanda PDV e delivery.
 
 ### Estoque & Inteligência (por loja) — REQUISITOS DETALHADOS
 > **Inventário SEPARADO por loja.** Cada loja tem seu próprio saldo. (Schema já
-> prevê: `lotes` por `loja_id`.) **Tudo abaixo exige o Supabase para ser real.**
+> prevê: `lotes` por `loja_id`.) As TELAS já existem em maquete; a lógica
+> AUTOMÁTICA (⬜) exige o Supabase para ser real.
 
-- ⬜ **Entrada de mercadoria com destino** — ao chegar produto, distribuir
-  quantas unidades vão para cada loja (controle de quanto tem em cada uma).
-- ⬜ **Baixa automática na venda** — venda no PDV ou delivery reduz o saldo da
-  loja correspondente.
-- ⬜ **Esgotado automático no catálogo** — quando o saldo zera (via vendas da
-  loja), o produto some/vira "esgotado" no delivery, sozinho.
-- ⬜ **Validação de pedido por estoque** — cliente pede 3, só há 2 → sistema
-  alerta e pede confirmação antes de aceitar o pedido.
-- ⬜ **Validade / FEFO (vence primeiro, sai primeiro)** — lista de todas as
-  validades; alerta de produto perto de vencer; orientar a vender o lote de
-  validade mais próxima primeiro, para o item não ficar parado até vencer.
+- 🟡 **Entrada de mercadoria com destino** — tela pronta: distribuir quantas
+  unidades vão para cada loja (`/admin/estoque/entrada`).
+- 🟡 **Estoque por loja + status** — tela pronta: saldo, mínimo e status
+  (ok/baixo/esgotado) por loja (`/admin/estoque`).
+- 🟡 **Validade / FEFO** — tela pronta: lista "vender primeiro" com os lotes
+  vencendo em 7 dias, ordenados pelo mais próximo.
+- 🟡 **Alertas** — visíveis: vencendo (7d), abaixo do mínimo, esgotados.
+- ⬜ **Baixa automática na venda** — venda no PDV/delivery reduz o saldo da loja.
+- ⬜ **Esgotado automático no catálogo** — saldo zera → produto vira "esgotado"
+  no delivery sozinho.
+- ⬜ **Validação de pedido por estoque** — pediu 3, só há 2 → confirma.
 - ⬜ **Controle de perda** — registrar vencido/quebra; relatório de perdas.
-- ⬜ **Sazonalidade** — análise de vendas por época (ex.: gorgonzola vende muito
-  no mês X → sugerir comprar mais nesse mês).
-- ⬜ **Estoque mínimo por produto/loja** — alerta e sugestão de reposição quando
-  abaixo do mínimo.
-- ⬜ **Análises comparativas entre as duas lojas.**
+- ⬜ **Sazonalidade** — análise por época → sugestão de compra.
+- ⬜ **Sugestão de reposição** quando abaixo do mínimo.
 
 ### Fiscal & Hardware
 - ✅ Cupom (layout térmico) · ✅ scanner (campo pronto)
