@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { brl, gramas } from "@/lib/catalogo";
 import { calcularResumo, prazoDe, LOJAS_RETIRADA } from "@/lib/regras";
+import { adicionarPedido } from "@/lib/pedidos-store";
 
 export default function Revisao() {
   const router = useRouter();
@@ -15,8 +16,24 @@ export default function Revisao() {
   const lojaRetirada = LOJAS_RETIRADA.find((l) => l.id === dados.lojaRetiradaId);
 
   function finalizar() {
-    // Ainda mock: sem Supabase, o pedido não persiste no banco.
-    // O carrinho é limpo e vamos ao acompanhamento.
+    // Cria o pedido na "espinha temporária" (localStorage) — cai no painel de
+    // recebimento do lojista com alerta. Com o Supabase, vira realtime.
+    adicionarPedido({
+      cliente: dados.nome || "Cliente",
+      canal: "Delivery",
+      modo,
+      entrega:
+        modo === "retirada"
+          ? `Retirada — ${lojaRetirada?.nome ?? "loja"}`
+          : dados.endereco || "Endereço não informado",
+      pagamento: pagamento === "pix" ? "Pix" : "Maquineta (cartão)",
+      itens: itens.map((it) => ({
+        nome: it.nome,
+        qtd: it.pesoG ? gramas(it.pesoG) : `${it.qtd} un`,
+        preco: it.precoLinha,
+      })),
+      total: r.total,
+    });
     router.push("/pedido");
     setTimeout(limpar, 400);
   }
