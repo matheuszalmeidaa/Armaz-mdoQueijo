@@ -52,6 +52,9 @@ Um painel só, que comanda PDV e delivery.
 - 🟡 Dashboard (KPIs, pedidos, status, meta)
 - ✅ Produtos: lista + cadastro + edição (peso/unidade, faixas)
 - 🟡 Configurações / regras da loja (+ zonas e cupons)
+- 🟡 **Recebimento ao vivo** — painel KDS (Novo→Preparando→Em rota→Entregue) +
+  alerta sonoro; o Finalizar do delivery cai aqui e o cliente vê o status mudar
+  (via localStorage; vira realtime do Supabase sem mexer nas telas)
 - 🟡 Pedidos (todos, filtro por canal, status)
 - 🟡 Clientes (recência, inativo há 30 dias, total gasto)
 - 🟡 Relatórios (por mês/canal/loja, mais vendidos, sazonalidade)
