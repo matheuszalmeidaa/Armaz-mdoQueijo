@@ -30,6 +30,7 @@ export default function AdminProdutos() {
               <th className="px-md py-3 font-medium">Categoria</th>
               <th className="px-md py-3 font-medium">Tipo</th>
               <th className="px-md py-3 text-right font-medium">Preço</th>
+              <th className="px-md py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/20">
@@ -74,6 +75,15 @@ export default function AdminProdutos() {
                     ? `${brl(p.faixas[0].kg)}/kg`
                     : brl(p.preco)}
                 </td>
+                <td className="px-md py-3 text-right">
+                  <Link
+                    href={`/admin/produtos/${p.id}/editar`}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary hover:bg-surface-container active:scale-95"
+                    title="Editar"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">edit</span>
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -81,8 +91,9 @@ export default function AdminProdutos() {
       </div>
 
       <p className="text-caption text-on-surface-variant">
-        * Edição e cadastro entram ao ligar o Supabase. Aqui já dá para ver o
-        modelo: cada produto é por peso (preço/kg + faixas) ou por unidade.
+        * Cadastro e edição já em maquete (o lápis edita). Cada produto é por
+        peso (preço/kg + faixas) ou por unidade. Salvar de verdade entra com o
+        Supabase.
       </p>
     </div>
   );

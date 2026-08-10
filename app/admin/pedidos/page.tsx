@@ -212,9 +212,9 @@ function DetalhePedido({
   const ehEntrega = pedido.entrega.startsWith("Rua") || pedido.entrega.startsWith("Av");
 
   return (
-    <div className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0_2px_8px_rgba(0,0,0,0.06)] lg:sticky lg:top-24">
+    <div className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0_2px_8px_rgba(0,0,0,0.06)] lg:sticky lg:top-20">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between border-b border-outline-variant/20 px-lg py-md">
+      <div className="flex items-center justify-between border-b border-outline-variant/20 px-md py-sm">
         <div className="flex items-center gap-sm">
           <button
             onClick={onFechar}
@@ -246,9 +246,9 @@ function DetalhePedido({
         </div>
       </div>
 
-      <div className="space-y-lg p-lg">
+      <div className="space-y-md p-md">
         {/* Cliente + entrega */}
-        <div className="grid gap-md sm:grid-cols-2">
+        <div className="grid gap-sm sm:grid-cols-2">
           <InfoBloco icone="person" rotulo="Cliente">
             <p className="text-body-lg text-on-surface">{pedido.cliente}</p>
             <p className="text-label-sm text-on-surface-variant">
@@ -309,10 +309,6 @@ function DetalhePedido({
             Avançar status
           </button>
         </div>
-        <p className="text-caption text-on-surface-variant">
-          * Maquete — com o Supabase, avançar o status atualiza o pedido em tempo
-          real (e o cliente vê no acompanhamento).
-        </p>
       </div>
     </div>
   );
@@ -328,7 +324,7 @@ function InfoBloco({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-outline-variant/20 p-md">
+    <div className="rounded-lg border border-outline-variant/20 p-sm">
       <span className="mb-1 flex items-center gap-1 text-label-sm uppercase tracking-wide text-on-surface-variant">
         <span className="material-symbols-outlined text-[18px] text-secondary">
           {icone}

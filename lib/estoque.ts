@@ -86,3 +86,11 @@ export function vencendoEmBreve(dias = 7) {
     .filter((e) => e.dias !== null && e.dias <= dias)
     .sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0));
 }
+
+// Conferência: produtos que vencem em ~1 mês (8 a 35 dias) — gera a "demanda"
+// de conferir se o estoque foi vendido antes de virar urgente (FEFO).
+export function paraConferir(minDias = 8, maxDias = 35) {
+  return ESTOQUE.map((e) => ({ ...e, dias: diasParaVencer(e.validade) }))
+    .filter((e) => e.dias !== null && e.dias >= minDias && e.dias <= maxDias)
+    .sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0));
+}
