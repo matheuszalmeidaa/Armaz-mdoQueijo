@@ -42,12 +42,15 @@ contradizem.
 - ✅ Zonas de entrega + taxa por zona
 - ✅ Retirada na loja (grátis, pula endereço)
 - ✅ Cupons de desconto (código no checkout)
+- ⬜ **Endereço com bairro + taxa por bairro/região** — cliente digita endereço
+  e bairro; taxa atribuída pelo bairro. Bairro novo (nunca atendido) → atribuir
+  a taxa ao endereço específico. (Refina/substitui as zonas fixas.)
 - ⬜ Aviso no WhatsApp · Salvar (Supabase)
 
 ### Gestão — Painel do Lojista (dono)
 Um painel só, que comanda PDV e delivery.
 - 🟡 Dashboard (KPIs, pedidos, status, meta)
-- ✅ Produtos: lista + cadastro (peso/unidade, faixas)
+- ✅ Produtos: lista + cadastro + edição (peso/unidade, faixas)
 - 🟡 Configurações / regras da loja (+ zonas e cupons)
 - 🟡 Pedidos (todos, filtro por canal, status)
 - 🟡 Clientes (recência, inativo há 30 dias, total gasto)
@@ -67,11 +70,15 @@ Um painel só, que comanda PDV e delivery.
 - 🟡 **Validade / FEFO** — tela pronta: lista "vender primeiro" com os lotes
   vencendo em 7 dias, ordenados pelo mais próximo.
 - 🟡 **Alertas** — visíveis: vencendo (7d), abaixo do mínimo, esgotados.
+- 🟡 **Conferência de validade** — tela pronta: produtos vencendo em ~1 mês
+  viram demanda de "conferir se vendeu tudo" (marca como conferido).
+- 🟡 **Transferência entre lojas** — modal: produto, de→para (auto), quantidade.
+- 🟡 **Perda / devolução** — modal: vencido, quebra/avaria, devolução à fábrica.
 - ⬜ **Baixa automática na venda** — venda no PDV/delivery reduz o saldo da loja.
 - ⬜ **Esgotado automático no catálogo** — saldo zera → produto vira "esgotado"
   no delivery sozinho.
 - ⬜ **Validação de pedido por estoque** — pediu 3, só há 2 → confirma.
-- ⬜ **Controle de perda** — registrar vencido/quebra; relatório de perdas.
+- ⬜ **Relatório de perdas** (das baixas registradas).
 - ⬜ **Sazonalidade** — análise por época → sugestão de compra.
 - ⬜ **Sugestão de reposição** quando abaixo do mínimo.
 
