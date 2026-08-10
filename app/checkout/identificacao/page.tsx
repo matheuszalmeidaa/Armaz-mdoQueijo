@@ -15,7 +15,10 @@ export default function Identificacao() {
 
   function continuar() {
     setDados({ nome: nome.trim(), telefone });
-    router.push("/checkout/endereco");
+    // Retirada na loja não precisa de endereço.
+    router.push(
+      dados.modo === "retirada" ? "/checkout/revisao" : "/checkout/endereco"
+    );
   }
 
   return (

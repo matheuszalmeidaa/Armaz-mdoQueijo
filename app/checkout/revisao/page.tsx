@@ -4,14 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { brl, gramas } from "@/lib/catalogo";
-import { REGRAS } from "@/lib/regras";
+import { calcularResumo, prazoDe, LOJAS_RETIRADA } from "@/lib/regras";
 
 export default function Revisao() {
   const router = useRouter();
   const { itens, total, dados, limpar } = useCart();
   const pagamento = dados.pagamento ?? "pix";
-  const descontoPix = pagamento === "pix" ? total * REGRAS.descontoPix : 0;
-  const totalFinal = total + REGRAS.frete - descontoPix;
+  const modo = dados.modo ?? "entrega";
+  const r = calcularResumo(total, dados);
+  const lojaRetirada = LOJAS_RETIRADA.find((l) => l.id === dados.lojaRetiradaId);
 
   function finalizar() {
     // Ainda mock: sem Supabase, o pedido não persiste no banco.
@@ -37,7 +38,7 @@ export default function Revisao() {
     <main className="mx-auto min-h-full max-w-[28rem] pb-32">
       <header className="sticky top-0 z-50 flex items-center gap-md border-b border-outline-variant/30 bg-surface/90 px-md py-sm backdrop-blur-md">
         <Link
-          href="/checkout/endereco"
+          href={modo === "retirada" ? "/checkout/identificacao" : "/checkout/endereco"}
           className="flex h-9 w-9 items-center justify-center rounded-full text-primary active:scale-95"
         >
           <span className="material-symbols-outlined">arrow_back</span>
@@ -48,27 +49,32 @@ export default function Revisao() {
       </header>
 
       <div className="px-md pt-md">
-        {/* Endereço */}
+        {/* Entrega ou retirada */}
         <h3 className="text-label-sm uppercase tracking-wide text-on-surface-variant">
-          Endereço de entrega
+          {modo === "retirada" ? "Retirada na loja" : "Endereço de entrega"}
         </h3>
         <div className="mt-sm flex items-start justify-between rounded-xl bg-surface-container-lowest p-md shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
           <div className="flex items-start gap-sm">
             <span className="material-symbols-outlined text-secondary">
-              location_on
+              {modo === "retirada" ? "storefront" : "location_on"}
             </span>
             <div>
               <p className="text-body-lg text-on-surface">
-                {dados.endereco || "Endereço não informado"}
+                {modo === "retirada"
+                  ? lojaRetirada
+                    ? `${lojaRetirada.nome} — ${lojaRetirada.endereco}`
+                    : "Loja não selecionada"
+                  : dados.endereco || "Endereço não informado"}
               </p>
               <p className="text-label-sm text-on-surface-variant">
-                Tempo estimado: {REGRAS.tempoEntregaMin}-{REGRAS.tempoEntregaMax}{" "}
-                min
+                {modo === "retirada"
+                  ? "Retire no balcão quando estiver pronto"
+                  : `Tempo estimado: ${prazoDe(dados)}`}
               </p>
             </div>
           </div>
           <Link
-            href="/checkout/endereco"
+            href={modo === "retirada" ? "/carrinho" : "/checkout/endereco"}
             className="text-label-md text-secondary"
           >
             Alterar
@@ -129,17 +135,28 @@ export default function Revisao() {
 
         {/* Resumo */}
         <div className="mt-lg rounded-xl bg-cream-surface p-md">
-          <Linha rotulo="Subtotal" valor={brl(total)} />
-          <Linha rotulo="Taxa de Entrega" valor={brl(REGRAS.frete)} />
-          {descontoPix > 0 && (
+          <Linha rotulo="Subtotal" valor={brl(r.subtotal)} />
+          <Linha
+            rotulo={modo === "retirada" ? "Retirada na loja" : "Taxa de Entrega"}
+            valor={r.frete > 0 ? brl(r.frete) : "Grátis"}
+            verde={r.frete === 0}
+          />
+          {r.descontoPix > 0 && (
             <Linha
-              rotulo={`Desconto Pix (${Math.round(REGRAS.descontoPix * 100)}%)`}
-              valor={`- ${brl(descontoPix)}`}
+              rotulo="Desconto Pix (5%)"
+              valor={`- ${brl(r.descontoPix)}`}
+              verde
+            />
+          )}
+          {r.descontoCupom > 0 && (
+            <Linha
+              rotulo={`Cupom ${r.cupom?.codigo ?? ""}`}
+              valor={`- ${brl(r.descontoCupom)}`}
               verde
             />
           )}
           <div className="my-sm border-t border-dashed border-outline/20" />
-          <Linha rotulo="Total" valor={brl(totalFinal)} destaque />
+          <Linha rotulo="Total" valor={brl(r.total)} destaque />
         </div>
       </div>
 

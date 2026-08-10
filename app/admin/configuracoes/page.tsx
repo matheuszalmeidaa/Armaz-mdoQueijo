@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { REGRAS } from "@/lib/regras";
+import { REGRAS, ZONAS, CUPONS } from "@/lib/regras";
+import { brl } from "@/lib/catalogo";
 
 export default function Configuracoes() {
   // Pré-preenchido com as regras padrão. No futuro salva no Supabase por loja.
@@ -47,6 +48,45 @@ export default function Configuracoes() {
           onChange={setPreparoMin}
           dica="Base para a previsão de entrega mostrada ao cliente."
         />
+      </Secao>
+
+      {/* Zonas e taxas */}
+      <Secao icone="map" titulo="Zonas e taxas de entrega">
+        <div className="divide-y divide-outline-variant/20 rounded-lg border border-outline-variant">
+          {ZONAS.map((z) => (
+            <div key={z.id} className="flex items-center justify-between px-md py-2.5">
+              <span className="text-body-md text-on-surface">
+                {z.nome}{" "}
+                <span className="text-label-sm text-on-surface-variant">
+                  · {z.prazo}
+                </span>
+              </span>
+              <span className="font-label-md text-label-md text-primary">
+                {brl(z.taxa)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="text-label-sm text-on-surface-variant">
+          O cliente escolhe a zona no checkout e a taxa é aplicada. Retirada na
+          loja é sempre grátis. (Edição das zonas entra com o Supabase.)
+        </p>
+      </Secao>
+
+      {/* Cupons */}
+      <Secao icone="local_activity" titulo="Cupons ativos">
+        <div className="divide-y divide-outline-variant/20 rounded-lg border border-outline-variant">
+          {CUPONS.map((c) => (
+            <div key={c.codigo} className="flex items-center justify-between px-md py-2.5">
+              <span className="font-label-md text-label-md text-on-surface">
+                {c.codigo}
+              </span>
+              <span className="text-body-md text-on-surface-variant">
+                {c.descricao}
+              </span>
+            </div>
+          ))}
+        </div>
       </Secao>
 
       {/* Produtos por peso */}

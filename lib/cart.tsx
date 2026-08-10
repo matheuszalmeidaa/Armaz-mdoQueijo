@@ -23,6 +23,10 @@ export type DadosCheckout = {
   telefone?: string;
   endereco?: string;
   pagamento?: "pix" | "cartao";
+  modo?: "entrega" | "retirada";
+  zonaId?: string;
+  lojaRetiradaId?: string;
+  cupom?: string;
 };
 
 type CartCtx = {
@@ -42,7 +46,10 @@ const DADOS_KEY = "armazem-checkout";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [itens, setItens] = useState<ItemCarrinho[]>([]);
-  const [dados, setDadosState] = useState<DadosCheckout>({ pagamento: "pix" });
+  const [dados, setDadosState] = useState<DadosCheckout>({
+    pagamento: "pix",
+    modo: "entrega",
+  });
   const [hidratado, setHidratado] = useState(false);
 
   // Carrega do localStorage no cliente

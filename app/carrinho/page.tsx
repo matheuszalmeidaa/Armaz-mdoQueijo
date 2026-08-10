@@ -2,22 +2,41 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import { CATALOGO, brl, gramas } from "@/lib/catalogo";
-import { REGRAS } from "@/lib/regras";
+import {
+  calcularResumo,
+  buscarCupom,
+  ZONAS,
+  LOJAS_RETIRADA,
+} from "@/lib/regras";
 
 export default function Carrinho() {
   const router = useRouter();
   const { itens, add, remover, limpar, total, dados, setDados } = useCart();
   const pagamento = dados.pagamento ?? "pix";
+  const modo = dados.modo ?? "entrega";
 
-  const descontoPix = pagamento === "pix" ? total * REGRAS.descontoPix : 0;
-  const totalFinal = total + REGRAS.frete - descontoPix;
+  const [cupomInput, setCupomInput] = useState(dados.cupom ?? "");
+  const [cupomErro, setCupomErro] = useState(false);
+
+  const r = calcularResumo(total, dados);
 
   // Upsell: produtos por unidade que ainda não estão no carrinho
   const sugestoes = CATALOGO.filter(
     (p) => p.tipo === "unidade" && !itens.some((i) => i.produtoId === p.id)
   ).slice(0, 2);
+
+  function aplicarCupom() {
+    const c = buscarCupom(cupomInput);
+    if (c) {
+      setDados({ cupom: c.codigo });
+      setCupomErro(false);
+    } else {
+      setCupomErro(true);
+    }
+  }
 
   return (
     <main className="mx-auto min-h-full max-w-[28rem] pb-40">
@@ -93,6 +112,68 @@ export default function Carrinho() {
             ))}
           </ul>
 
+          {/* Como quer receber */}
+          <section className="mt-lg px-md">
+            <h3 className="mb-sm font-headline-md text-headline-md text-on-surface">
+              Como quer receber?
+            </h3>
+            <div className="flex rounded-lg border border-outline-variant p-1">
+              <SegBtn
+                ativo={modo === "entrega"}
+                onClick={() => setDados({ modo: "entrega" })}
+                icone="local_shipping"
+                label="Entrega"
+              />
+              <SegBtn
+                ativo={modo === "retirada"}
+                onClick={() => setDados({ modo: "retirada" })}
+                icone="storefront"
+                label="Retirar na loja"
+              />
+            </div>
+
+            {modo === "entrega" ? (
+              <div className="mt-sm">
+                <label className="block text-label-sm text-on-surface-variant">
+                  Zona de entrega
+                </label>
+                <select
+                  value={dados.zonaId ?? ""}
+                  onChange={(e) => setDados({ zonaId: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
+                >
+                  <option value="">Selecione sua região…</option>
+                  {ZONAS.map((z) => (
+                    <option key={z.id} value={z.id}>
+                      {z.nome} — {brl(z.taxa)} · {z.prazo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="mt-sm">
+                <label className="block text-label-sm text-on-surface-variant">
+                  Retirar em
+                </label>
+                <select
+                  value={dados.lojaRetiradaId ?? ""}
+                  onChange={(e) => setDados({ lojaRetiradaId: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
+                >
+                  <option value="">Selecione a loja…</option>
+                  {LOJAS_RETIRADA.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.nome} — {l.endereco}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-label-sm text-tertiary">
+                  Retirada é grátis (sem taxa de entrega).
+                </p>
+              </div>
+            )}
+          </section>
+
           {/* Forma de pagamento */}
           <section className="mt-lg px-md">
             <h3 className="mb-sm font-headline-md text-headline-md text-on-surface">
@@ -104,7 +185,7 @@ export default function Carrinho() {
                 onClick={() => setDados({ pagamento: "pix" })}
                 icone="qr_code_2"
                 titulo="Pix"
-                sub={`${Math.round(REGRAS.descontoPix * 100)}% de desconto extra`}
+                sub="5% de desconto extra"
                 destaque
               />
               <OpcaoPagamento
@@ -115,6 +196,57 @@ export default function Carrinho() {
                 sub="Até 6x sem juros"
               />
             </div>
+          </section>
+
+          {/* Cupom */}
+          <section className="mt-lg px-md">
+            <h3 className="mb-sm font-headline-md text-headline-md text-on-surface">
+              Cupom de desconto
+            </h3>
+            {r.cupom ? (
+              <div className="flex items-center justify-between rounded-lg bg-tertiary-container/40 px-md py-3">
+                <span className="flex items-center gap-sm text-body-md text-on-surface">
+                  <span className="material-symbols-outlined text-tertiary">
+                    local_activity
+                  </span>
+                  <strong>{r.cupom.codigo}</strong> — {r.cupom.descricao}
+                </span>
+                <button
+                  onClick={() => {
+                    setDados({ cupom: "" });
+                    setCupomInput("");
+                  }}
+                  className="text-danger-red"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-sm">
+                  <input
+                    value={cupomInput}
+                    onChange={(e) => {
+                      setCupomInput(e.target.value);
+                      setCupomErro(false);
+                    }}
+                    placeholder="Digite o código"
+                    className="flex-grow rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg uppercase outline-none focus:border-primary"
+                  />
+                  <button
+                    onClick={aplicarCupom}
+                    className="rounded-lg bg-secondary px-lg text-label-md text-on-secondary active:scale-95"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+                {cupomErro && (
+                  <p className="mt-1 text-label-sm text-danger-red">
+                    Cupom inválido. Tente BEMVINDO10 ou ROCA20.
+                  </p>
+                )}
+              </>
+            )}
           </section>
 
           {/* Upsell */}
@@ -169,17 +301,28 @@ export default function Carrinho() {
           {/* Resumo */}
           <section className="mt-lg px-md">
             <div className="rounded-xl bg-cream-surface p-md">
-              <Linha rotulo="Subtotal" valor={brl(total)} />
-              <Linha rotulo="Frete" valor={brl(REGRAS.frete)} />
-              {descontoPix > 0 && (
+              <Linha rotulo="Subtotal" valor={brl(r.subtotal)} />
+              <Linha
+                rotulo={modo === "retirada" ? "Retirada na loja" : "Frete"}
+                valor={r.frete > 0 ? brl(r.frete) : "Grátis"}
+                verde={r.frete === 0}
+              />
+              {r.descontoPix > 0 && (
                 <Linha
                   rotulo="Desconto Pix (5%)"
-                  valor={`- ${brl(descontoPix)}`}
+                  valor={`- ${brl(r.descontoPix)}`}
+                  verde
+                />
+              )}
+              {r.descontoCupom > 0 && (
+                <Linha
+                  rotulo={`Cupom ${r.cupom?.codigo ?? ""}`}
+                  valor={`- ${brl(r.descontoCupom)}`}
                   verde
                 />
               )}
               <div className="my-sm border-t border-dashed border-outline/20" />
-              <Linha rotulo="Total" valor={brl(totalFinal)} destaque />
+              <Linha rotulo="Total" valor={brl(r.total)} destaque />
             </div>
             <p className="mt-sm text-caption text-on-surface-variant">
               * Itens por peso são aproximados; o valor final pode ajustar ao
@@ -187,7 +330,7 @@ export default function Carrinho() {
             </p>
           </section>
 
-          {/* Finalizar */}
+          {/* Continuar */}
           <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
             <button
               onClick={() => router.push("/checkout/identificacao")}
@@ -198,13 +341,37 @@ export default function Carrinho() {
                 <span className="material-symbols-outlined">arrow_forward</span>
               </span>
               <span className="font-headline-md text-headline-md">
-                {brl(totalFinal)}
+                {brl(r.total)}
               </span>
             </button>
           </div>
         </>
       )}
     </main>
+  );
+}
+
+function SegBtn({
+  ativo,
+  onClick,
+  icone,
+  label,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  icone: string;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-1 items-center justify-center gap-1 rounded-md py-2 text-label-md transition-colors ${
+        ativo ? "bg-primary text-on-primary" : "text-on-surface"
+      }`}
+    >
+      <span className="material-symbols-outlined text-[20px]">{icone}</span>
+      {label}
+    </button>
   );
 }
 
