@@ -12,6 +12,10 @@ export default function Configuracoes() {
   const [toleranciaCorte, setToleranciaCorte] = useState("10");
   const [whatsapp, setWhatsapp] = useState("(73) 99811-2345");
   const [somPedido, setSomPedido] = useState(true);
+  const [cashbackAtivo, setCashbackAtivo] = useState(REGRAS.cashback.ativo);
+  const [cashbackPct, setCashbackPct] = useState(
+    String(Math.round(REGRAS.cashback.percent * 100))
+  );
   const [salvo, setSalvo] = useState(false);
 
   function salvar() {
@@ -98,6 +102,39 @@ export default function Configuracoes() {
           onChange={setToleranciaCorte}
           dica="Variação aceita entre o peso escolhido e o peso real cortado (o '±'). Ex.: 10% = 200g pode sair entre 180g e 220g sem reajuste."
         />
+      </Secao>
+
+      {/* Cashback */}
+      <Secao icone="loyalty" titulo="Cashback (clube do queijo)">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-label-md text-on-surface">Ativar cashback</p>
+            <p className="text-label-sm text-on-surface-variant">
+              O cliente ganha crédito a cada compra pra usar na próxima.
+            </p>
+          </div>
+          <button
+            onClick={() => setCashbackAtivo((v) => !v)}
+            className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors ${
+              cashbackAtivo ? "bg-tertiary" : "bg-outline-variant"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
+                cashbackAtivo ? "left-[22px]" : "left-0.5"
+              }`}
+            />
+          </button>
+        </div>
+        {cashbackAtivo && (
+          <Campo
+            rotulo="Percentual de cashback"
+            sufixo="%"
+            valor={cashbackPct}
+            onChange={setCashbackPct}
+            dica="Ex.: 3% = a cada R$ 100, o cliente ganha R$ 3 de crédito."
+          />
+        )}
       </Secao>
 
       {/* Pagamento */}

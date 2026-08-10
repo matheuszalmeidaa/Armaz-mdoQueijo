@@ -41,6 +41,8 @@ export function FormProduto({
   );
 
   const [descricao, setDescricao] = useState(inicial?.descricao ?? "");
+  const [custo, setCusto] = useState("");
+  const [codigoBarras, setCodigoBarras] = useState("");
   const [salvo, setSalvo] = useState(false);
 
   function addPeso() {
@@ -61,6 +63,17 @@ export function FormProduto({
         ? Number(preco)
         : 0;
 
+  // Margem (só pra consulta do lojista): compara custo com o preço de venda.
+  const precoRef =
+    tipo === "peso"
+      ? Number(precoKg.replace(",", "."))
+      : Number(preco.replace(",", "."));
+  const custoNum = Number(custo.replace(",", "."));
+  const margem =
+    precoRef > 0 && custoNum > 0
+      ? Math.round((1 - custoNum / precoRef) * 100)
+      : null;
+
   return (
     <div className="mx-auto max-w-[48rem] space-y-lg">
       <div className="flex items-center gap-sm">
@@ -75,6 +88,13 @@ export function FormProduto({
 
       {/* Básico */}
       <Secao titulo="Informações básicas">
+        <div>
+          <label className="block text-label-md text-on-surface">Foto</label>
+          <button className="mt-1 flex aspect-video w-full max-w-[20rem] flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-outline/40 bg-surface-container-low text-on-surface-variant hover:border-primary/40">
+            <span className="material-symbols-outlined text-[32px]">add_photo_alternate</span>
+            <span className="text-label-sm">Adicionar foto</span>
+          </button>
+        </div>
         <Campo rotulo="Nome do produto">
           <input
             value={nome}
@@ -108,6 +128,25 @@ export function FormProduto({
             </div>
           </div>
         </div>
+        <div>
+          <label className="block text-label-md text-on-surface">
+            Código de barras
+          </label>
+          <div className="mt-1 flex items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 focus-within:border-primary">
+            <span className="material-symbols-outlined text-on-surface-variant">
+              barcode_scanner
+            </span>
+            <input
+              value={codigoBarras}
+              onChange={(e) => setCodigoBarras(e.target.value)}
+              placeholder="Bipe o produto ou digite o código"
+              className="w-full bg-transparent text-body-lg outline-none placeholder:text-on-surface-variant/60"
+            />
+          </div>
+          <p className="mt-1 text-label-sm text-on-surface-variant">
+            Usado pra bipar no PDV e dar baixa no estoque.
+          </p>
+        </div>
       </Secao>
 
       {tipo === "peso" ? (
@@ -121,6 +160,16 @@ export function FormProduto({
               className="w-full bg-transparent text-body-lg outline-none"
             />
           </Campo>
+          <Campo rotulo="Custo por quilo (quanto você pagou — só pra você)" prefixo="R$" sufixo="/kg">
+            <input
+              value={custo}
+              onChange={(e) => setCusto(e.target.value)}
+              inputMode="decimal"
+              placeholder="0,00"
+              className="w-full bg-transparent text-body-lg outline-none"
+            />
+          </Campo>
+          {margem !== null && <MargemLinha margem={margem} />}
 
           <div>
             <label className="block text-label-md text-on-surface">
@@ -218,6 +267,16 @@ export function FormProduto({
               className="w-full bg-transparent text-body-lg outline-none"
             />
           </Campo>
+          <Campo rotulo="Custo por unidade (quanto você pagou — só pra você)" prefixo="R$" sufixo="/un">
+            <input
+              value={custo}
+              onChange={(e) => setCusto(e.target.value)}
+              inputMode="decimal"
+              placeholder="0,00"
+              className="w-full bg-transparent text-body-lg outline-none"
+            />
+          </Campo>
+          {margem !== null && <MargemLinha margem={margem} />}
         </Secao>
       )}
 
@@ -317,5 +376,25 @@ function BotaoTipo({
       <span className="material-symbols-outlined text-[20px]">{icone}</span>
       {label}
     </button>
+  );
+}
+
+function MargemLinha({ margem }: { margem: number }) {
+  const cor =
+    margem >= 40
+      ? "text-tertiary"
+      : margem >= 20
+        ? "text-secondary"
+        : "text-danger-red";
+  return (
+    <div className="flex items-center justify-between rounded-lg bg-cream-surface px-md py-2.5">
+      <span className="flex items-center gap-1 text-body-md text-on-surface-variant">
+        <span className="material-symbols-outlined text-[18px] text-secondary">
+          percent
+        </span>
+        Margem (venda vs. custo)
+      </span>
+      <span className={`font-headline-md text-headline-md ${cor}`}>{margem}%</span>
+    </div>
   );
 }

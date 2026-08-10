@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import { CATALOGO, brl, gramas } from "@/lib/catalogo";
-import { calcularResumo, buscarCupom, LOJAS_RETIRADA } from "@/lib/regras";
+import { calcularResumo, buscarCupom, LOJAS_RETIRADA, REGRAS } from "@/lib/regras";
 
 export default function Carrinho() {
   const router = useRouter();
@@ -308,6 +308,18 @@ export default function Carrinho() {
               <div className="my-sm border-t border-dashed border-outline/20" />
               <Linha rotulo="Total" valor={brl(r.total)} destaque />
             </div>
+            {REGRAS.cashback.ativo && (
+              <div className="mt-sm flex items-center gap-sm rounded-lg bg-tertiary-container/40 px-md py-2.5">
+                <span className="material-symbols-outlined text-tertiary">loyalty</span>
+                <span className="text-body-md text-on-surface">
+                  Você ganha{" "}
+                  <strong className="text-tertiary">
+                    {brl(r.total * REGRAS.cashback.percent)}
+                  </strong>{" "}
+                  em cashback nesta compra.
+                </span>
+              </div>
+            )}
             <p className="mt-sm text-caption text-on-surface-variant">
               * Itens por peso são aproximados; o valor final pode ajustar ao
               corte, dentro da faixa escolhida.

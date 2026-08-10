@@ -12,6 +12,7 @@ export const REGRAS = {
   descontoPix: 0.05, // 5% no Pix
   tempoEntregaMin: 45, // minutos
   tempoEntregaMax: 60,
+  cashback: { ativo: true, percent: 0.03 }, // 3% de volta em créditos
 };
 
 // Zonas de entrega — taxa e prazo por região
