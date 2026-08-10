@@ -48,10 +48,10 @@ contradizem.
 Um painel só, que comanda PDV e delivery.
 - 🟡 Dashboard (KPIs, pedidos, status, meta)
 - ✅ Produtos: lista + cadastro (peso/unidade, faixas)
-- 🟡 Configurações / regras da loja
-- ⬜ Pedidos (todos, filtro loja/canal)
-- ⬜ Clientes (recência, inativo há 30 dias)
-- ⬜ Relatórios (por loja/canal, mais vendidos, perda)
+- 🟡 Configurações / regras da loja (+ zonas e cupons)
+- 🟡 Pedidos (todos, filtro por canal, status)
+- 🟡 Clientes (recência, inativo há 30 dias, total gasto)
+- 🟡 Relatórios (por mês/canal/loja, mais vendidos, sazonalidade)
 - ⬜ Financeiro (plano, faturas, repasses, saldo)
 - ⬜ Usuários e permissões (dono × operador)
 
