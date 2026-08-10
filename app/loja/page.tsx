@@ -5,6 +5,7 @@ import { useState } from "react";
 import { CATALOGO, CATEGORIAS, brl, precoBase, type Produto } from "@/lib/catalogo";
 import { useCart } from "@/lib/cart";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
+import { badgesDe, BADGE_CLS } from "@/lib/badges";
 
 export default function LojaHome() {
   const [cat, setCat] = useState<string>("Todos");
@@ -81,17 +82,33 @@ export default function LojaHome() {
 
 function CardProduto({ produto }: { produto: Produto }) {
   const porPeso = produto.tipo === "peso";
+  const badges = badgesDe(produto.id);
+  const esgotado = badges.some((b) => b.tipo === "esgotado");
   return (
     <Link
       href={`/produto/${produto.id}`}
       className="group flex flex-col overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all active:scale-[0.98]"
     >
-      <ProdutoImagem
-        src={produto.img}
-        alt={produto.nome}
-        icone={produto.icone}
-        className="aspect-square w-full"
-      />
+      <div className="relative">
+        <ProdutoImagem
+          src={produto.img}
+          alt={produto.nome}
+          icone={produto.icone}
+          className={`aspect-square w-full ${esgotado ? "opacity-50 grayscale" : ""}`}
+        />
+        {badges.length > 0 && (
+          <div className="absolute left-1.5 top-1.5 flex flex-col items-start gap-1">
+            {badges.map((b) => (
+              <span
+                key={b.label}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold shadow-sm ${BADGE_CLS[b.tipo]}`}
+              >
+                {b.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="flex flex-grow flex-col p-sm">
         <h4 className="line-clamp-1 text-label-md text-on-surface">
           {produto.nome}

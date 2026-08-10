@@ -1,0 +1,53 @@
+// Badges do produto na loja — geram urgência/destaque.
+// "Esgotado" e "Últimas unidades" saem do ESTOQUE real (por isso são de verdade
+// quando o Supabase ligar); "Novidade" e "Promoção" são tags do produto.
+
+import { getProduto } from "./catalogo";
+import { ESTOQUE, unidadeDe } from "./estoque";
+
+export type Badge = {
+  label: string;
+  tipo: "esgotado" | "poucos" | "novidade" | "promo";
+};
+
+export const BADGE_CLS: Record<Badge["tipo"], string> = {
+  esgotado: "bg-error-container text-on-error-container",
+  poucos: "bg-warning-amber text-on-secondary-fixed",
+  novidade: "bg-tertiary text-on-tertiary",
+  promo: "bg-primary text-on-primary",
+};
+
+function saldoTotal(produtoId: string): number | null {
+  const e = ESTOQUE.find((x) => x.produtoId === produtoId);
+  return e ? e.centro.saldo + e.bairro.saldo : null;
+}
+
+export function estaEsgotado(produtoId: string): boolean {
+  const t = saldoTotal(produtoId);
+  return t !== null && t <= 0;
+}
+
+export function badgesDe(produtoId: string): Badge[] {
+  const p = getProduto(produtoId);
+  const total = saldoTotal(produtoId);
+  const un = unidadeDe(produtoId);
+  const badges: Badge[] = [];
+
+  if (total !== null) {
+    if (total <= 0) {
+      badges.push({ label: "Esgotado", tipo: "esgotado" });
+    } else if (un === "un" && total <= 3) {
+      badges.push({ label: `Últimas ${total} un`, tipo: "poucos" });
+    } else if (un === "kg" && total <= 1.5) {
+      badges.push({ label: "Acabando", tipo: "poucos" });
+    }
+  }
+
+  if (p?.tipo === "unidade" && p.precoAntigo) {
+    badges.push({ label: "Promoção", tipo: "promo" });
+  }
+  if (p?.novidade) {
+    badges.push({ label: "Novidade", tipo: "novidade" });
+  }
+  return badges;
+}

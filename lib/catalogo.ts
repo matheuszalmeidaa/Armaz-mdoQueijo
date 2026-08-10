@@ -15,6 +15,7 @@ type Base = {
   nota?: string; // aviso "Atenção..."
   origem?: string;
   intensidade?: string;
+  novidade?: boolean; // tag manual "Novidade"
 };
 
 export type Produto = Base &
@@ -60,6 +61,7 @@ export const CATALOGO: Produto[] = [
       "Gouda cremoso com pesto de manjericão, ideal para tábuas e sanduíches quentes.",
     origem: "Pomerode, SC",
     intensidade: "Média-Alta",
+    novidade: true,
     tipo: "peso",
     pesos: [200, 300, 400, 500],
     faixas: [
@@ -79,6 +81,7 @@ export const CATALOGO: Produto[] = [
     nota: "Atenção: este queijo pode apresentar aroma forte e textura extremamente cremosa devido à maturação e presença de trufas negras.",
     origem: "Pomerode, SC",
     intensidade: "Média-Alta",
+    novidade: true,
     tipo: "peso",
     pesos: [120, 240, 360, 480],
     faixas: [

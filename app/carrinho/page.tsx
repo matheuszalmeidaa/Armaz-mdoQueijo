@@ -5,12 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import { CATALOGO, brl, gramas } from "@/lib/catalogo";
-import {
-  calcularResumo,
-  buscarCupom,
-  ZONAS,
-  LOJAS_RETIRADA,
-} from "@/lib/regras";
+import { calcularResumo, buscarCupom, LOJAS_RETIRADA } from "@/lib/regras";
 
 export default function Carrinho() {
   const router = useRouter();
@@ -133,23 +128,12 @@ export default function Carrinho() {
             </div>
 
             {modo === "entrega" ? (
-              <div className="mt-sm">
-                <label className="block text-label-sm text-on-surface-variant">
-                  Zona de entrega
-                </label>
-                <select
-                  value={dados.zonaId ?? ""}
-                  onChange={(e) => setDados({ zonaId: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
-                >
-                  <option value="">Selecione sua região…</option>
-                  {ZONAS.map((z) => (
-                    <option key={z.id} value={z.id}>
-                      {z.nome} — {brl(z.taxa)} · {z.prazo}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <p className="mt-sm flex items-center gap-sm rounded-lg bg-surface-container-low px-md py-2.5 text-body-md text-on-surface-variant">
+                <span className="material-symbols-outlined text-secondary">
+                  local_shipping
+                </span>
+                A taxa de entrega é calculada pelo seu bairro no endereço.
+              </p>
             ) : (
               <div className="mt-sm">
                 <label className="block text-label-sm text-on-surface-variant">

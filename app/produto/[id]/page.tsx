@@ -13,6 +13,7 @@ import {
 import { useCart } from "@/lib/cart";
 import { REGRAS } from "@/lib/regras";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
+import { badgesDe, BADGE_CLS } from "@/lib/badges";
 
 export default function ProdutoPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,6 +50,16 @@ export default function ProdutoPage() {
             Corte na hora
           </span>
         )}
+        <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
+          {badgesDe(produto.id).map((b) => (
+            <span
+              key={b.label}
+              className={`rounded-full px-2.5 py-1 text-label-sm font-semibold shadow-sm ${BADGE_CLS[b.tipo]}`}
+            >
+              {b.label}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="px-md">
