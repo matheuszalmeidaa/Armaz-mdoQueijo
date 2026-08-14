@@ -33,50 +33,52 @@ export default function ProdutoPage() {
   }
 
   return (
-    <main className="mx-auto min-h-full max-w-[28rem] pb-32">
+    <main className="min-h-full pb-32 lg:pb-lg">
       <Header nome={produto.produtor ?? "Armazém do Queijo"} />
 
-      {/* Imagem */}
-      <div className="relative m-md overflow-hidden rounded-xl">
-        <ProdutoImagem
-          src={produto.img}
-          alt={produto.nome}
-          icone={produto.icone}
-          className="aspect-square w-full"
-          iconSize={96}
-        />
-        {produto.tipo === "peso" && (
-          <span className="absolute left-3 top-3 rounded-full bg-warning-amber px-3 py-1 text-label-sm font-semibold text-on-secondary-fixed shadow-sm">
-            Corte na hora
-          </span>
-        )}
-        <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
-          {badgesDe(produto.id).map((b) => (
-            <span
-              key={b.label}
-              className={`rounded-full px-2.5 py-1 text-label-sm font-semibold shadow-sm ${BADGE_CLS[b.tipo]}`}
-            >
-              {b.label}
+      <div className="mx-auto max-w-5xl lg:grid lg:grid-cols-2 lg:items-start lg:gap-xl lg:px-md lg:pt-lg">
+        {/* Imagem */}
+        <div className="relative m-md overflow-hidden rounded-xl lg:m-0 lg:sticky lg:top-24">
+          <ProdutoImagem
+            src={produto.img}
+            alt={produto.nome}
+            icone={produto.icone}
+            className="aspect-square w-full"
+            iconSize={96}
+          />
+          {produto.tipo === "peso" && (
+            <span className="absolute left-3 top-3 rounded-full bg-warning-amber px-3 py-1 text-label-sm font-semibold text-on-secondary-fixed shadow-sm">
+              Corte na hora
             </span>
-          ))}
+          )}
+          <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
+            {badgesDe(produto.id).map((b) => (
+              <span
+                key={b.label}
+                className={`rounded-full px-2.5 py-1 text-label-sm font-semibold shadow-sm ${BADGE_CLS[b.tipo]}`}
+              >
+                {b.label}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="px-md">
-        <p className="text-label-sm uppercase tracking-wide text-on-surface-variant">
-          {produto.categoria} · {produto.produtor}
-        </p>
-        <h1 className="mt-xs font-headline-lg text-headline-lg leading-tight text-on-surface">
-          {produto.nome}
-        </h1>
+        <div className="px-md lg:px-0">
+          <p className="text-label-sm uppercase tracking-wide text-on-surface-variant">
+            {produto.categoria} · {produto.produtor}
+          </p>
+          <h1 className="mt-xs font-headline-lg text-headline-lg leading-tight text-on-surface">
+            {produto.nome}
+          </h1>
 
-        {produto.tipo === "peso" ? (
-          <SeletorPeso produto={produto} />
-        ) : (
-          <SeletorUnidade produto={produto} />
-        )}
+          {produto.tipo === "peso" ? (
+            <SeletorPeso produto={produto} />
+          ) : (
+            <SeletorUnidade produto={produto} />
+          )}
 
-        <Detalhes produto={produto} />
+          <Detalhes produto={produto} />
+        </div>
       </div>
     </main>
   );
@@ -152,7 +154,8 @@ function InfoCard({
 function Header({ nome }: { nome: string }) {
   const { qtdItens } = useCart();
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between border-b border-outline-variant/30 bg-surface/90 px-md py-sm backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-outline-variant/30 bg-surface/90 backdrop-blur-md">
+      <div className="mx-auto flex max-w-5xl items-center justify-between px-md py-sm">
       <Link
         href="/loja"
         className="flex h-9 w-9 items-center justify-center rounded-full text-primary active:scale-95"
@@ -173,6 +176,7 @@ function Header({ nome }: { nome: string }) {
           </span>
         )}
       </Link>
+      </div>
     </header>
   );
 }
@@ -385,7 +389,7 @@ function BarraAdicionar({
   onClick: () => void;
 }) {
   return (
-    <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
+    <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md lg:static lg:left-auto lg:z-auto lg:mt-lg lg:max-w-none lg:translate-x-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
       <button
         onClick={onClick}
         className="flex w-full items-center justify-between rounded-lg bg-primary px-lg py-4 text-on-primary shadow-lg transition-transform active:scale-[0.98]"
