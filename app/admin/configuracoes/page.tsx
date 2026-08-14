@@ -7,6 +7,7 @@ import {
   lerConfig,
   salvarConfig,
   DIAS_SEMANA,
+  FOTOS_VITRINE,
   type ConfigLoja,
   type CupomCfg,
   type DiaHorario,
@@ -35,6 +36,9 @@ export default function Configuracoes() {
   const [excecoes, setExcecoes] = useState<Excecao[]>(CONFIG_PADRAO.excecoes);
   const [instagram, setInstagram] = useState(CONFIG_PADRAO.redes.instagram);
   const [facebook, setFacebook] = useState(CONFIG_PADRAO.redes.facebook);
+  const [heroImg, setHeroImg] = useState(CONFIG_PADRAO.heroImg);
+  const [heroTag, setHeroTag] = useState(CONFIG_PADRAO.heroTag);
+  const [heroTitulo, setHeroTitulo] = useState(CONFIG_PADRAO.heroTitulo);
   const [salvo, setSalvo] = useState(false);
 
   // Carrega o que já foi salvo (localStorage) ao abrir a tela.
@@ -54,6 +58,9 @@ export default function Configuracoes() {
     setExcecoes(c.excecoes);
     setInstagram(c.redes.instagram);
     setFacebook(c.redes.facebook);
+    setHeroImg(c.heroImg);
+    setHeroTag(c.heroTag);
+    setHeroTitulo(c.heroTitulo);
   }, []);
 
   function salvar() {
@@ -78,6 +85,9 @@ export default function Configuracoes() {
         facebook: facebook.trim(),
         whatsapp: whatsapp.trim(),
       },
+      heroImg: heroImg.trim(),
+      heroTag: heroTag.trim(),
+      heroTitulo: heroTitulo.trim(),
     };
     salvarConfig(c);
     setSalvo(true);
@@ -147,6 +157,50 @@ export default function Configuracoes() {
               }`}
             />
           </button>
+        </div>
+      </Secao>
+
+      {/* Vitrine */}
+      <Secao icone="image" titulo="Vitrine (banner da loja)">
+        <p className="text-label-sm text-on-surface-variant">
+          O destaque no topo da loja. Escolha uma foto ou cole uma URL. (Upload de
+          arquivo entra com o Supabase.)
+        </p>
+        <Campo rotulo="Etiqueta" valor={heroTag} onChange={setHeroTag} />
+        <Campo rotulo="Título" valor={heroTitulo} onChange={setHeroTitulo} />
+        <div>
+          <label className="block text-label-md text-on-surface">Foto do banner</label>
+          <div className="mt-1 flex flex-wrap gap-sm">
+            <button
+              onClick={() => setHeroImg("")}
+              className={`flex h-16 w-24 flex-col items-center justify-center rounded-lg border text-label-sm ${
+                heroImg === ""
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-outline-variant text-on-surface-variant"
+              }`}
+            >
+              <span className="material-symbols-outlined">gradient</span>
+              Gradiente
+            </button>
+            {FOTOS_VITRINE.map((src) => (
+              <button
+                key={src}
+                onClick={() => setHeroImg(src)}
+                className={`h-16 w-24 overflow-hidden rounded-lg border-2 ${
+                  heroImg === src ? "border-primary" : "border-transparent"
+                }`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+          <input
+            value={heroImg.startsWith("/produtos") ? "" : heroImg}
+            onChange={(e) => setHeroImg(e.target.value)}
+            placeholder="Ou cole uma URL de imagem (https://...)"
+            className="mt-sm w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 text-body-md outline-none focus:border-primary"
+          />
         </div>
       </Secao>
 

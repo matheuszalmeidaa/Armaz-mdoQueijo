@@ -44,6 +44,9 @@ export type ConfigLoja = {
   horarios: DiaHorario[]; // 0=domingo .. 6=sábado
   excecoes: Excecao[]; // dias personalizados (sobrepõem a semana)
   redes: Redes;
+  heroImg: string; // banner da vitrine (URL ou caminho em /produtos); "" = gradiente
+  heroTag: string; // etiqueta do banner
+  heroTitulo: string; // título do banner
 };
 
 export const CONFIG_PADRAO: ConfigLoja = {
@@ -72,7 +75,21 @@ export const CONFIG_PADRAO: ConfigLoja = {
   })),
   excecoes: [],
   redes: { instagram: "", facebook: "", whatsapp: "" },
+  heroImg: "",
+  heroTag: "SUGESTÃO DO DIA",
+  heroTitulo: "Queijo Canastra com Mel de Laranjeira",
 };
+
+// Fotos disponíveis para o banner sem upload (as que já vêm no projeto).
+export const FOTOS_VITRINE = [
+  "/produtos/canastra.png",
+  "/produtos/figueira.png",
+  "/produtos/meiacura.png",
+  "/produtos/tabua.png",
+  "/produtos/defumados.png",
+  "/produtos/geleia.png",
+  "/produtos/mel.png",
+];
 
 export const DIAS_SEMANA = [
   "Domingo",

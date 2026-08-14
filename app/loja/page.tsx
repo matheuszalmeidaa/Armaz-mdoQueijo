@@ -73,12 +73,28 @@ export default function LojaHome() {
       <div className="mx-auto max-w-6xl">
         {/* Hero */}
         <section className="px-md pt-md">
-          <div className="flex h-[150px] flex-col justify-end overflow-hidden rounded-xl bg-gradient-to-t from-primary to-primary-container/40 p-md lg:h-[240px] lg:p-lg">
-            <span className="w-fit rounded-full bg-warning-amber px-2 py-0.5 text-label-sm font-semibold text-on-secondary-fixed">
-              SUGESTÃO DO DIA
-            </span>
-            <h2 className="mt-2 font-headline-md text-headline-md leading-tight text-cream-surface lg:text-headline-lg">
-              Queijo Canastra com Mel de Laranjeira
+          <div
+            className="relative flex h-[150px] flex-col justify-end overflow-hidden rounded-xl bg-gradient-to-t from-primary to-primary-container/40 p-md lg:h-[240px] lg:p-lg"
+            style={
+              cfg.heroImg
+                ? {
+                    backgroundImage: `url('${cfg.heroImg}')`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }
+                : undefined
+            }
+          >
+            {cfg.heroImg && (
+              <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/40 to-transparent" />
+            )}
+            {cfg.heroTag && (
+              <span className="relative w-fit rounded-full bg-warning-amber px-2 py-0.5 text-label-sm font-semibold text-on-secondary-fixed">
+                {cfg.heroTag}
+              </span>
+            )}
+            <h2 className="relative mt-2 font-headline-md text-headline-md leading-tight text-cream-surface lg:text-headline-lg">
+              {cfg.heroTitulo}
             </h2>
           </div>
         </section>
