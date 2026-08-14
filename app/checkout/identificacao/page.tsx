@@ -31,7 +31,7 @@ export default function Identificacao() {
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
         <span className="font-display text-headline-md text-primary">
-          Fusqueijão
+          Armazém do Queijo
         </span>
       </header>
 

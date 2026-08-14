@@ -34,7 +34,7 @@ export default function ProdutoPage() {
 
   return (
     <main className="mx-auto min-h-full max-w-[28rem] pb-32">
-      <Header nome={produto.produtor ?? "Fusqueijão"} />
+      <Header nome={produto.produtor ?? "Armazém do Queijo"} />
 
       {/* Imagem */}
       <div className="relative m-md overflow-hidden rounded-xl">

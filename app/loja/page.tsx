@@ -22,7 +22,7 @@ export default function LojaHome() {
           <span className="material-symbols-outlined">menu</span>
         </button>
         <span className="font-display text-headline-lg tracking-tight text-primary">
-          Fusqueijão
+          Armazém do Queijo
         </span>
         <Link
           href="/carrinho"
