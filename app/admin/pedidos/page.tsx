@@ -2,106 +2,35 @@
 
 import { useState } from "react";
 import { brl } from "@/lib/catalogo";
+import {
+  usePedidosLive,
+  avancarStatus,
+  type PedidoLive,
+  type StatusLive,
+} from "@/lib/pedidos-store";
 
-type Status =
-  | "Novo"
-  | "Aceito"
-  | "Preparando"
-  | "Em rota"
-  | "Entregue"
-  | "Concluído";
-
-type ItemPedido = { nome: string; qtd: string; preco: number };
-
-type Pedido = {
-  id: string;
-  cliente: string;
-  telefone: string;
-  canal: "Delivery" | "PDV";
-  loja: "Centro" | "Bairro";
-  status: Status;
-  hora: string;
-  pagamento: string;
-  entrega: string; // endereço ou "Balcão" / "Retirada — Loja X"
-  frete: number;
-  itens: ItemPedido[];
-};
-
-const STATUS_CHIP: Record<Status, string> = {
+const STATUS_CHIP: Record<StatusLive, string> = {
   Novo: "bg-error-container text-on-error-container",
-  Aceito: "bg-secondary-container text-on-secondary-container",
   Preparando: "bg-warning-amber/20 text-secondary",
   "Em rota": "bg-primary-container/15 text-primary",
   Entregue: "bg-tertiary-container/40 text-tertiary",
-  Concluído: "bg-surface-container text-on-surface-variant",
 };
-
-const PEDIDOS: Pedido[] = [
-  {
-    id: "#8421", cliente: "Mariana Silveira", telefone: "(73) 99811-2345",
-    canal: "Delivery", loja: "Centro", status: "Preparando", hora: "12:34",
-    pagamento: "Pix", entrega: "Rua das Flores, 45 — Centro", frete: 8,
-    itens: [
-      { nome: "Queijo Figueira — Meia Cura", qtd: "300g", preco: 123.3 },
-      { nome: "Geleia de Amora Artesanal", qtd: "1 un", preco: 28.5 },
-    ],
-  },
-  {
-    id: "#8420", cliente: "João Carlos Ramos", telefone: "(73) 99822-4455",
-    canal: "Delivery", loja: "Bairro", status: "Em rota", hora: "12:20",
-    pagamento: "Cartão de Crédito", entrega: "Av. da Roça, 890 — Jardim das Flores", frete: 12,
-    itens: [{ nome: "Gouda Pesto Verde", qtd: "200g", preco: 82.0 }],
-  },
-  {
-    id: "#8419", cliente: "Balcão", telefone: "—",
-    canal: "PDV", loja: "Centro", status: "Concluído", hora: "12:15",
-    pagamento: "Dinheiro", entrega: "Balcão — Loja Centro", frete: 0,
-    itens: [{ nome: "Queijo Borbinha", qtd: "200g", preco: 53.6 }],
-  },
-  {
-    id: "#8418", cliente: "Roberto Oliveira", telefone: "(73) 99833-6677",
-    canal: "Delivery", loja: "Centro", status: "Novo", hora: "12:10",
-    pagamento: "Pix", entrega: "Rua Cemitério, 110 — Itabuna", frete: 18,
-    itens: [
-      { nome: "Tábua de Frios Premium", qtd: "1 un", preco: 124.9 },
-      { nome: "Mel de Florada Silvestre", qtd: "2 un", preco: 64.0 },
-    ],
-  },
-  {
-    id: "#8417", cliente: "Ana Paula Mendes", telefone: "(73) 99866-3344",
-    canal: "Delivery", loja: "Bairro", status: "Entregue", hora: "11:52",
-    pagamento: "Pix", entrega: "Retirada — Loja Bairro", frete: 0,
-    itens: [{ nome: "Queijo Morro Azul com Trufas", qtd: "120g", preco: 64.8 }],
-  },
-  {
-    id: "#8416", cliente: "Balcão", telefone: "—",
-    canal: "PDV", loja: "Bairro", status: "Concluído", hora: "11:40",
-    pagamento: "Débito", entrega: "Balcão — Loja Bairro", frete: 0,
-    itens: [
-      { nome: "Mix de Defumados", qtd: "1 un", preco: 68.0 },
-      { nome: "Mel de Florada Silvestre", qtd: "2 un", preco: 64.0 },
-    ],
-  },
-  {
-    id: "#8415", cliente: "Carlos Nunes", telefone: "(73) 99844-8899",
-    canal: "Delivery", loja: "Centro", status: "Aceito", hora: "11:31",
-    pagamento: "Cartão de Crédito", entrega: "Rua Nova, 12 — Centro", frete: 8,
-    itens: [{ nome: "Queijo Figueira — Meia Cura", qtd: "100g", preco: 41.1 }],
-  },
-];
 
 const CANAIS = ["Todos", "Delivery", "PDV"] as const;
 
-const subtotalDe = (p: Pedido) => p.itens.reduce((s, i) => s + i.preco, 0);
-const totalDe = (p: Pedido) => subtotalDe(p) + p.frete;
+const hora = (ms: number) =>
+  new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+const subtotalDe = (p: PedidoLive) => p.itens.reduce((s, i) => s + i.preco, 0);
 
 export default function AdminPedidos() {
+  const pedidos = usePedidosLive();
   const [canal, setCanal] = useState<(typeof CANAIS)[number]>("Todos");
-  const [sel, setSel] = useState<Pedido | null>(null);
+  const [selId, setSelId] = useState<string | null>(null);
 
   const lista =
-    canal === "Todos" ? PEDIDOS : PEDIDOS.filter((p) => p.canal === canal);
-  const totalDia = PEDIDOS.reduce((s, p) => s + totalDe(p), 0);
+    canal === "Todos" ? pedidos : pedidos.filter((p) => p.canal === canal);
+  const sel = pedidos.find((p) => p.id === selId) ?? null;
+  const totalDia = pedidos.reduce((s, p) => s + p.total, 0);
 
   return (
     <div className="space-y-lg">
@@ -111,7 +40,7 @@ export default function AdminPedidos() {
             Pedidos
           </h1>
           <p className="mt-1 text-body-md text-on-surface-variant">
-            {PEDIDOS.length} pedidos hoje · {brl(totalDia)} — delivery e PDV.
+            {pedidos.length} pedidos · {brl(totalDia)} — delivery e PDV.
           </p>
         </div>
         <div className="flex rounded-lg border border-outline-variant p-1">
@@ -129,13 +58,23 @@ export default function AdminPedidos() {
         </div>
       </div>
 
+      {pedidos.length === 0 && (
+        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-lowest p-lg text-center">
+          <span className="material-symbols-outlined text-[40px] text-on-surface-variant/50">
+            receipt_long
+          </span>
+          <p className="mt-sm text-body-md text-on-surface-variant">
+            Nenhum pedido ainda. Os pedidos do delivery e as vendas do PDV
+            aparecem aqui automaticamente.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-lg lg:flex-row">
         {/* Lista */}
         <div
           className={
-            sel
-              ? "hidden lg:block lg:w-[360px] lg:flex-shrink-0"
-              : "w-full"
+            sel ? "hidden lg:block lg:w-[360px] lg:flex-shrink-0" : "w-full"
           }
         >
           <div className="space-y-sm">
@@ -144,7 +83,7 @@ export default function AdminPedidos() {
               return (
                 <button
                   key={p.id}
-                  onClick={() => setSel(p)}
+                  onClick={() => setSelId(p.id)}
                   className={`w-full rounded-xl border bg-surface-container-lowest p-md text-left shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all active:scale-[0.99] ${
                     ativo
                       ? "border-primary ring-1 ring-primary"
@@ -152,7 +91,7 @@ export default function AdminPedidos() {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-primary">{p.id}</span>
+                    <span className="font-medium text-primary">#{p.numero}</span>
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-label-sm font-medium ${STATUS_CHIP[p.status]}`}
                     >
@@ -164,18 +103,18 @@ export default function AdminPedidos() {
                       {p.cliente}
                     </span>
                     <span className="font-headline-md text-headline-md text-primary">
-                      {brl(totalDe(p))}
+                      {brl(p.total)}
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-sm text-caption text-on-surface-variant">
                     <span className="rounded-full bg-surface-container px-2 py-0.5">
                       {p.canal}
                     </span>
-                    <span>Loja {p.loja}</span>
+                    <span>
+                      {p.itens.length} {p.itens.length === 1 ? "item" : "itens"}
+                    </span>
                     <span>·</span>
-                    <span>{p.itens.length} {p.itens.length === 1 ? "item" : "itens"}</span>
-                    <span>·</span>
-                    <span>{p.hora}</span>
+                    <span>{hora(p.criadoEm)}</span>
                   </div>
                 </button>
               );
@@ -186,12 +125,12 @@ export default function AdminPedidos() {
         {/* Detalhe */}
         {sel && (
           <div className="w-full lg:flex-1">
-            <DetalhePedido pedido={sel} onFechar={() => setSel(null)} />
+            <DetalhePedido pedido={sel} onFechar={() => setSelId(null)} />
           </div>
         )}
       </div>
 
-      {!sel && (
+      {!sel && pedidos.length > 0 && (
         <p className="text-caption text-on-surface-variant">
           Toque num pedido para ver os detalhes ao lado.
         </p>
@@ -204,12 +143,13 @@ function DetalhePedido({
   pedido,
   onFechar,
 }: {
-  pedido: Pedido;
+  pedido: PedidoLive;
   onFechar: () => void;
 }) {
   const subtotal = subtotalDe(pedido);
-  const total = totalDe(pedido);
-  const ehEntrega = pedido.entrega.startsWith("Rua") || pedido.entrega.startsWith("Av");
+  const extras = pedido.total - subtotal; // frete/descontos embutidos
+  const ehEntrega = pedido.modo === "entrega";
+  const podeAvancar = pedido.status !== "Entregue";
 
   return (
     <div className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0_2px_8px_rgba(0,0,0,0.06)] lg:sticky lg:top-20">
@@ -224,10 +164,10 @@ function DetalhePedido({
           </button>
           <div>
             <h2 className="font-headline-md text-headline-md text-primary">
-              Pedido {pedido.id}
+              Pedido #{pedido.numero}
             </h2>
             <span className="text-label-sm text-on-surface-variant">
-              {pedido.hora} · {pedido.canal} · Loja {pedido.loja}
+              {hora(pedido.criadoEm)} · {pedido.canal}
             </span>
           </div>
         </div>
@@ -251,9 +191,11 @@ function DetalhePedido({
         <div className="grid gap-sm sm:grid-cols-2">
           <InfoBloco icone="person" rotulo="Cliente">
             <p className="text-body-lg text-on-surface">{pedido.cliente}</p>
-            <p className="text-label-sm text-on-surface-variant">
-              {pedido.telefone}
-            </p>
+            {pedido.telefone && (
+              <p className="text-label-sm text-on-surface-variant">
+                {pedido.telefone}
+              </p>
+            )}
           </InfoBloco>
           <InfoBloco
             icone={ehEntrega ? "location_on" : "storefront"}
@@ -284,29 +226,41 @@ function DetalhePedido({
         {/* Resumo */}
         <div className="rounded-lg bg-cream-surface p-md">
           <Linha rotulo="Subtotal" valor={brl(subtotal)} />
-          <Linha
-            rotulo={pedido.frete > 0 ? "Frete" : "Retirada / balcão"}
-            valor={pedido.frete > 0 ? brl(pedido.frete) : "Grátis"}
-          />
+          {Math.abs(extras) >= 0.01 && (
+            <Linha
+              rotulo={extras > 0 ? "Frete / ajustes" : "Descontos"}
+              valor={brl(extras)}
+            />
+          )}
           <div className="my-sm border-t border-dashed border-outline/20" />
-          <Linha rotulo="Total" valor={brl(total)} destaque />
+          <Linha rotulo="Total" valor={brl(pedido.total)} destaque />
           <p className="mt-sm flex items-center gap-1 text-label-sm text-on-surface-variant">
             <span className="material-symbols-outlined text-[16px]">
-              {pedido.pagamento === "Pix" ? "qr_code_2" : pedido.pagamento === "Dinheiro" ? "payments" : "credit_card"}
+              {pedido.pagamento.includes("Pix")
+                ? "qr_code_2"
+                : pedido.pagamento.includes("inheiro")
+                  ? "payments"
+                  : "credit_card"}
             </span>
             Pago em {pedido.pagamento}
           </p>
         </div>
 
-        {/* Ações (maquete) */}
+        {/* Ações */}
         <div className="flex gap-sm">
           <button className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-outline-variant py-3 text-label-md text-on-surface">
             <span className="material-symbols-outlined text-[20px]">print</span>
             Imprimir
           </button>
-          <button className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-primary py-3 text-label-md font-semibold text-on-primary">
-            <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
-            Avançar status
+          <button
+            onClick={() => podeAvancar && avancarStatus(pedido.id)}
+            disabled={!podeAvancar}
+            className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-primary py-3 text-label-md font-semibold text-on-primary disabled:opacity-40"
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              arrow_forward
+            </span>
+            {podeAvancar ? "Avançar status" : "Entregue"}
           </button>
         </div>
       </div>
