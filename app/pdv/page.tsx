@@ -12,6 +12,7 @@ import {
   type Produto,
 } from "@/lib/catalogo";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
+import { registrarVendaPDV } from "@/lib/pedidos-store";
 
 type ItemVenda = {
   key: string;
@@ -160,6 +161,18 @@ export default function PDV() {
         total: prev[pagamento].total + total,
       },
     }));
+    // Registra a venda na espinha — aparece na gestão de pedidos, relatórios
+    // e clientes (mesma fonte do delivery).
+    registrarVendaPDV({
+      cliente: "Consumidor",
+      pagamento: PAG_LABEL[pagamento] ?? pagamento,
+      itens: itens.map((it) => ({
+        nome: it.nome,
+        qtd: it.pesoG ? gramas(it.pesoG) : `${it.qtd} un`,
+        preco: it.precoLinha,
+      })),
+      total,
+    });
     setCupom({
       numero: String(Math.floor(1000 + Math.random() * 9000)),
       hora: new Date().toLocaleTimeString("pt-BR", {
