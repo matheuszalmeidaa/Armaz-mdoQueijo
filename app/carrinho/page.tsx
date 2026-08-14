@@ -17,7 +17,8 @@ import { useConfig } from "@/lib/config-store";
 
 export default function Carrinho() {
   const router = useRouter();
-  const { itens, add, remover, limpar, total, dados, setDados } = useCart();
+  const { itens, add, alterarQtd, remover, limpar, total, dados, setDados } =
+    useCart();
   const pagamento = dados.pagamento ?? "pix";
   const modo = dados.modo ?? "entrega";
 
@@ -26,6 +27,10 @@ export default function Carrinho() {
 
   const cfg = useConfig();
   const r = calcularResumo(total, dados, cfg);
+  const faltaMinimo =
+    modo === "entrega" &&
+    cfg.pedidoMinimo > 0 &&
+    r.subtotal < cfg.pedidoMinimo;
 
   const noCarrinho = (id: string) => itens.some((i) => i.produtoId === id);
 
@@ -122,18 +127,43 @@ export default function Carrinho() {
                     {it.nome}
                   </h4>
                   <span className="text-caption text-on-surface-variant">
-                    {it.pesoG ? `Pedaço aprox. ${gramas(it.pesoG)}` : `${it.qtd} un`}
+                    {it.pesoG
+                      ? `Pedaço aprox. ${gramas(it.pesoG)}${it.qtd > 1 ? ` × ${it.qtd}` : ""}`
+                      : `${it.qtd} un`}
                   </span>
                   <p className="mt-1 font-headline-md text-headline-md text-primary">
                     {brl(it.precoLinha)}
                   </p>
                 </div>
-                <button
-                  onClick={() => remover(it.key)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-danger-red active:scale-90"
-                >
-                  <span className="material-symbols-outlined">delete</span>
-                </button>
+                <div className="flex flex-col items-end gap-1">
+                  <button
+                    onClick={() => remover(it.key)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-danger-red active:scale-90"
+                    aria-label="Remover"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">delete</span>
+                  </button>
+                  <div className="flex items-center gap-1 rounded-full border border-outline-variant px-1 py-0.5">
+                    <button
+                      onClick={() => alterarQtd(it.key, -1)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-primary active:scale-90 disabled:opacity-30"
+                      disabled={it.qtd <= 1}
+                      aria-label="Menos um"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">remove</span>
+                    </button>
+                    <span className="w-5 text-center text-body-md font-semibold">
+                      {it.qtd}
+                    </span>
+                    <button
+                      onClick={() => alterarQtd(it.key, 1)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-primary active:scale-90"
+                      aria-label="Mais um"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">add</span>
+                    </button>
+                  </div>
+                </div>
               </li>
             ))}
           </ul>
@@ -163,7 +193,8 @@ export default function Carrinho() {
                 <span className="material-symbols-outlined text-secondary">
                   local_shipping
                 </span>
-                A taxa de entrega é calculada pelo seu bairro no endereço.
+                Taxa de entrega:{" "}
+                <strong className="text-on-surface">{brl(cfg.frete)}</strong>
               </p>
             ) : (
               <div className="mt-sm">
@@ -207,10 +238,59 @@ export default function Carrinho() {
                 ativo={pagamento === "cartao"}
                 onClick={() => setDados({ pagamento: "cartao" })}
                 icone="credit_card"
-                titulo="Cartão de Crédito"
-                sub="Até 6x sem juros"
+                titulo="Cartão (maquineta na entrega)"
+                sub="Débito ou crédito"
+              />
+              <OpcaoPagamento
+                ativo={pagamento === "dinheiro"}
+                onClick={() => setDados({ pagamento: "dinheiro" })}
+                icone="payments"
+                titulo="Dinheiro"
+                sub="Pague na entrega"
               />
             </div>
+
+            {pagamento === "pix" && cfg.pixChave && (
+              <div className="mt-sm flex items-center justify-between gap-sm rounded-lg bg-surface-container-low px-md py-2.5">
+                <div className="min-w-0">
+                  <p className="text-label-sm text-on-surface-variant">Chave Pix</p>
+                  <p className="truncate text-body-md text-on-surface">
+                    {cfg.pixChave}
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigator.clipboard?.writeText(cfg.pixChave)}
+                  className="flex flex-shrink-0 items-center gap-1 rounded-lg border border-outline-variant px-3 py-2 text-label-md text-primary active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    content_copy
+                  </span>
+                  Copiar
+                </button>
+              </div>
+            )}
+
+            {pagamento === "dinheiro" && (
+              <div className="mt-sm rounded-lg bg-surface-container-low px-md py-2.5">
+                <label className="block text-label-sm text-on-surface-variant">
+                  Precisa de troco? Troco para quanto?
+                </label>
+                <div className="mt-1 flex items-center gap-1">
+                  <span className="text-body-md text-on-surface-variant">R$</span>
+                  <input
+                    inputMode="decimal"
+                    value={dados.trocoPara ? String(dados.trocoPara) : ""}
+                    onChange={(e) =>
+                      setDados({
+                        trocoPara: Number(e.target.value.replace(",", ".")) || undefined,
+                      })
+                    }
+                    placeholder="Sem troco"
+                    className="w-full bg-transparent text-body-lg outline-none"
+                  />
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Cupom */}
@@ -387,9 +467,17 @@ export default function Carrinho() {
 
           {/* Continuar */}
           <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
+            {faltaMinimo && (
+              <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-danger-red">
+                <span className="material-symbols-outlined text-[16px]">info</span>
+                Pedido mínimo de {brl(cfg.pedidoMinimo)} — faltam{" "}
+                {brl(cfg.pedidoMinimo - r.subtotal)}.
+              </p>
+            )}
             <button
               onClick={() => router.push("/checkout/identificacao")}
-              className="flex w-full items-center justify-between rounded-lg bg-primary px-lg py-4 text-on-primary shadow-lg transition-transform active:scale-[0.98]"
+              disabled={faltaMinimo}
+              className="flex w-full items-center justify-between rounded-lg bg-primary px-lg py-4 text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
             >
               <span className="flex items-center gap-2 text-body-lg font-semibold">
                 Continuar

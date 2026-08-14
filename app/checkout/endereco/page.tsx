@@ -15,10 +15,30 @@ function mascarar(valor: string, visiveis: number) {
 export default function Endereco() {
   const router = useRouter();
   const { dados, setDados } = useCart();
-  const [endereco, setEndereco] = useState(dados.endereco ?? "");
+  const [rua, setRua] = useState(dados.rua ?? "");
+  const [numero, setNumero] = useState(dados.numero ?? "");
+  const [complemento, setComplemento] = useState(dados.complemento ?? "");
+  const [bairro, setBairro] = useState(dados.bairro ?? "");
+  const [referencia, setReferencia] = useState(dados.referencia ?? "");
+
+  const valido =
+    rua.trim().length > 2 && numero.trim().length > 0 && bairro.trim().length > 1;
 
   function confirmar() {
-    setDados({ endereco: endereco.trim() });
+    if (!valido) return;
+    const enderecoStr =
+      `${rua.trim()}, ${numero.trim()}` +
+      (complemento.trim() ? ` — ${complemento.trim()}` : "") +
+      ` — ${bairro.trim()}` +
+      (referencia.trim() ? ` (ref: ${referencia.trim()})` : "");
+    setDados({
+      rua: rua.trim(),
+      numero: numero.trim(),
+      complemento: complemento.trim(),
+      bairro: bairro.trim(),
+      referencia: referencia.trim(),
+      endereco: enderecoStr,
+    });
     router.push("/checkout/revisao");
   }
 
@@ -77,19 +97,40 @@ export default function Endereco() {
         <h2 className="mt-lg font-headline-md text-headline-md text-on-surface">
           Endereço de entrega
         </h2>
-        <div className="mt-sm rounded-xl border-2 border-primary bg-surface-container-lowest p-md">
-          <div className="flex items-start gap-sm">
-            <span className="material-symbols-outlined text-primary">
-              location_on
-            </span>
-            <textarea
-              value={endereco}
-              onChange={(e) => setEndereco(e.target.value)}
-              rows={2}
-              placeholder="Rua, número, bairro, cidade - UF, CEP"
-              className="w-full resize-none bg-transparent text-body-lg outline-none placeholder:text-on-surface-variant/60"
+        <div className="mt-sm space-y-sm">
+          <div className="grid grid-cols-3 gap-sm">
+            <CampoEnd
+              className="col-span-2"
+              rotulo="Rua"
+              valor={rua}
+              onChange={setRua}
+              placeholder="Nome da rua"
+            />
+            <CampoEnd
+              rotulo="Número"
+              valor={numero}
+              onChange={setNumero}
+              placeholder="123"
             />
           </div>
+          <CampoEnd
+            rotulo="Complemento (opcional)"
+            valor={complemento}
+            onChange={setComplemento}
+            placeholder="Apto, bloco, casa..."
+          />
+          <CampoEnd
+            rotulo="Bairro"
+            valor={bairro}
+            onChange={setBairro}
+            placeholder="Seu bairro"
+          />
+          <CampoEnd
+            rotulo="Ponto de referência (opcional)"
+            valor={referencia}
+            onChange={setReferencia}
+            placeholder="Perto de..., portão azul..."
+          />
         </div>
       </div>
 
@@ -97,13 +138,39 @@ export default function Endereco() {
       <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
         <button
           onClick={confirmar}
-          disabled={endereco.trim().length < 8}
+          disabled={!valido}
           className="w-full rounded-lg bg-primary px-lg py-4 text-body-lg font-semibold text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
         >
           Confirmar o endereço
         </button>
       </div>
     </main>
+  );
+}
+
+function CampoEnd({
+  rotulo,
+  valor,
+  onChange,
+  placeholder,
+  className,
+}: {
+  rotulo: string;
+  valor: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <label className="block text-label-sm text-on-surface-variant">{rotulo}</label>
+      <input
+        value={valor}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none placeholder:text-on-surface-variant/50 focus:border-primary"
+      />
+    </div>
   );
 }
 

@@ -21,8 +21,15 @@ export type ItemCarrinho = {
 export type DadosCheckout = {
   nome?: string;
   telefone?: string;
+  // Endereço estruturado + string formatada para exibição/mensagem.
   endereco?: string;
-  pagamento?: "pix" | "cartao";
+  rua?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  referencia?: string;
+  pagamento?: "pix" | "cartao" | "dinheiro";
+  trocoPara?: number; // quando pagamento = dinheiro
   modo?: "entrega" | "retirada";
   zonaId?: string;
   lojaRetiradaId?: string;
@@ -32,6 +39,7 @@ export type DadosCheckout = {
 type CartCtx = {
   itens: ItemCarrinho[];
   add: (item: ItemCarrinho) => void;
+  alterarQtd: (key: string, delta: number) => void;
   remover: (key: string) => void;
   limpar: () => void;
   total: number;
@@ -90,6 +98,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  // Muda a quantidade escalando o preço da linha (unitário = precoLinha/qtd).
+  function alterarQtd(key: string, delta: number) {
+    setItens((prev) =>
+      prev.map((x) => {
+        if (x.key !== key) return x;
+        const novaQtd = Math.max(1, x.qtd + delta);
+        const unit = x.precoLinha / x.qtd;
+        return { ...x, qtd: novaQtd, precoLinha: unit * novaQtd };
+      })
+    );
+  }
+
   const remover = (key: string) =>
     setItens((prev) => prev.filter((x) => x.key !== key));
   const limpar = () => setItens([]);
@@ -99,7 +119,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ itens, add, remover, limpar, total, qtdItens, dados, setDados }}
+      value={{ itens, add, alterarQtd, remover, limpar, total, qtdItens, dados, setDados }}
     >
       {children}
     </Ctx.Provider>

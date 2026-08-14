@@ -47,6 +47,8 @@ export type ConfigLoja = {
   heroImg: string; // banner da vitrine (URL ou caminho em /produtos); "" = gradiente
   heroTag: string; // etiqueta do banner
   heroTitulo: string; // título do banner
+  pixChave: string; // chave Pix mostrada ao cliente
+  pedidoMinimo: number; // valor mínimo do pedido (entrega); 0 = sem mínimo
 };
 
 export const CONFIG_PADRAO: ConfigLoja = {
@@ -78,6 +80,8 @@ export const CONFIG_PADRAO: ConfigLoja = {
   heroImg: "",
   heroTag: "SUGESTÃO DO DIA",
   heroTitulo: "Queijo Canastra com Mel de Laranjeira",
+  pixChave: "",
+  pedidoMinimo: 0,
 };
 
 // Fotos disponíveis para o banner sem upload (as que já vêm no projeto).

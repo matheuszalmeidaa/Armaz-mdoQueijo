@@ -39,6 +39,10 @@ export default function Configuracoes() {
   const [heroImg, setHeroImg] = useState(CONFIG_PADRAO.heroImg);
   const [heroTag, setHeroTag] = useState(CONFIG_PADRAO.heroTag);
   const [heroTitulo, setHeroTitulo] = useState(CONFIG_PADRAO.heroTitulo);
+  const [pixChave, setPixChave] = useState(CONFIG_PADRAO.pixChave);
+  const [pedidoMinimo, setPedidoMinimo] = useState(
+    String(CONFIG_PADRAO.pedidoMinimo)
+  );
   const [salvo, setSalvo] = useState(false);
 
   // Carrega o que já foi salvo (localStorage) ao abrir a tela.
@@ -61,6 +65,8 @@ export default function Configuracoes() {
     setHeroImg(c.heroImg);
     setHeroTag(c.heroTag);
     setHeroTitulo(c.heroTitulo);
+    setPixChave(c.pixChave);
+    setPedidoMinimo(String(c.pedidoMinimo));
   }, []);
 
   function salvar() {
@@ -88,6 +94,8 @@ export default function Configuracoes() {
       heroImg: heroImg.trim(),
       heroTag: heroTag.trim(),
       heroTitulo: heroTitulo.trim(),
+      pixChave: pixChave.trim(),
+      pedidoMinimo: num(pedidoMinimo),
     };
     salvarConfig(c);
     setSalvo(true);
@@ -347,6 +355,13 @@ export default function Configuracoes() {
           onChange={setPreparoMin}
           dica="Base para a previsão de entrega mostrada ao cliente."
         />
+        <Campo
+          rotulo="Pedido mínimo (entrega)"
+          prefixo="R$"
+          valor={pedidoMinimo}
+          onChange={setPedidoMinimo}
+          dica="0 = sem mínimo. Abaixo disso, o cliente não fecha o pedido de entrega."
+        />
       </Secao>
 
       {/* Zonas e taxas */}
@@ -516,6 +531,12 @@ export default function Configuracoes() {
           valor={pix}
           onChange={setPix}
           dica="Desconto aplicado quando o cliente escolhe Pix."
+        />
+        <Campo
+          rotulo="Chave Pix"
+          valor={pixChave}
+          onChange={setPixChave}
+          dica="Mostrada ao cliente no checkout e enviada no WhatsApp do pedido."
         />
       </Secao>
 

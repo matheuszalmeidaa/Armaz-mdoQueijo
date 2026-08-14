@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useUltimoPedido, type StatusLive } from "@/lib/pedidos-store";
+import { useConfig } from "@/lib/config-store";
+import { linkWhatsApp } from "@/lib/pedido-msg";
 
 // As etapas espelham o status_venda da espinha (schema.sql).
 const ETAPAS = [
@@ -30,10 +32,30 @@ const HERO: Record<StatusLive, { titulo: string; sub: string; icone: string }> =
 
 export default function AcompanhamentoPedido() {
   const pedido = useUltimoPedido();
+  const cfg = useConfig();
   const status: StatusLive = pedido?.status ?? "Preparando";
   const passoAtual = PASSO[status];
   const hero = HERO[status];
   const numero = pedido?.numero ?? "----";
+
+  // Previsão calculada: criação + tempo de preparo/entrega da config.
+  const previsao = (() => {
+    if (!pedido) return null;
+    const f = (ms: number) =>
+      new Date(ms).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    return `${f(pedido.criadoEm + cfg.tempoEntregaMin * 60000)} - ${f(
+      pedido.criadoEm + cfg.tempoEntregaMax * 60000
+    )}`;
+  })();
+
+  const ajudaHref =
+    linkWhatsApp(
+      cfg.whatsapp,
+      `Olá! Preciso de ajuda com meu pedido #${numero}.`
+    ) ?? undefined;
 
   return (
     <main className="mx-auto min-h-full max-w-[28rem] pb-24">
@@ -55,11 +77,12 @@ export default function AcompanhamentoPedido() {
             {hero.titulo}
           </h1>
           <p className="mt-xs text-body-md text-on-surface-variant">{hero.sub}</p>
-          {status !== "Entregue" && (
+          {status !== "Entregue" && previsao && (
             <div className="mt-md flex items-center gap-sm rounded-lg border-l-4 border-primary bg-surface-container px-md py-2">
               <span className="material-symbols-outlined text-primary">schedule</span>
               <span className="text-body-md text-on-surface">
-                Previsão de Entrega <strong className="text-primary">12:45 - 13:00</strong>
+                {pedido?.modo === "retirada" ? "Pronto para retirada" : "Previsão de entrega"}{" "}
+                <strong className="text-primary">{previsao}</strong>
               </span>
             </div>
           )}
@@ -113,7 +136,14 @@ export default function AcompanhamentoPedido() {
 
       {/* Ajuda */}
       <section className="px-md pt-md">
-        <a href="#" className="flex items-center justify-center gap-sm rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-md py-3 text-body-md text-on-surface active:scale-[0.99]">
+        <a
+          href={ajudaHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`flex items-center justify-center gap-sm rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-md py-3 text-body-md text-on-surface active:scale-[0.99] ${
+            ajudaHref ? "" : "pointer-events-none opacity-40"
+          }`}
+        >
           <span className="material-symbols-outlined text-tertiary">chat</span>
           Precisa de ajuda? Falar no WhatsApp
         </a>

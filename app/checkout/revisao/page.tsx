@@ -7,6 +7,13 @@ import { brl, gramas } from "@/lib/catalogo";
 import { calcularResumo, prazoDe, LOJAS_RETIRADA } from "@/lib/regras";
 import { useConfig, lojaAbertaAgora } from "@/lib/config-store";
 import { adicionarPedido } from "@/lib/pedidos-store";
+import { mensagemPedido, linkWhatsApp, formatarEndereco } from "@/lib/pedido-msg";
+
+const PAG_LABEL: Record<string, string> = {
+  pix: "Pix",
+  cartao: "Maquineta (cartão)",
+  dinheiro: "Dinheiro",
+};
 
 export default function Revisao() {
   const router = useRouter();
@@ -20,9 +27,16 @@ export default function Revisao() {
 
   function finalizar() {
     if (!status.aberta) return;
+
+    const itensMsg = itens.map((it) => ({
+      nome: it.nome,
+      qtd: it.pesoG ? gramas(it.pesoG) : `${it.qtd} un`,
+      preco: it.precoLinha,
+    }));
+
     // Cria o pedido na "espinha temporária" (localStorage) — cai no painel de
-    // recebimento do lojista com alerta. Com o Supabase, vira realtime.
-    adicionarPedido({
+    // recebimento do lojista. Com o Supabase, vira realtime.
+    const pedido = adicionarPedido({
       cliente: dados.nome || "Cliente",
       telefone: dados.telefone,
       canal: "Delivery",
@@ -30,15 +44,24 @@ export default function Revisao() {
       entrega:
         modo === "retirada"
           ? `Retirada — ${lojaRetirada?.nome ?? "loja"}`
-          : dados.endereco || "Endereço não informado",
-      pagamento: pagamento === "pix" ? "Pix" : "Maquineta (cartão)",
-      itens: itens.map((it) => ({
-        nome: it.nome,
-        qtd: it.pesoG ? gramas(it.pesoG) : `${it.qtd} un`,
-        preco: it.precoLinha,
-      })),
+          : formatarEndereco(dados) || "Endereço não informado",
+      pagamento: PAG_LABEL[pagamento] ?? pagamento,
+      itens: itensMsg,
       total: r.total,
     });
+
+    // Envia o pedido para o WhatsApp da loja (é como o pedido chega hoje).
+    const texto = mensagemPedido({
+      numero: pedido.numero,
+      dados,
+      itens: itensMsg,
+      resumo: r,
+      pixChave: cfg.pixChave,
+      lojaRetiradaNome: lojaRetirada?.nome,
+    });
+    const link = linkWhatsApp(cfg.whatsapp, texto);
+    if (link) window.open(link, "_blank");
+
     router.push("/pedido");
     setTimeout(limpar, 400);
   }
@@ -144,11 +167,27 @@ export default function Revisao() {
         <div className="mt-sm flex items-center justify-between rounded-xl bg-surface-container-lowest p-md shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
           <div className="flex items-center gap-sm">
             <span className="material-symbols-outlined text-secondary">
-              {pagamento === "pix" ? "qr_code_2" : "credit_card"}
+              {pagamento === "pix"
+                ? "qr_code_2"
+                : pagamento === "dinheiro"
+                  ? "payments"
+                  : "credit_card"}
             </span>
-            <span className="text-body-lg text-on-surface">
-              {pagamento === "pix" ? "Pix" : "Cartão de Crédito"}
-            </span>
+            <div className="leading-tight">
+              <span className="block text-body-lg text-on-surface">
+                {PAG_LABEL[pagamento] ?? pagamento}
+              </span>
+              {pagamento === "dinheiro" && dados.trocoPara ? (
+                <span className="text-label-sm text-on-surface-variant">
+                  Troco para {brl(dados.trocoPara)}
+                </span>
+              ) : null}
+              {pagamento === "pix" && cfg.pixChave ? (
+                <span className="text-label-sm text-on-surface-variant">
+                  Chave: {cfg.pixChave}
+                </span>
+              ) : null}
+            </div>
           </div>
           <Link href="/carrinho" className="text-label-md text-secondary">
             Alterar
@@ -195,9 +234,9 @@ export default function Revisao() {
           disabled={!status.aberta}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-lg py-4 text-body-lg font-semibold text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
         >
-          {status.aberta ? "Finalizar Pedido" : "Loja fechada no momento"}
+          {status.aberta ? "Enviar pedido pelo WhatsApp" : "Loja fechada no momento"}
           {status.aberta && (
-            <span className="material-symbols-outlined">arrow_forward</span>
+            <span className="material-symbols-outlined">chat</span>
           )}
         </button>
       </div>
