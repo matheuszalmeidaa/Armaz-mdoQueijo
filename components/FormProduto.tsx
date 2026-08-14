@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { CATEGORIAS, brl, type Produto } from "@/lib/catalogo";
+import { CATALOGO, CATEGORIAS, brl, type Produto } from "@/lib/catalogo";
 
 type Faixa = { min: string; kg: string };
 
@@ -41,6 +41,7 @@ export function FormProduto({
   );
 
   const [descricao, setDescricao] = useState(inicial?.descricao ?? "");
+  const [vinculadoId, setVinculadoId] = useState(inicial?.vinculadoId ?? "");
   const [custo, setCusto] = useState("");
   const [codigoBarras, setCodigoBarras] = useState("");
   const [salvo, setSalvo] = useState(false);
@@ -288,6 +289,30 @@ export function FormProduto({
           placeholder="Sobre o produto, origem, sugestão de consumo..."
           className="w-full resize-none rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-md outline-none focus:border-primary"
         />
+      </Secao>
+
+      <Secao titulo="Sugerir junto (Vai bem com)">
+        <p className="text-label-sm text-on-surface-variant">
+          Quando o cliente adiciona este produto, sugerimos o escolhido abaixo no
+          carrinho — pra subir o ticket com combinações que fazem sentido.
+        </p>
+        <div className="flex items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 focus-within:border-primary">
+          <span className="material-symbols-outlined text-on-surface-variant">
+            recommend
+          </span>
+          <select
+            value={vinculadoId}
+            onChange={(e) => setVinculadoId(e.target.value)}
+            className="w-full bg-transparent text-body-lg outline-none"
+          >
+            <option value="">Nenhum</option>
+            {CATALOGO.filter((p) => p.id !== inicial?.id).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome}
+              </option>
+            ))}
+          </select>
+        </div>
       </Secao>
 
       <div className="flex flex-wrap items-center justify-between gap-md rounded-xl bg-cream-surface p-md">

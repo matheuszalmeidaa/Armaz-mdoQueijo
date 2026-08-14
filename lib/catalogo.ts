@@ -16,6 +16,7 @@ type Base = {
   origem?: string;
   intensidade?: string;
   novidade?: boolean; // tag manual "Novidade"
+  vinculadoId?: string; // "Vai bem com" — produto sugerido junto no carrinho
 };
 
 export type Produto = Base &
@@ -42,6 +43,7 @@ export const CATALOGO: Produto[] = [
       "Um meia cura de leite cru, casca natural e massa amanteigada. Derrete na boca e combina com geleias e um bom tinto.",
     origem: "Serra da Canastra, MG",
     intensidade: "Média",
+    vinculadoId: "geleia-amora",
     tipo: "peso",
     pesos: [200, 300, 400, 500, 750, 1000],
     faixas: [
@@ -62,6 +64,7 @@ export const CATALOGO: Produto[] = [
     origem: "Pomerode, SC",
     intensidade: "Média-Alta",
     novidade: true,
+    vinculadoId: "tabua-frios",
     tipo: "peso",
     pesos: [200, 300, 400, 500],
     faixas: [
@@ -82,6 +85,7 @@ export const CATALOGO: Produto[] = [
     origem: "Pomerode, SC",
     intensidade: "Média-Alta",
     novidade: true,
+    vinculadoId: "mel-silvestre",
     tipo: "peso",
     pesos: [120, 240, 360, 480],
     faixas: [
@@ -100,6 +104,7 @@ export const CATALOGO: Produto[] = [
       "Queijo de casca lavada, macio e de sabor marcante. Um clássico da roça para quem gosta de intensidade.",
     origem: "Serra da Canastra, MG",
     intensidade: "Alta",
+    vinculadoId: "geleia-amora",
     tipo: "peso",
     pesos: [200, 270, 400, 540],
     faixas: [
@@ -155,6 +160,12 @@ export const CATALOGO: Produto[] = [
 ];
 
 export const getProduto = (id: string) => CATALOGO.find((p) => p.id === id);
+
+// "Vai bem com": o produto que o lojista vinculou a este (sugerido no carrinho).
+export const getVinculado = (id: string) => {
+  const p = getProduto(id);
+  return p?.vinculadoId ? getProduto(p.vinculadoId) : undefined;
+};
 
 // --- Helpers de preço ---
 export function precoPorKg(p: Extract<Produto, { tipo: "peso" }>, pesoG: number) {

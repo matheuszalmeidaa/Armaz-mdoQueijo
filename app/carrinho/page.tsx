@@ -4,7 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
-import { CATALOGO, brl, gramas } from "@/lib/catalogo";
+import {
+  CATALOGO,
+  brl,
+  gramas,
+  getProduto,
+  precoBase,
+  type Produto,
+} from "@/lib/catalogo";
 import { calcularResumo, buscarCupom, LOJAS_RETIRADA, REGRAS } from "@/lib/regras";
 
 export default function Carrinho() {
@@ -18,10 +25,32 @@ export default function Carrinho() {
 
   const r = calcularResumo(total, dados);
 
-  // Upsell: produtos por unidade que ainda não estão no carrinho
-  const sugestoes = CATALOGO.filter(
-    (p) => p.tipo === "unidade" && !itens.some((i) => i.produtoId === p.id)
+  const noCarrinho = (id: string) => itens.some((i) => i.produtoId === id);
+
+  // "Vai bem com": produtos que o lojista vinculou aos itens do carrinho.
+  const vinculados = (() => {
+    const vistos = new Set<string>();
+    const out: Produto[] = [];
+    for (const i of itens) {
+      const vid = getProduto(i.produtoId)?.vinculadoId;
+      if (!vid || vistos.has(vid) || noCarrinho(vid)) continue;
+      const vp = getProduto(vid);
+      if (vp) {
+        vistos.add(vid);
+        out.push(vp);
+      }
+    }
+    return out.slice(0, 2);
+  })();
+
+  // Sem vínculo cadastrado: cai no upsell genérico (unidades fora do carrinho).
+  const genericos = CATALOGO.filter(
+    (p) => p.tipo === "unidade" && !noCarrinho(p.id)
   ).slice(0, 2);
+
+  const sugestoes = vinculados.length > 0 ? vinculados : genericos;
+  const tituloUpsell =
+    vinculados.length > 0 ? "Vai bem com" : "Combine com seu pedido";
 
   function aplicarCupom() {
     const c = buscarCupom(cupomInput);
@@ -233,11 +262,11 @@ export default function Carrinho() {
             )}
           </section>
 
-          {/* Upsell */}
+          {/* Upsell — produto vinculado ("Vai bem com") ou sugestão genérica */}
           {sugestoes.length > 0 && (
             <section className="mt-lg px-md">
               <h3 className="mb-sm font-headline-md text-headline-md text-on-surface">
-                Combine com seu pedido
+                {tituloUpsell}
               </h3>
               <div className="grid grid-cols-2 gap-gutter">
                 {sugestoes.map((p) => (
@@ -253,28 +282,47 @@ export default function Carrinho() {
                     <h4 className="line-clamp-1 text-label-md text-on-surface">
                       {p.nome}
                     </h4>
-                    <div className="mt-auto flex items-center justify-between pt-sm">
-                      <span className="font-headline-md text-headline-md text-primary">
-                        {brl(p.tipo === "unidade" ? p.preco : 0)}
-                      </span>
-                      <button
-                        onClick={() =>
-                          p.tipo === "unidade" &&
-                          add({
-                            key: p.id,
-                            produtoId: p.id,
-                            nome: p.nome,
-                            icone: p.icone,
-                            qtd: 1,
-                            precoLinha: p.preco,
-                          })
-                        }
-                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-container text-white active:scale-90"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">
-                          add
+                    <div className="mt-auto flex items-end justify-between pt-sm">
+                      <div className="flex flex-col leading-tight">
+                        {p.tipo === "peso" && (
+                          <span className="text-caption text-on-surface-variant">
+                            a partir de
+                          </span>
+                        )}
+                        <span className="font-headline-md text-headline-md text-primary">
+                          {brl(precoBase(p))}
                         </span>
-                      </button>
+                      </div>
+                      {p.tipo === "unidade" ? (
+                        <button
+                          aria-label={`Adicionar ${p.nome}`}
+                          onClick={() =>
+                            add({
+                              key: p.id,
+                              produtoId: p.id,
+                              nome: p.nome,
+                              icone: p.icone,
+                              qtd: 1,
+                              precoLinha: p.preco,
+                            })
+                          }
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-container text-white active:scale-90"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">
+                            add
+                          </span>
+                        </button>
+                      ) : (
+                        <Link
+                          href={`/produto/${p.id}`}
+                          aria-label={`Escolher peso de ${p.nome}`}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-container text-white active:scale-90"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">
+                            scale
+                          </span>
+                        </Link>
+                      )}
                     </div>
                   </div>
                 ))}
