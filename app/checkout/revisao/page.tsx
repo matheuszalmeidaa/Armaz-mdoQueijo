@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { brl, gramas } from "@/lib/catalogo";
 import { calcularResumo, prazoDe, LOJAS_RETIRADA } from "@/lib/regras";
+import { useConfig } from "@/lib/config-store";
 import { adicionarPedido } from "@/lib/pedidos-store";
 
 export default function Revisao() {
@@ -12,7 +13,8 @@ export default function Revisao() {
   const { itens, total, dados, limpar } = useCart();
   const pagamento = dados.pagamento ?? "pix";
   const modo = dados.modo ?? "entrega";
-  const r = calcularResumo(total, dados);
+  const cfg = useConfig();
+  const r = calcularResumo(total, dados, cfg);
   const lojaRetirada = LOJAS_RETIRADA.find((l) => l.id === dados.lojaRetiradaId);
 
   function finalizar() {
@@ -20,6 +22,7 @@ export default function Revisao() {
     // recebimento do lojista com alerta. Com o Supabase, vira realtime.
     adicionarPedido({
       cliente: dados.nome || "Cliente",
+      telefone: dados.telefone,
       canal: "Delivery",
       modo,
       entrega:
@@ -86,7 +89,7 @@ export default function Revisao() {
               <p className="text-label-sm text-on-surface-variant">
                 {modo === "retirada"
                   ? "Retire no balcão quando estiver pronto"
-                  : `Tempo estimado: ${prazoDe(dados)}`}
+                  : `Tempo estimado: ${prazoDe(dados, cfg)}`}
               </p>
             </div>
           </div>

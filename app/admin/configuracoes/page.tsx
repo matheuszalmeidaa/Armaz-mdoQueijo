@@ -1,25 +1,58 @@
 "use client";
 
-import { useState } from "react";
-import { REGRAS, ZONAS, CUPONS } from "@/lib/regras";
+import { useEffect, useState } from "react";
+import { ZONAS, CUPONS } from "@/lib/regras";
+import {
+  CONFIG_PADRAO,
+  lerConfig,
+  salvarConfig,
+  type ConfigLoja,
+} from "@/lib/config-store";
 import { brl } from "@/lib/catalogo";
 
+const num = (v: string) => Number(v.replace(",", ".")) || 0;
+
 export default function Configuracoes() {
-  // Pré-preenchido com as regras padrão. No futuro salva no Supabase por loja.
-  const [taxa, setTaxa] = useState(String(REGRAS.frete));
-  const [pix, setPix] = useState(String(Math.round(REGRAS.descontoPix * 100)));
-  const [preparoMin, setPreparoMin] = useState(String(REGRAS.tempoEntregaMin));
-  const [toleranciaCorte, setToleranciaCorte] = useState("10");
-  const [whatsapp, setWhatsapp] = useState("(73) 99811-2345");
-  const [somPedido, setSomPedido] = useState(true);
-  const [cashbackAtivo, setCashbackAtivo] = useState(REGRAS.cashback.ativo);
+  const [taxa, setTaxa] = useState(String(CONFIG_PADRAO.frete));
+  const [pix, setPix] = useState(String(Math.round(CONFIG_PADRAO.descontoPix * 100)));
+  const [preparoMin, setPreparoMin] = useState(String(CONFIG_PADRAO.tempoEntregaMin));
+  const [toleranciaCorte, setToleranciaCorte] = useState(
+    String(CONFIG_PADRAO.toleranciaCorte)
+  );
+  const [whatsapp, setWhatsapp] = useState(CONFIG_PADRAO.whatsapp);
+  const [somPedido, setSomPedido] = useState(CONFIG_PADRAO.somPedido);
+  const [cashbackAtivo, setCashbackAtivo] = useState(CONFIG_PADRAO.cashbackAtivo);
   const [cashbackPct, setCashbackPct] = useState(
-    String(Math.round(REGRAS.cashback.percent * 100))
+    String(Math.round(CONFIG_PADRAO.cashbackPercent * 100))
   );
   const [salvo, setSalvo] = useState(false);
 
+  // Carrega o que já foi salvo (localStorage) ao abrir a tela.
+  useEffect(() => {
+    const c = lerConfig();
+    setTaxa(String(c.frete));
+    setPix(String(Math.round(c.descontoPix * 100)));
+    setPreparoMin(String(c.tempoEntregaMin));
+    setToleranciaCorte(String(c.toleranciaCorte));
+    setWhatsapp(c.whatsapp);
+    setSomPedido(c.somPedido);
+    setCashbackAtivo(c.cashbackAtivo);
+    setCashbackPct(String(Math.round(c.cashbackPercent * 100)));
+  }, []);
+
   function salvar() {
-    // Mock: sem Supabase ainda. Aqui persistiria as regras da loja.
+    const c: ConfigLoja = {
+      frete: num(taxa),
+      descontoPix: num(pix) / 100,
+      tempoEntregaMin: num(preparoMin),
+      tempoEntregaMax: CONFIG_PADRAO.tempoEntregaMax,
+      toleranciaCorte: num(toleranciaCorte),
+      whatsapp: whatsapp.trim(),
+      somPedido,
+      cashbackAtivo,
+      cashbackPercent: num(cashbackPct) / 100,
+    };
+    salvarConfig(c);
     setSalvo(true);
     setTimeout(() => setSalvo(false), 2000);
   }
@@ -194,8 +227,9 @@ export default function Configuracoes() {
         )}
       </div>
       <p className="text-caption text-on-surface-variant">
-        * Ainda em maquete — ao ligar o Supabase, isto passa a salvar de verdade
-        por loja.
+        * Salvo neste aparelho e já vale para o delivery (taxa, Pix, tempo,
+        cashback). Ao ligar o Supabase, passa a valer por loja em todos os
+        aparelhos.
       </p>
     </div>
   );

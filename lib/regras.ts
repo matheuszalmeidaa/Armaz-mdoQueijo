@@ -47,23 +47,36 @@ export function buscarCupom(codigo?: string) {
   return CUPONS.find((c) => c.codigo === codigo.trim().toUpperCase()) ?? null;
 }
 
-export function freteDe(dados: DadosCheckout): number {
+// Config aplicada nos cálculos. Os padrões vêm de REGRAS; o lojista pode
+// sobrescrever via config-store (que passa um ConfigLoja compatível aqui).
+export type RegrasCalculo = {
+  frete: number;
+  descontoPix: number;
+  tempoEntregaMin: number;
+  tempoEntregaMax: number;
+};
+
+export function freteDe(dados: DadosCheckout, cfg: RegrasCalculo = REGRAS): number {
   if (dados.modo === "retirada") return 0;
   const z = ZONAS.find((z) => z.id === dados.zonaId);
-  return z ? z.taxa : REGRAS.frete;
+  return z ? z.taxa : cfg.frete;
 }
 
-export function prazoDe(dados: DadosCheckout): string {
+export function prazoDe(dados: DadosCheckout, cfg: RegrasCalculo = REGRAS): string {
   if (dados.modo === "retirada") return "pronto para retirada";
   const z = ZONAS.find((z) => z.id === dados.zonaId);
-  return z ? z.prazo : `${REGRAS.tempoEntregaMin}–${REGRAS.tempoEntregaMax} min`;
+  return z ? z.prazo : `${cfg.tempoEntregaMin}–${cfg.tempoEntregaMax} min`;
 }
 
 // Cálculo único do resumo — usado no carrinho E na revisão (sempre iguais)
-export function calcularResumo(subtotal: number, dados: DadosCheckout) {
-  const frete = freteDe(dados);
+export function calcularResumo(
+  subtotal: number,
+  dados: DadosCheckout,
+  cfg: RegrasCalculo = REGRAS
+) {
+  const frete = freteDe(dados, cfg);
   const descontoPix =
-    (dados.pagamento ?? "pix") === "pix" ? subtotal * REGRAS.descontoPix : 0;
+    (dados.pagamento ?? "pix") === "pix" ? subtotal * cfg.descontoPix : 0;
   const cupom = buscarCupom(dados.cupom);
   const descontoCupom = !cupom
     ? 0

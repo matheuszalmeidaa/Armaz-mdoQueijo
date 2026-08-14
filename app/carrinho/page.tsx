@@ -12,7 +12,8 @@ import {
   precoBase,
   type Produto,
 } from "@/lib/catalogo";
-import { calcularResumo, buscarCupom, LOJAS_RETIRADA, REGRAS } from "@/lib/regras";
+import { calcularResumo, buscarCupom, LOJAS_RETIRADA } from "@/lib/regras";
+import { useConfig } from "@/lib/config-store";
 
 export default function Carrinho() {
   const router = useRouter();
@@ -23,7 +24,8 @@ export default function Carrinho() {
   const [cupomInput, setCupomInput] = useState(dados.cupom ?? "");
   const [cupomErro, setCupomErro] = useState(false);
 
-  const r = calcularResumo(total, dados);
+  const cfg = useConfig();
+  const r = calcularResumo(total, dados, cfg);
 
   const noCarrinho = (id: string) => itens.some((i) => i.produtoId === id);
 
@@ -356,13 +358,13 @@ export default function Carrinho() {
               <div className="my-sm border-t border-dashed border-outline/20" />
               <Linha rotulo="Total" valor={brl(r.total)} destaque />
             </div>
-            {REGRAS.cashback.ativo && (
+            {cfg.cashbackAtivo && (
               <div className="mt-sm flex items-center gap-sm rounded-lg bg-tertiary-container/40 px-md py-2.5">
                 <span className="material-symbols-outlined text-tertiary">loyalty</span>
                 <span className="text-body-md text-on-surface">
                   Você ganha{" "}
                   <strong className="text-tertiary">
-                    {brl(r.total * REGRAS.cashback.percent)}
+                    {brl(r.total * cfg.cashbackPercent)}
                   </strong>{" "}
                   em cashback nesta compra.
                 </span>

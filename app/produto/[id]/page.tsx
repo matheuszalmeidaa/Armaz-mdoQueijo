@@ -11,7 +11,7 @@ import {
   type Produto,
 } from "@/lib/catalogo";
 import { useCart } from "@/lib/cart";
-import { REGRAS } from "@/lib/regras";
+import { useConfig } from "@/lib/config-store";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
 import { badgesDe, BADGE_CLS } from "@/lib/badges";
 
@@ -185,6 +185,7 @@ function SeletorPeso({
 }) {
   const { add } = useCart();
   const router = useRouter();
+  const cfg = useConfig();
   const [peso, setPeso] = useState(produto.pesos[1] ?? produto.pesos[0]);
 
   const precoBaseKg = produto.faixas[0].kg;
@@ -225,8 +226,8 @@ function SeletorPeso({
       </p>
       <p className="mt-1 flex items-center gap-1 text-label-md text-tertiary">
         <span className="material-symbols-outlined text-[16px]">qr_code_2</span>
-        {brl(total * (1 - REGRAS.descontoPix))} com{" "}
-        {Math.round(REGRAS.descontoPix * 100)}% no Pix
+        {brl(total * (1 - cfg.descontoPix))} com{" "}
+        {Math.round(cfg.descontoPix * 100)}% no Pix
       </p>
 
       <div className="mt-lg">
@@ -309,6 +310,7 @@ function SeletorUnidade({
 }) {
   const { add } = useCart();
   const router = useRouter();
+  const cfg = useConfig();
   const [qtd, setQtd] = useState(1);
   const total = produto.preco * qtd;
 
@@ -337,8 +339,8 @@ function SeletorUnidade({
       </p>
       <p className="mt-1 flex items-center gap-1 text-label-md text-tertiary">
         <span className="material-symbols-outlined text-[16px]">qr_code_2</span>
-        {brl(total * (1 - REGRAS.descontoPix))} com{" "}
-        {Math.round(REGRAS.descontoPix * 100)}% no Pix
+        {brl(total * (1 - cfg.descontoPix))} com{" "}
+        {Math.round(cfg.descontoPix * 100)}% no Pix
       </p>
 
       <div className="mt-lg flex items-center gap-md">

@@ -16,6 +16,7 @@ export type PedidoLive = {
   numero: string;
   criadoEm: number;
   cliente: string;
+  telefone?: string;
   canal: "Delivery" | "PDV";
   modo: "entrega" | "retirada";
   entrega: string;
@@ -65,18 +66,38 @@ function salvar(lista: PedidoLive[]) {
   window.dispatchEvent(new Event(EVT));
 }
 
-export function adicionarPedido(p: Omit<PedidoLive, "id" | "numero" | "criadoEm" | "status">) {
+type NovoPedido = Omit<PedidoLive, "id" | "numero" | "criadoEm" | "status">;
+
+function inserir(
+  p: NovoPedido,
+  opts: { status?: StatusLive; marcarUltimo?: boolean } = {}
+) {
   const lista = ler();
   const pedido: PedidoLive = {
     ...p,
     id: crypto.randomUUID(),
     numero: String(8400 + lista.length + Math.floor(Math.random() * 90)),
     criadoEm: Date.now(),
-    status: "Novo",
+    status: opts.status ?? "Novo",
   };
   salvar([pedido, ...lista]);
-  localStorage.setItem(KEY_ULTIMO, pedido.id);
+  if (opts.marcarUltimo) localStorage.setItem(KEY_ULTIMO, pedido.id);
   return pedido;
+}
+
+// Pedido do DELIVERY: entra como "Novo" e vira o "último pedido" que o cliente
+// acompanha em /pedido.
+export function adicionarPedido(p: NovoPedido) {
+  return inserir(p, { status: "Novo", marcarUltimo: true });
+}
+
+// Venda do PDV: venda de balcão já concluída — entra como "Entregue" e NÃO vira
+// o pedido acompanhado pelo cliente. Aparece na gestão, relatórios e clientes.
+export function registrarVendaPDV(p: Omit<NovoPedido, "canal" | "modo" | "entrega">) {
+  return inserir(
+    { ...p, canal: "PDV", modo: "retirada", entrega: "Venda no balcão (PDV)" },
+    { status: "Entregue", marcarUltimo: false }
+  );
 }
 
 export function atualizarStatus(id: string, status: StatusLive) {
@@ -121,4 +142,61 @@ export function useUltimoPedido(): PedidoLive | undefined {
   useEffect(recomputar, []);
   useAssinatura(recomputar);
   return pedido;
+}
+
+// --- Clientes derivados dos pedidos ---
+export type ClienteAgg = {
+  chave: string; // telefone (ou nome quando sem telefone)
+  nome: string;
+  telefone?: string;
+  qtdPedidos: number;
+  totalGasto: number;
+  ultimoPedidoEm: number;
+  inativoDias: number;
+  canais: Array<"Delivery" | "PDV">;
+};
+
+// Chave de identidade do cliente: telefone (só dígitos) ou, sem telefone, o nome.
+export const chaveCliente = (p: { telefone?: string; cliente: string }) =>
+  (p.telefone && p.telefone.replace(/\D/g, "")) || p.cliente;
+
+function agregarClientes(lista: PedidoLive[]): ClienteAgg[] {
+  const mapa = new Map<string, ClienteAgg>();
+  for (const p of lista) {
+    const chave = chaveCliente(p);
+    if (!chave) continue;
+    const atual = mapa.get(chave);
+    if (atual) {
+      atual.qtdPedidos += 1;
+      atual.totalGasto += p.total;
+      if (p.criadoEm > atual.ultimoPedidoEm) atual.ultimoPedidoEm = p.criadoEm;
+      if (!atual.canais.includes(p.canal)) atual.canais.push(p.canal);
+      if (!atual.telefone && p.telefone) atual.telefone = p.telefone;
+    } else {
+      mapa.set(chave, {
+        chave,
+        nome: p.cliente,
+        telefone: p.telefone,
+        qtdPedidos: 1,
+        totalGasto: p.total,
+        ultimoPedidoEm: p.criadoEm,
+        inativoDias: 0,
+        canais: [p.canal],
+      });
+    }
+  }
+  const agora = Date.now();
+  return Array.from(mapa.values())
+    .map((c) => ({
+      ...c,
+      inativoDias: Math.floor((agora - c.ultimoPedidoEm) / (1000 * 60 * 60 * 24)),
+    }))
+    .sort((a, b) => b.ultimoPedidoEm - a.ultimoPedidoEm);
+}
+
+export function useClientes(): ClienteAgg[] {
+  const [lista, setLista] = useState<ClienteAgg[]>([]);
+  useEffect(() => setLista(agregarClientes(ler())), []);
+  useAssinatura(() => setLista(agregarClientes(ler())));
+  return lista;
 }
