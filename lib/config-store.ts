@@ -7,7 +7,17 @@
 // arquivo — evita ciclo).
 
 import { useEffect, useState } from "react";
-import { REGRAS } from "./regras";
+import { REGRAS, CUPONS } from "./regras";
+
+// Cupom configurável pelo lojista. `minimo` = "válido a partir de R$ X".
+export type CupomCfg = {
+  codigo: string;
+  tipo: "percent" | "reais";
+  valor: number;
+  minimo: number; // 0 = sem mínimo
+  descricao: string;
+  ativo: boolean;
+};
 
 export type ConfigLoja = {
   frete: number; // taxa padrão de entrega (R$)
@@ -19,6 +29,7 @@ export type ConfigLoja = {
   somPedido: boolean;
   cashbackAtivo: boolean;
   cashbackPercent: number; // fração 0..1
+  cupons: CupomCfg[];
 };
 
 export const CONFIG_PADRAO: ConfigLoja = {
@@ -31,6 +42,14 @@ export const CONFIG_PADRAO: ConfigLoja = {
   somPedido: true,
   cashbackAtivo: REGRAS.cashback.ativo,
   cashbackPercent: REGRAS.cashback.percent,
+  cupons: CUPONS.map((c) => ({
+    codigo: c.codigo,
+    tipo: c.tipo,
+    valor: c.valor,
+    minimo: 0,
+    descricao: c.descricao,
+    ativo: true,
+  })),
 };
 
 const KEY = "armazem-config";

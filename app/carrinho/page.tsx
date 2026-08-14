@@ -55,7 +55,7 @@ export default function Carrinho() {
     vinculados.length > 0 ? "Vai bem com" : "Combine com seu pedido";
 
   function aplicarCupom() {
-    const c = buscarCupom(cupomInput);
+    const c = buscarCupom(cupomInput, cfg.cupons);
     if (c) {
       setDados({ cupom: c.codigo });
       setCupomErro(false);
@@ -219,22 +219,31 @@ export default function Carrinho() {
               Cupom de desconto
             </h3>
             {r.cupom ? (
-              <div className="flex items-center justify-between rounded-lg bg-tertiary-container/40 px-md py-3">
-                <span className="flex items-center gap-sm text-body-md text-on-surface">
-                  <span className="material-symbols-outlined text-tertiary">
-                    local_activity
+              <div className="rounded-lg bg-tertiary-container/40 px-md py-3">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-sm text-body-md text-on-surface">
+                    <span className="material-symbols-outlined text-tertiary">
+                      local_activity
+                    </span>
+                    <strong>{r.cupom.codigo}</strong> — {r.cupom.descricao}
                   </span>
-                  <strong>{r.cupom.codigo}</strong> — {r.cupom.descricao}
-                </span>
-                <button
-                  onClick={() => {
-                    setDados({ cupom: "" });
-                    setCupomInput("");
-                  }}
-                  className="text-danger-red"
-                >
-                  <span className="material-symbols-outlined">close</span>
-                </button>
+                  <button
+                    onClick={() => {
+                      setDados({ cupom: "" });
+                      setCupomInput("");
+                    }}
+                    className="text-danger-red"
+                  >
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                {!r.atingiuMinimo && (
+                  <p className="mt-1 flex items-center gap-1 text-label-sm text-secondary">
+                    <span className="material-symbols-outlined text-[16px]">info</span>
+                    Válido a partir de {brl(r.cupom.minimo)} — faltam{" "}
+                    {brl(r.cupom.minimo - r.subtotal)} em produtos.
+                  </p>
+                )}
               </div>
             ) : (
               <>
@@ -257,7 +266,7 @@ export default function Carrinho() {
                 </div>
                 {cupomErro && (
                   <p className="mt-1 text-label-sm text-danger-red">
-                    Cupom inválido. Tente BEMVINDO10 ou ROCA20.
+                    Cupom inválido ou inativo.
                   </p>
                 )}
               </>

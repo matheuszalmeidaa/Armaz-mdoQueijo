@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ZONAS, CUPONS } from "@/lib/regras";
+import { ZONAS } from "@/lib/regras";
 import {
   CONFIG_PADRAO,
   lerConfig,
   salvarConfig,
   type ConfigLoja,
+  type CupomCfg,
 } from "@/lib/config-store";
 import { brl } from "@/lib/catalogo";
 
@@ -25,6 +26,7 @@ export default function Configuracoes() {
   const [cashbackPct, setCashbackPct] = useState(
     String(Math.round(CONFIG_PADRAO.cashbackPercent * 100))
   );
+  const [cupons, setCupons] = useState<CupomCfg[]>(CONFIG_PADRAO.cupons);
   const [salvo, setSalvo] = useState(false);
 
   // Carrega o que já foi salvo (localStorage) ao abrir a tela.
@@ -38,6 +40,7 @@ export default function Configuracoes() {
     setSomPedido(c.somPedido);
     setCashbackAtivo(c.cashbackAtivo);
     setCashbackPct(String(Math.round(c.cashbackPercent * 100)));
+    setCupons(c.cupons);
   }, []);
 
   function salvar() {
@@ -51,10 +54,26 @@ export default function Configuracoes() {
       somPedido,
       cashbackAtivo,
       cashbackPercent: num(cashbackPct) / 100,
+      cupons: cupons
+        .map((cp) => ({ ...cp, codigo: cp.codigo.trim().toUpperCase() }))
+        .filter((cp) => cp.codigo),
     };
     salvarConfig(c);
     setSalvo(true);
     setTimeout(() => setSalvo(false), 2000);
+  }
+
+  function addCupom() {
+    setCupons([
+      ...cupons,
+      { codigo: "", tipo: "percent", valor: 10, minimo: 0, descricao: "", ativo: true },
+    ]);
+  }
+  function updCupom(i: number, patch: Partial<CupomCfg>) {
+    setCupons(cupons.map((c, j) => (j === i ? { ...c, ...patch } : c)));
+  }
+  function delCupom(i: number) {
+    setCupons(cupons.filter((_, j) => j !== i));
   }
 
   return (
@@ -111,18 +130,94 @@ export default function Configuracoes() {
       </Secao>
 
       {/* Cupons */}
-      <Secao icone="local_activity" titulo="Cupons ativos">
-        <div className="divide-y divide-outline-variant/20 rounded-lg border border-outline-variant">
-          {CUPONS.map((c) => (
-            <div key={c.codigo} className="flex items-center justify-between px-md py-2.5">
-              <span className="font-label-md text-label-md text-on-surface">
-                {c.codigo}
-              </span>
-              <span className="text-body-md text-on-surface-variant">
-                {c.descricao}
-              </span>
+      <Secao icone="local_activity" titulo="Cupons de desconto">
+        <p className="text-label-sm text-on-surface-variant">
+          Crie cupons e defina a partir de qual valor de compra eles valem.
+        </p>
+        <div className="space-y-md">
+          {cupons.map((c, i) => (
+            <div
+              key={i}
+              className="rounded-lg border border-outline-variant/60 bg-surface-container-low p-md"
+            >
+              <div className="flex items-center gap-sm">
+                <input
+                  value={c.codigo}
+                  onChange={(e) => updCupom(i, { codigo: e.target.value.toUpperCase() })}
+                  placeholder="CÓDIGO"
+                  className="w-full flex-grow rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 text-body-lg font-semibold uppercase tracking-wide outline-none focus:border-primary"
+                />
+                <label className="flex flex-shrink-0 cursor-pointer items-center gap-1 text-label-sm text-on-surface">
+                  <input
+                    type="checkbox"
+                    checked={c.ativo}
+                    onChange={(e) => updCupom(i, { ativo: e.target.checked })}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  Ativo
+                </label>
+                <button
+                  onClick={() => delCupom(i)}
+                  className="material-symbols-outlined text-danger-red"
+                  title="Excluir cupom"
+                >
+                  delete
+                </button>
+              </div>
+
+              <div className="mt-sm grid grid-cols-2 gap-sm sm:grid-cols-3">
+                <label className="flex items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2">
+                  <select
+                    value={c.tipo}
+                    onChange={(e) =>
+                      updCupom(i, { tipo: e.target.value as CupomCfg["tipo"] })
+                    }
+                    className="w-full bg-transparent text-body-md outline-none"
+                  >
+                    <option value="percent">Desconto %</option>
+                    <option value="reais">Desconto R$</option>
+                  </select>
+                </label>
+                <div className="flex items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2">
+                  <span className="text-label-sm text-on-surface-variant">
+                    {c.tipo === "percent" ? "%" : "R$"}
+                  </span>
+                  <input
+                    value={String(c.valor)}
+                    onChange={(e) => updCupom(i, { valor: num(e.target.value) })}
+                    inputMode="decimal"
+                    className="w-full bg-transparent text-body-md outline-none"
+                  />
+                </div>
+                <div className="col-span-2 flex items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2 sm:col-span-1">
+                  <span className="text-label-sm text-on-surface-variant">
+                    a partir de R$
+                  </span>
+                  <input
+                    value={String(c.minimo)}
+                    onChange={(e) => updCupom(i, { minimo: num(e.target.value) })}
+                    inputMode="decimal"
+                    placeholder="0"
+                    className="w-full bg-transparent text-body-md outline-none"
+                  />
+                </div>
+              </div>
+
+              <input
+                value={c.descricao}
+                onChange={(e) => updCupom(i, { descricao: e.target.value })}
+                placeholder="Descrição (ex.: 10% de boas-vindas)"
+                className="mt-sm w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 text-body-md outline-none focus:border-primary"
+              />
             </div>
           ))}
+          <button
+            onClick={addCupom}
+            className="flex items-center gap-1 text-label-md text-secondary"
+          >
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            Adicionar cupom
+          </button>
         </div>
       </Secao>
 

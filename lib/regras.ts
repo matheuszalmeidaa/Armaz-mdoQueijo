@@ -42,9 +42,27 @@ export const CUPONS: Cupom[] = [
   { codigo: "ROCA20", tipo: "reais", valor: 20, descricao: "R$ 20 de desconto" },
 ];
 
-export function buscarCupom(codigo?: string) {
+// Cupom já com regra de mínimo e estado (o config-store passa uma lista destes).
+export type CupomAplicavel = {
+  codigo: string;
+  tipo: "percent" | "reais";
+  valor: number;
+  minimo: number; // 0 = sem mínimo
+  descricao: string;
+  ativo: boolean;
+};
+
+// Procura um cupom ATIVO pelo código, na lista fornecida (config da loja) ou nos
+// padrões. A validade por VALOR MÍNIMO é checada no cálculo (calcularResumo).
+export function buscarCupom(
+  codigo?: string,
+  cupons?: CupomAplicavel[]
+): CupomAplicavel | null {
   if (!codigo) return null;
-  return CUPONS.find((c) => c.codigo === codigo.trim().toUpperCase()) ?? null;
+  const alvo = codigo.trim().toUpperCase();
+  const lista: CupomAplicavel[] =
+    cupons ?? CUPONS.map((c) => ({ ...c, minimo: 0, ativo: true }));
+  return lista.find((c) => c.ativo && c.codigo.toUpperCase() === alvo) ?? null;
 }
 
 // Config aplicada nos cálculos. Os padrões vêm de REGRAS; o lojista pode
@@ -54,6 +72,7 @@ export type RegrasCalculo = {
   descontoPix: number;
   tempoEntregaMin: number;
   tempoEntregaMax: number;
+  cupons?: CupomAplicavel[];
 };
 
 export function freteDe(dados: DadosCheckout, cfg: RegrasCalculo = REGRAS): number {
@@ -77,12 +96,14 @@ export function calcularResumo(
   const frete = freteDe(dados, cfg);
   const descontoPix =
     (dados.pagamento ?? "pix") === "pix" ? subtotal * cfg.descontoPix : 0;
-  const cupom = buscarCupom(dados.cupom);
-  const descontoCupom = !cupom
-    ? 0
-    : cupom.tipo === "percent"
-      ? (subtotal * cupom.valor) / 100
-      : cupom.valor;
+  const cupom = buscarCupom(dados.cupom, cfg.cupons);
+  const atingiuMinimo = !!cupom && subtotal >= cupom.minimo;
+  const descontoCupom =
+    !cupom || !atingiuMinimo
+      ? 0
+      : cupom.tipo === "percent"
+        ? (subtotal * cupom.valor) / 100
+        : cupom.valor;
   const total = Math.max(0, subtotal + frete - descontoPix - descontoCupom);
-  return { subtotal, frete, descontoPix, descontoCupom, cupom, total };
+  return { subtotal, frete, descontoPix, descontoCupom, cupom, atingiuMinimo, total };
 }
