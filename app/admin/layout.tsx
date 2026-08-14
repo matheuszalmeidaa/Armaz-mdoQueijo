@@ -93,6 +93,18 @@ export default function AdminLayout({
             />
             {aberta ? "Loja Aberta" : "Loja Fechada"}
           </button>
+          <form action="/api/sair" method="post">
+            <button
+              type="submit"
+              title="Sair"
+              className="flex items-center gap-1 rounded-lg px-3 py-2 text-label-md text-on-surface-variant hover:bg-surface-container"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                logout
+              </span>
+              <span className="hidden sm:inline">Sair</span>
+            </button>
+          </form>
         </header>
 
         {/* Nav mobile (scroll horizontal) */}
