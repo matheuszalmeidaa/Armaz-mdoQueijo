@@ -62,7 +62,7 @@ export default function EntrarPage() {
           </div>
 
           {/* Frase */}
-          <div className="max-w-md">
+          <div className="max-w-[30rem]">
             <h1 className="font-display text-[2.75rem] font-bold leading-[1.05] text-cream-surface">
               Sua queijaria
               <br />
