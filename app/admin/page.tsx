@@ -1,47 +1,44 @@
-const KPIS = [
-  {
-    icone: "payments",
-    rotulo: "Vendas hoje",
-    valor: "R$ 2.450,80",
-    delta: "+12% vs. ontem",
-    positivo: true,
-  },
-  {
-    icone: "receipt_long",
-    rotulo: "Novos pedidos",
-    valor: "34",
-    delta: "5 pendentes",
-    positivo: true,
-  },
-  {
-    icone: "shopping_cart",
-    rotulo: "Ticket médio",
-    valor: "R$ 72,15",
-    delta: "-3% vs. média",
-    positivo: false,
-  },
-  {
-    icone: "local_shipping",
-    rotulo: "Entregas ativas",
-    valor: "12",
-    delta: "8 concluídas",
-    positivo: true,
-  },
-];
+"use client";
 
-const PEDIDOS = [
-  { id: "#8421", cliente: "Mariana Silveira", canal: "Delivery", status: "Preparando", cor: "bg-warning-amber", total: "R$ 142,50" },
-  { id: "#8420", cliente: "João Carlos Ramos", canal: "Delivery", status: "Em rota", cor: "bg-tertiary", total: "R$ 89,90" },
-  { id: "#8419", cliente: "Balcão — Loja Centro", canal: "PDV", status: "Concluído", cor: "bg-outline", total: "R$ 54,00" },
-  { id: "#8418", cliente: "Roberto Oliveira", canal: "Delivery", status: "Aceito", cor: "bg-secondary", total: "R$ 210,30" },
-];
+import Link from "next/link";
+import { brl } from "@/lib/catalogo";
+import { usePedidosLive, type StatusLive } from "@/lib/pedidos-store";
+
+const DOT: Record<StatusLive, string> = {
+  Novo: "bg-error",
+  Preparando: "bg-warning-amber",
+  "Em rota": "bg-primary",
+  Entregue: "bg-tertiary",
+};
+
+const META_DIA = 3200;
 
 export default function AdminDashboard() {
+  const pedidos = usePedidosLive();
+
+  const vendas = pedidos.reduce((s, p) => s + p.total, 0);
+  const novos = pedidos.filter((p) => p.status === "Novo").length;
+  const ticket = pedidos.length ? vendas / pedidos.length : 0;
+  const ativas = pedidos.filter(
+    (p) => p.status === "Preparando" || p.status === "Em rota"
+  ).length;
+  const concluidas = pedidos.filter((p) => p.status === "Entregue").length;
+  const metaPct = Math.min(100, Math.round((vendas / META_DIA) * 100));
+
+  const kpis = [
+    { icone: "payments", rotulo: "Vendas", valor: brl(vendas), delta: `${pedidos.length} pedidos`, positivo: true },
+    { icone: "receipt_long", rotulo: "Novos pedidos", valor: String(novos), delta: novos ? "aguardando" : "tudo em dia", positivo: true },
+    { icone: "shopping_cart", rotulo: "Ticket médio", valor: brl(ticket), delta: "por pedido", positivo: true },
+    { icone: "local_shipping", rotulo: "Entregas ativas", valor: String(ativas), delta: `${concluidas} concluídas`, positivo: true },
+  ];
+
+  const recentes = pedidos.slice(0, 6);
+
   return (
     <div className="space-y-lg">
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-md xl:grid-cols-4">
-        {KPIS.map((k) => (
+        {kpis.map((k) => (
           <div
             key={k.rotulo}
             className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-md shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
@@ -57,13 +54,7 @@ export default function AdminDashboard() {
             <p className="mt-sm font-display text-headline-lg text-on-surface">
               {k.valor}
             </p>
-            <p
-              className={`mt-1 text-label-sm ${
-                k.positivo ? "text-tertiary" : "text-danger-red"
-              }`}
-            >
-              {k.delta}
-            </p>
+            <p className="mt-1 text-label-sm text-tertiary">{k.delta}</p>
           </div>
         ))}
       </div>
@@ -75,43 +66,51 @@ export default function AdminDashboard() {
             <h2 className="font-headline-md text-headline-md text-primary">
               Pedidos recentes
             </h2>
-            <a href="#" className="text-label-md text-secondary">
+            <Link href="/admin/pedidos" className="text-label-md text-secondary">
               Ver todos
-            </a>
+            </Link>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-label-sm uppercase tracking-wide text-on-surface-variant">
-                  <th className="pb-2 font-medium">ID</th>
-                  <th className="pb-2 font-medium">Cliente</th>
-                  <th className="pb-2 font-medium">Canal</th>
-                  <th className="pb-2 font-medium">Status</th>
-                  <th className="pb-2 text-right font-medium">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant/20">
-                {PEDIDOS.map((p) => (
-                  <tr key={p.id} className="text-body-md text-on-surface">
-                    <td className="py-3 font-medium text-primary">{p.id}</td>
-                    <td className="py-3">{p.cliente}</td>
-                    <td className="py-3">
-                      <span className="rounded-full bg-surface-container px-2 py-0.5 text-label-sm">
-                        {p.canal}
-                      </span>
-                    </td>
-                    <td className="py-3">
-                      <span className="flex items-center gap-1.5">
-                        <span className={`h-2 w-2 rounded-full ${p.cor}`} />
-                        {p.status}
-                      </span>
-                    </td>
-                    <td className="py-3 text-right font-medium">{p.total}</td>
+          {recentes.length === 0 ? (
+            <p className="py-6 text-center text-body-md text-on-surface-variant">
+              Nenhum pedido ainda. Delivery e PDV aparecem aqui.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-label-sm uppercase tracking-wide text-on-surface-variant">
+                    <th className="pb-2 font-medium">ID</th>
+                    <th className="pb-2 font-medium">Cliente</th>
+                    <th className="pb-2 font-medium">Canal</th>
+                    <th className="pb-2 font-medium">Status</th>
+                    <th className="pb-2 text-right font-medium">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/20">
+                  {recentes.map((p) => (
+                    <tr key={p.id} className="text-body-md text-on-surface">
+                      <td className="py-3 font-medium text-primary">#{p.numero}</td>
+                      <td className="py-3">{p.cliente}</td>
+                      <td className="py-3">
+                        <span className="rounded-full bg-surface-container px-2 py-0.5 text-label-sm">
+                          {p.canal}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <span className="flex items-center gap-1.5">
+                          <span className={`h-2 w-2 rounded-full ${DOT[p.status]}`} />
+                          {p.status}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right font-medium">
+                        {brl(p.total)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         {/* Coluna lateral */}
@@ -122,9 +121,9 @@ export default function AdminDashboard() {
               Status da operação
             </h2>
             <div className="space-y-sm">
-              <LinhaStatus icone="inventory_2" texto="Queijos para embalar" valor="14" />
-              <LinhaStatus icone="schedule" texto="Tempo médio de preparo" valor="18m" />
-              <LinhaStatus icone="warning" texto="Lotes vencendo (7 dias)" valor="3" alerta />
+              <LinhaStatus icone="notifications_active" texto="Pedidos novos" valor={String(novos)} alerta={novos > 0} />
+              <LinhaStatus icone="local_shipping" texto="Entregas em andamento" valor={String(ativas)} />
+              <LinhaStatus icone="check_circle" texto="Concluídos" valor={String(concluidas)} />
             </div>
           </section>
 
@@ -135,12 +134,17 @@ export default function AdminDashboard() {
             </span>
             <div className="mt-1 flex items-end justify-between">
               <span className="font-display text-headline-lg text-cream-surface">
-                R$ 3.200
+                {brl(META_DIA)}
               </span>
-              <span className="text-label-md text-primary-fixed">76% atingido</span>
+              <span className="text-label-md text-primary-fixed">
+                {metaPct}% atingido
+              </span>
             </div>
             <div className="mt-sm h-2 overflow-hidden rounded-full bg-primary-container">
-              <div className="h-full rounded-full bg-cream-surface" style={{ width: "76%" }} />
+              <div
+                className="h-full rounded-full bg-cream-surface"
+                style={{ width: `${metaPct}%` }}
+              />
             </div>
           </section>
         </div>
