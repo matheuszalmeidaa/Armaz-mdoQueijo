@@ -6,10 +6,33 @@ import { CATALOGO, CATEGORIAS, brl, precoBase, type Produto } from "@/lib/catalo
 import { useCart } from "@/lib/cart";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
 import { badgesDe, BADGE_CLS } from "@/lib/badges";
+import { useConfig, lojaAbertaAgora, type Redes } from "@/lib/config-store";
+
+// Monta os links de redes/whatsapp para o aviso de loja fechada.
+function linksRedes(redes: Redes, whatsapp: string) {
+  const links: { icone: string; rotulo: string; href: string }[] = [];
+  const zap = whatsapp.replace(/\D/g, "");
+  if (zap) links.push({ icone: "chat", rotulo: "WhatsApp", href: `https://wa.me/55${zap}` });
+  if (redes.instagram) {
+    const ig = redes.instagram.trim();
+    const href = ig.startsWith("http")
+      ? ig
+      : `https://instagram.com/${ig.replace(/^@/, "")}`;
+    links.push({ icone: "photo_camera", rotulo: "Instagram", href });
+  }
+  if (redes.facebook) {
+    const fb = redes.facebook.trim();
+    links.push({ icone: "thumb_up", rotulo: "Facebook", href: fb.startsWith("http") ? fb : `https://facebook.com/${fb}` });
+  }
+  return links;
+}
 
 export default function LojaHome() {
   const [cat, setCat] = useState<string>("Todos");
   const { qtdItens } = useCart();
+  const cfg = useConfig();
+  const status = lojaAbertaAgora(cfg);
+  const [avisoVisto, setAvisoVisto] = useState(false);
 
   const lista =
     cat === "Todos" ? CATALOGO : CATALOGO.filter((p) => p.categoria === cat);
@@ -38,6 +61,14 @@ export default function LojaHome() {
           </Link>
         </div>
       </header>
+
+      {!status.aberta && (
+        <div className="flex items-center justify-center gap-sm bg-primary px-md py-2 text-center text-label-md text-on-primary">
+          <span className="material-symbols-outlined text-[18px]">schedule</span>
+          Loja fechada — {status.motivo} Você pode montar o pedido e enviar quando
+          abrirmos.
+        </div>
+      )}
 
       <div className="mx-auto max-w-6xl">
         {/* Hero */}
@@ -80,6 +111,70 @@ export default function LojaHome() {
           </div>
         </section>
       </div>
+
+      {/* Aviso de loja fechada — X fecha e deixa navegar o catálogo */}
+      {!status.aberta && !avisoVisto && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-md sm:items-center"
+          onClick={() => setAvisoVisto(true)}
+        >
+          <div
+            className="w-full max-w-[26rem] rounded-2xl bg-surface-container-lowest p-lg shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-container/20 text-primary">
+                <span className="material-symbols-outlined">schedule</span>
+              </div>
+              <button
+                onClick={() => setAvisoVisto(true)}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container"
+                aria-label="Fechar aviso"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <h2 className="mt-sm font-headline-md text-headline-md text-on-surface">
+              Estamos fechados no momento
+            </h2>
+            <p className="mt-1 text-body-md text-on-surface-variant">
+              {status.motivo} Fique à vontade para ver o catálogo — é só fechar
+              este aviso.
+            </p>
+
+            {linksRedes(cfg.redes, cfg.whatsapp).length > 0 && (
+              <>
+                <p className="mt-md text-label-sm uppercase tracking-wide text-on-surface-variant">
+                  Enquanto isso, siga a gente
+                </p>
+                <div className="mt-sm flex flex-wrap gap-sm">
+                  {linksRedes(cfg.redes, cfg.whatsapp).map((l) => (
+                    <a
+                      key={l.rotulo}
+                      href={l.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-2 text-label-md text-primary active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">
+                        {l.icone}
+                      </span>
+                      {l.rotulo}
+                    </a>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <button
+              onClick={() => setAvisoVisto(true)}
+              className="mt-lg w-full rounded-lg bg-primary py-3 text-body-lg font-semibold text-on-primary active:scale-[0.98]"
+            >
+              Ver catálogo
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

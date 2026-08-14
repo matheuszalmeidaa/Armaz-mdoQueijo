@@ -6,8 +6,11 @@ import {
   CONFIG_PADRAO,
   lerConfig,
   salvarConfig,
+  DIAS_SEMANA,
   type ConfigLoja,
   type CupomCfg,
+  type DiaHorario,
+  type Excecao,
 } from "@/lib/config-store";
 import { brl } from "@/lib/catalogo";
 
@@ -27,6 +30,11 @@ export default function Configuracoes() {
     String(Math.round(CONFIG_PADRAO.cashbackPercent * 100))
   );
   const [cupons, setCupons] = useState<CupomCfg[]>(CONFIG_PADRAO.cupons);
+  const [aceitaPedidos, setAceitaPedidos] = useState(CONFIG_PADRAO.aceitaPedidos);
+  const [horarios, setHorarios] = useState<DiaHorario[]>(CONFIG_PADRAO.horarios);
+  const [excecoes, setExcecoes] = useState<Excecao[]>(CONFIG_PADRAO.excecoes);
+  const [instagram, setInstagram] = useState(CONFIG_PADRAO.redes.instagram);
+  const [facebook, setFacebook] = useState(CONFIG_PADRAO.redes.facebook);
   const [salvo, setSalvo] = useState(false);
 
   // Carrega o que já foi salvo (localStorage) ao abrir a tela.
@@ -41,6 +49,11 @@ export default function Configuracoes() {
     setCashbackAtivo(c.cashbackAtivo);
     setCashbackPct(String(Math.round(c.cashbackPercent * 100)));
     setCupons(c.cupons);
+    setAceitaPedidos(c.aceitaPedidos);
+    setHorarios(c.horarios);
+    setExcecoes(c.excecoes);
+    setInstagram(c.redes.instagram);
+    setFacebook(c.redes.facebook);
   }, []);
 
   function salvar() {
@@ -57,6 +70,14 @@ export default function Configuracoes() {
       cupons: cupons
         .map((cp) => ({ ...cp, codigo: cp.codigo.trim().toUpperCase() }))
         .filter((cp) => cp.codigo),
+      aceitaPedidos,
+      horarios,
+      excecoes: excecoes.filter((e) => e.data),
+      redes: {
+        instagram: instagram.trim(),
+        facebook: facebook.trim(),
+        whatsapp: whatsapp.trim(),
+      },
     };
     salvarConfig(c);
     setSalvo(true);
@@ -76,6 +97,22 @@ export default function Configuracoes() {
     setCupons(cupons.filter((_, j) => j !== i));
   }
 
+  function updHorario(i: number, patch: Partial<DiaHorario>) {
+    setHorarios(horarios.map((h, j) => (j === i ? { ...h, ...patch } : h)));
+  }
+  function addExcecao() {
+    setExcecoes([
+      ...excecoes,
+      { data: "", aberto: false, abre: "08:00", fecha: "18:00", motivo: "" },
+    ]);
+  }
+  function updExcecao(i: number, patch: Partial<Excecao>) {
+    setExcecoes(excecoes.map((e, j) => (j === i ? { ...e, ...patch } : e)));
+  }
+  function delExcecao(i: number) {
+    setExcecoes(excecoes.filter((_, j) => j !== i));
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-lg">
       <div>
@@ -87,6 +124,158 @@ export default function Configuracoes() {
           delivery e o PDV.
         </p>
       </div>
+
+      {/* Status da loja */}
+      <Secao icone="storefront" titulo="Status da loja (delivery)">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-label-md text-on-surface">Aceitar pedidos</p>
+            <p className="text-label-sm text-on-surface-variant">
+              Desligado, a loja aparece como fechada no delivery (o cliente ainda
+              navega o catálogo).
+            </p>
+          </div>
+          <button
+            onClick={() => setAceitaPedidos((v) => !v)}
+            className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors ${
+              aceitaPedidos ? "bg-tertiary" : "bg-outline-variant"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
+                aceitaPedidos ? "left-[22px]" : "left-0.5"
+              }`}
+            />
+          </button>
+        </div>
+      </Secao>
+
+      {/* Horário de atendimento */}
+      <Secao icone="schedule" titulo="Horário de atendimento">
+        <p className="text-label-sm text-on-surface-variant">
+          Fora do horário, o delivery mostra a loja como fechada.
+        </p>
+        <div className="space-y-1">
+          {horarios.map((h, i) => (
+            <div
+              key={i}
+              className="flex flex-wrap items-center gap-sm rounded-lg border border-outline-variant/50 px-md py-2"
+            >
+              <button
+                onClick={() => updHorario(i, { aberto: !h.aberto })}
+                className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
+                  h.aberto ? "bg-tertiary" : "bg-outline-variant"
+                }`}
+                aria-label={`${DIAS_SEMANA[i]} ${h.aberto ? "aberto" : "fechado"}`}
+              >
+                <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                    h.aberto ? "left-[22px]" : "left-0.5"
+                  }`}
+                />
+              </button>
+              <span className="w-16 text-body-md text-on-surface">
+                {DIAS_SEMANA[i]}
+              </span>
+              {h.aberto ? (
+                <div className="flex items-center gap-1 text-body-md text-on-surface">
+                  <input
+                    type="time"
+                    value={h.abre}
+                    onChange={(e) => updHorario(i, { abre: e.target.value })}
+                    className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 outline-none focus:border-primary"
+                  />
+                  <span className="text-on-surface-variant">às</span>
+                  <input
+                    type="time"
+                    value={h.fecha}
+                    onChange={(e) => updHorario(i, { fecha: e.target.value })}
+                    className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 outline-none focus:border-primary"
+                  />
+                </div>
+              ) : (
+                <span className="text-label-md text-on-surface-variant">Fechado</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </Secao>
+
+      {/* Dias personalizados */}
+      <Secao icone="event" titulo="Dias personalizados">
+        <p className="text-label-sm text-on-surface-variant">
+          Um feriado ou um dia com horário diferente. Sobrepõe o horário semanal.
+        </p>
+        <div className="space-y-md">
+          {excecoes.map((e, i) => (
+            <div
+              key={i}
+              className="rounded-lg border border-outline-variant/60 bg-surface-container-low p-md"
+            >
+              <div className="flex flex-wrap items-center gap-sm">
+                <input
+                  type="date"
+                  value={e.data}
+                  onChange={(ev) => updExcecao(i, { data: ev.target.value })}
+                  className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1.5 text-body-md outline-none focus:border-primary"
+                />
+                <button
+                  onClick={() => updExcecao(i, { aberto: !e.aberto })}
+                  className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
+                    e.aberto ? "bg-tertiary" : "bg-outline-variant"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                      e.aberto ? "left-[22px]" : "left-0.5"
+                    }`}
+                  />
+                </button>
+                <span className="text-label-md text-on-surface">
+                  {e.aberto ? "Aberto" : "Fechado"}
+                </span>
+                <button
+                  onClick={() => delExcecao(i)}
+                  className="material-symbols-outlined ml-auto text-danger-red"
+                  title="Excluir"
+                >
+                  delete
+                </button>
+              </div>
+              {e.aberto && (
+                <div className="mt-sm flex items-center gap-1 text-body-md text-on-surface">
+                  <input
+                    type="time"
+                    value={e.abre}
+                    onChange={(ev) => updExcecao(i, { abre: ev.target.value })}
+                    className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 outline-none focus:border-primary"
+                  />
+                  <span className="text-on-surface-variant">às</span>
+                  <input
+                    type="time"
+                    value={e.fecha}
+                    onChange={(ev) => updExcecao(i, { fecha: ev.target.value })}
+                    className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 outline-none focus:border-primary"
+                  />
+                </div>
+              )}
+              <input
+                value={e.motivo}
+                onChange={(ev) => updExcecao(i, { motivo: ev.target.value })}
+                placeholder="Motivo (ex.: Feriado, Confraternização) — opcional"
+                className="mt-sm w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 text-body-md outline-none focus:border-primary"
+              />
+            </div>
+          ))}
+          <button
+            onClick={addExcecao}
+            className="flex items-center gap-1 text-label-md text-secondary"
+          >
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            Adicionar dia personalizado
+          </button>
+        </div>
+      </Secao>
 
       {/* Entrega */}
       <Secao icone="local_shipping" titulo="Entrega">
@@ -283,6 +472,17 @@ export default function Configuracoes() {
           valor={whatsapp}
           onChange={setWhatsapp}
           dica="Botão 'Falar no WhatsApp' do delivery aponta para cá."
+        />
+        <Campo
+          rotulo="Instagram (@ ou link)"
+          valor={instagram}
+          onChange={setInstagram}
+          dica="Aparece no aviso de loja fechada, para o cliente seguir."
+        />
+        <Campo
+          rotulo="Facebook (link)"
+          valor={facebook}
+          onChange={setFacebook}
         />
         <div className="flex items-center justify-between py-2">
           <div>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { brl, gramas } from "@/lib/catalogo";
 import { calcularResumo, prazoDe, LOJAS_RETIRADA } from "@/lib/regras";
-import { useConfig } from "@/lib/config-store";
+import { useConfig, lojaAbertaAgora } from "@/lib/config-store";
 import { adicionarPedido } from "@/lib/pedidos-store";
 
 export default function Revisao() {
@@ -14,10 +14,12 @@ export default function Revisao() {
   const pagamento = dados.pagamento ?? "pix";
   const modo = dados.modo ?? "entrega";
   const cfg = useConfig();
+  const status = lojaAbertaAgora(cfg);
   const r = calcularResumo(total, dados, cfg);
   const lojaRetirada = LOJAS_RETIRADA.find((l) => l.id === dados.lojaRetiradaId);
 
   function finalizar() {
+    if (!status.aberta) return;
     // Cria o pedido na "espinha temporária" (localStorage) — cai no painel de
     // recebimento do lojista com alerta. Com o Supabase, vira realtime.
     adicionarPedido({
@@ -182,12 +184,21 @@ export default function Revisao() {
 
       {/* Finalizar */}
       <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
+        {!status.aberta && (
+          <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-danger-red">
+            <span className="material-symbols-outlined text-[16px]">schedule</span>
+            Loja fechada — {status.motivo}
+          </p>
+        )}
         <button
           onClick={finalizar}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-lg py-4 text-body-lg font-semibold text-on-primary shadow-lg transition-transform active:scale-[0.98]"
+          disabled={!status.aberta}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-lg py-4 text-body-lg font-semibold text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
         >
-          Finalizar Pedido
-          <span className="material-symbols-outlined">arrow_forward</span>
+          {status.aberta ? "Finalizar Pedido" : "Loja fechada no momento"}
+          {status.aberta && (
+            <span className="material-symbols-outlined">arrow_forward</span>
+          )}
         </button>
       </div>
     </main>

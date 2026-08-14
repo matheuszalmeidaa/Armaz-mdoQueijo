@@ -19,6 +19,16 @@ export type CupomCfg = {
   ativo: boolean;
 };
 
+export type DiaHorario = { aberto: boolean; abre: string; fecha: string };
+export type Excecao = {
+  data: string; // "YYYY-MM-DD"
+  aberto: boolean;
+  abre: string;
+  fecha: string;
+  motivo: string;
+};
+export type Redes = { instagram: string; facebook: string; whatsapp: string };
+
 export type ConfigLoja = {
   frete: number; // taxa padrão de entrega (R$)
   descontoPix: number; // fração 0..1
@@ -30,6 +40,10 @@ export type ConfigLoja = {
   cashbackAtivo: boolean;
   cashbackPercent: number; // fração 0..1
   cupons: CupomCfg[];
+  aceitaPedidos: boolean; // toggle mestre do delivery
+  horarios: DiaHorario[]; // 0=domingo .. 6=sábado
+  excecoes: Excecao[]; // dias personalizados (sobrepõem a semana)
+  redes: Redes;
 };
 
 export const CONFIG_PADRAO: ConfigLoja = {
@@ -50,7 +64,56 @@ export const CONFIG_PADRAO: ConfigLoja = {
     descricao: c.descricao,
     ativo: true,
   })),
+  aceitaPedidos: true,
+  horarios: Array.from({ length: 7 }, () => ({
+    aberto: true,
+    abre: "08:00",
+    fecha: "18:00",
+  })),
+  excecoes: [],
+  redes: { instagram: "", facebook: "", whatsapp: "" },
 };
+
+export const DIAS_SEMANA = [
+  "Domingo",
+  "Segunda",
+  "Terça",
+  "Quarta",
+  "Quinta",
+  "Sexta",
+  "Sábado",
+];
+
+const hmParaMin = (hm: string) => {
+  const [h, m] = hm.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
+// Está aberta agora? Considera o toggle mestre, exceções do dia e o horário
+// semanal. Retorna também um motivo amigável quando fechada.
+export function lojaAbertaAgora(
+  cfg: ConfigLoja,
+  agora: Date = new Date()
+): { aberta: boolean; motivo?: string } {
+  if (!cfg.aceitaPedidos)
+    return { aberta: false, motivo: "No momento não estamos aceitando pedidos." };
+
+  const iso = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
+  const agoraMin = agora.getHours() * 60 + agora.getMinutes();
+
+  const exc = cfg.excecoes.find((e) => e.data === iso);
+  const dia = exc ?? cfg.horarios[agora.getDay()];
+  if (!dia || !dia.aberto)
+    return {
+      aberta: false,
+      motivo: (exc && exc.motivo) || "Estamos fechados hoje.",
+    };
+
+  const dentro = agoraMin >= hmParaMin(dia.abre) && agoraMin <= hmParaMin(dia.fecha);
+  return dentro
+    ? { aberta: true }
+    : { aberta: false, motivo: `Atendemos hoje das ${dia.abre} às ${dia.fecha}.` };
+}
 
 const KEY = "armazem-config";
 const EVT = "config-change";
