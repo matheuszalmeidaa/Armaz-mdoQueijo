@@ -7,9 +7,9 @@ const COOKIE = "armazem_sessao";
 const SENHA = process.env.ADMIN_SENHA ?? "armazem";
 
 export async function POST(request: Request) {
-  const { senha } = await request
+  const { senha, lembrar } = await request
     .json()
-    .catch(() => ({ senha: "" as string }));
+    .catch(() => ({ senha: "" as string, lembrar: false }));
 
   if (typeof senha !== "string" || senha !== SENHA) {
     return NextResponse.json({ ok: false }, { status: 401 });
@@ -20,7 +20,8 @@ export async function POST(request: Request) {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 12, // 12 horas
+    // "Manter conectado": ~30 dias; senão, 12 horas.
+    maxAge: lembrar ? 60 * 60 * 24 * 30 : 60 * 60 * 12,
   });
   return res;
 }
