@@ -1,9 +1,13 @@
 "use client";
 
-// "Espinha temporária" de pedidos ao vivo, no localStorage. Liga o Finalizar do
-// delivery ao painel de recebimento e ao acompanhamento — sem backend.
-// Ao ligar o Supabase, troca-se a implementação destas funções por realtime,
-// SEM mexer nas telas.
+// Fonte única de pedidos ao vivo. Agora ligada ao Supabase pelas rotas de
+// servidor (/api/pedidos, service_role) — é o que faz o pedido do celular do
+// cliente cair na loja em OUTRO aparelho. O localStorage segue como cache/reserva
+// (aparelho que fez o pedido vê na hora; e se o servidor não tiver banco ainda,
+// tudo continua funcionando localmente).
+//
+// As telas NÃO mudam: continuam usando usePedidosLive / useUltimoPedido /
+// useClientes / adicionarPedido / registrarVendaPDV / avancarStatus.
 
 import { useEffect, useState } from "react";
 
@@ -31,30 +35,11 @@ const KEY = "armazem-pedidos-live";
 const KEY_ULTIMO = "armazem-ultimo-pedido";
 const EVT = "pedidos-live-change";
 
-const SEED: PedidoLive[] = [
-  {
-    id: "seed-1", numero: "8402", criadoEm: Date.now() - 1000 * 60 * 6,
-    cliente: "Fernanda Lima", canal: "Delivery", modo: "entrega",
-    entrega: "Rua das Acácias, 210 — Centro", pagamento: "Maquineta (crédito)",
-    total: 96.4, status: "Preparando",
-    itens: [{ nome: "Queijo Canastra", qtd: "500g", preco: 84.4 }, { nome: "Mel Silvestre", qtd: "1 un", preco: 12.0 }],
-  },
-  {
-    id: "seed-2", numero: "8403", criadoEm: Date.now() - 1000 * 60 * 2,
-    cliente: "Carlos Nunes", canal: "Delivery", modo: "retirada",
-    entrega: "Retirada — Loja Centro", pagamento: "Pix",
-    total: 48.9, status: "Novo",
-    itens: [{ nome: "Queijo Figueira", qtd: "300g", preco: 48.9 }],
-  },
-];
-
+// --- localStorage (cache / reserva sem banco) ---
 function ler(): PedidoLive[] {
   if (typeof window === "undefined") return [];
   const raw = localStorage.getItem(KEY);
-  if (raw === null) {
-    localStorage.setItem(KEY, JSON.stringify(SEED));
-    return SEED;
-  }
+  if (raw === null) return [];
   try {
     return JSON.parse(raw) as PedidoLive[];
   } catch {
@@ -62,9 +47,128 @@ function ler(): PedidoLive[] {
   }
 }
 
-function salvar(lista: PedidoLive[]) {
+function salvarLocal(lista: PedidoLive[]) {
   localStorage.setItem(KEY, JSON.stringify(lista));
-  window.dispatchEvent(new Event(EVT));
+}
+
+// --- Ponte com o servidor (Supabase via /api/pedidos) ---
+type Row = {
+  id: string;
+  numero: string;
+  cliente: string;
+  telefone: string | null;
+  canal: "Delivery" | "PDV";
+  modo: "entrega" | "retirada";
+  entrega: string | null;
+  pagamento: string | null;
+  itens: ItemLive[] | null;
+  total: number | string;
+  status: StatusLive;
+  agendado: boolean | null;
+  criado_em: string;
+};
+
+function rowParaLive(r: Row): PedidoLive {
+  return {
+    id: r.id,
+    numero: r.numero,
+    criadoEm: new Date(r.criado_em).getTime(),
+    cliente: r.cliente,
+    telefone: r.telefone ?? undefined,
+    canal: r.canal,
+    modo: r.modo,
+    entrega: r.entrega ?? "",
+    pagamento: r.pagamento ?? "",
+    itens: Array.isArray(r.itens) ? r.itens : [],
+    total: Number(r.total) || 0,
+    status: r.status,
+    agendado: Boolean(r.agendado),
+  };
+}
+
+// Retorna a lista do servidor, ou null quando não há banco (modo local).
+async function buscarServidor(): Promise<PedidoLive[] | null> {
+  try {
+    const res = await fetch("/api/pedidos", { cache: "no-store" });
+    const j = await res.json();
+    if (j.semBanco || j.error) return null;
+    return (j.pedidos ?? []).map(rowParaLive);
+  } catch {
+    return null;
+  }
+}
+
+function enviarServidor(p: PedidoLive) {
+  fetch("/api/pedidos", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: p.id,
+      numero: p.numero,
+      cliente: p.cliente,
+      telefone: p.telefone ?? null,
+      canal: p.canal,
+      modo: p.modo,
+      entrega: p.entrega,
+      pagamento: p.pagamento,
+      itens: p.itens,
+      total: p.total,
+      status: p.status,
+      agendado: p.agendado ?? false,
+    }),
+  })
+    .then(() => refetch())
+    .catch(() => {});
+}
+
+// --- Estado compartilhado + polling (quase tempo real) ---
+// modoServidor: null = ainda não sabemos; true = banco ligado; false = só local.
+let modoServidor: boolean | null = null;
+let cacheLista: PedidoLive[] = [];
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+let assinantes = 0;
+
+function notificar() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(EVT));
+}
+
+async function refetch() {
+  const srv = await buscarServidor();
+  if (srv === null) {
+    modoServidor = false;
+    cacheLista = ler();
+  } else {
+    modoServidor = true;
+    cacheLista = srv;
+  }
+  notificar();
+}
+
+function iniciarPoll() {
+  assinantes += 1;
+  if (pollTimer) return;
+  // Enquanto o servidor não responde, mostra o cache local na hora.
+  if (modoServidor === null) cacheLista = ler();
+  refetch();
+  pollTimer = setInterval(refetch, 5000);
+}
+
+function pararPoll() {
+  assinantes = Math.max(0, assinantes - 1);
+  if (assinantes === 0 && pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
+
+// Fonte de verdade para as telas: banco quando disponível, senão localStorage.
+function snapshot(): PedidoLive[] {
+  return modoServidor === false ? ler() : cacheLista;
+}
+
+// --- Escrita ---
+function gerarNumero(qtd: number) {
+  return String(8400 + qtd + Math.floor(Math.random() * 90));
 }
 
 type NovoPedido = Omit<PedidoLive, "id" | "numero" | "criadoEm" | "status">;
@@ -77,72 +181,90 @@ function inserir(
   const pedido: PedidoLive = {
     ...p,
     id: crypto.randomUUID(),
-    numero: String(8400 + lista.length + Math.floor(Math.random() * 90)),
+    numero: gerarNumero(lista.length),
     criadoEm: Date.now(),
     status: opts.status ?? "Novo",
   };
-  salvar([pedido, ...lista]);
+  // Cache local imediato (o aparelho que fez o pedido vê na hora).
+  salvarLocal([pedido, ...lista]);
+  cacheLista = [pedido, ...cacheLista.filter((x) => x.id !== pedido.id)];
   if (opts.marcarUltimo) localStorage.setItem(KEY_ULTIMO, pedido.id);
+  notificar();
+  // Sobe para o Supabase em segundo plano — cruza aparelhos.
+  enviarServidor(pedido);
   return pedido;
 }
 
-// Pedido do DELIVERY: entra como "Novo" e vira o "último pedido" que o cliente
-// acompanha em /pedido.
+// Pedido do DELIVERY: entra como "Novo" e vira o "último pedido" acompanhado.
 export function adicionarPedido(p: NovoPedido) {
   return inserir(p, { status: "Novo", marcarUltimo: true });
 }
 
-// Venda do PDV: venda de balcão já concluída — entra como "Entregue" e NÃO vira
-// o pedido acompanhado pelo cliente. Aparece na gestão, relatórios e clientes.
-export function registrarVendaPDV(p: Omit<NovoPedido, "canal" | "modo" | "entrega">) {
+// Venda do PDV: já concluída — entra como "Entregue"; não é o pedido acompanhado.
+export function registrarVendaPDV(
+  p: Omit<NovoPedido, "canal" | "modo" | "entrega">
+) {
   return inserir(
     { ...p, canal: "PDV", modo: "retirada", entrega: "Venda no balcão (PDV)" },
     { status: "Entregue", marcarUltimo: false }
   );
 }
 
+function atualizarStatusLocal(id: string, status: StatusLive) {
+  salvarLocal(ler().map((p) => (p.id === id ? { ...p, status } : p)));
+  cacheLista = cacheLista.map((p) => (p.id === id ? { ...p, status } : p));
+  notificar();
+}
+
 export function atualizarStatus(id: string, status: StatusLive) {
-  salvar(ler().map((p) => (p.id === id ? { ...p, status } : p)));
+  atualizarStatusLocal(id, status); // otimista
+  fetch(`/api/pedidos/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  })
+    .then(() => refetch())
+    .catch(() => {});
 }
 
 export function avancarStatus(id: string) {
-  const lista = ler();
-  const p = lista.find((x) => x.id === id);
+  const fonte = cacheLista.length ? cacheLista : ler();
+  const p = fonte.find((x) => x.id === id);
   if (!p) return;
   const i = FLUXO.indexOf(p.status);
   if (i < FLUXO.length - 1) atualizarStatus(id, FLUXO[i + 1]);
 }
 
 // --- Hooks ---
-function useAssinatura(recomputar: () => void) {
+function useLista(): PedidoLive[] {
+  const [lista, setLista] = useState<PedidoLive[]>(() => snapshot());
   useEffect(() => {
-    const h = () => recomputar();
+    iniciarPoll();
+    const h = () => setLista(snapshot());
     window.addEventListener(EVT, h);
     window.addEventListener("storage", h);
+    setLista(snapshot());
     return () => {
       window.removeEventListener(EVT, h);
       window.removeEventListener("storage", h);
+      pararPoll();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-}
-
-export function usePedidosLive(): PedidoLive[] {
-  const [lista, setLista] = useState<PedidoLive[]>([]);
-  useEffect(() => setLista(ler()), []);
-  useAssinatura(() => setLista(ler()));
   return lista;
 }
 
+export function usePedidosLive(): PedidoLive[] {
+  return useLista();
+}
+
 export function useUltimoPedido(): PedidoLive | undefined {
-  const [pedido, setPedido] = useState<PedidoLive | undefined>(undefined);
-  const recomputar = () => {
-    const id = localStorage.getItem(KEY_ULTIMO);
-    setPedido(ler().find((p) => p.id === id));
-  };
-  useEffect(recomputar, []);
-  useAssinatura(recomputar);
-  return pedido;
+  const lista = useLista();
+  const [id, setId] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof window !== "undefined") setId(localStorage.getItem(KEY_ULTIMO));
+  }, []);
+  if (!id) return undefined;
+  return lista.find((p) => p.id === id) ?? ler().find((p) => p.id === id);
 }
 
 // --- Clientes derivados dos pedidos ---
@@ -196,8 +318,6 @@ function agregarClientes(lista: PedidoLive[]): ClienteAgg[] {
 }
 
 export function useClientes(): ClienteAgg[] {
-  const [lista, setLista] = useState<ClienteAgg[]>([]);
-  useEffect(() => setLista(agregarClientes(ler())), []);
-  useAssinatura(() => setLista(agregarClientes(ler())));
-  return lista;
+  const lista = useLista();
+  return agregarClientes(lista);
 }

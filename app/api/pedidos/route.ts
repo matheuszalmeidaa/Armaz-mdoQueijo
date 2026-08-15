@@ -26,8 +26,11 @@ export async function POST(request: Request) {
   const b = await request.json().catch(() => null);
   if (!b) return NextResponse.json({ error: "corpo inválido" }, { status: 400 });
 
-  const numero = String(8400 + Math.floor(Math.random() * 600));
-  const registro = {
+  const numero =
+    typeof b.numero === "string" && b.numero
+      ? b.numero
+      : String(8400 + Math.floor(Math.random() * 600));
+  const registro: Record<string, unknown> = {
     numero,
     cliente: b.cliente ?? "Cliente",
     telefone: b.telefone ?? null,
@@ -40,6 +43,9 @@ export async function POST(request: Request) {
     status: b.status ?? "Novo",
     agendado: Boolean(b.agendado),
   };
+  // O cliente pode enviar o mesmo id (uuid) que usou localmente, para o número
+  // do pedido casar no WhatsApp, no acompanhamento e no banco.
+  if (typeof b.id === "string" && b.id) registro.id = b.id;
 
   const { data, error } = await db.from("pedidos").insert(registro).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
