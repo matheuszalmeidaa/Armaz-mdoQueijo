@@ -155,21 +155,86 @@ export function lerConfig(): ConfigLoja {
   }
 }
 
+// --- Ponte com o servidor (Supabase via /api/config) ---
+// modoServidor: null = ainda não sabemos; true = banco ligado; false = só local.
+let modoServidor: boolean | null = null;
+let servidorCfg: ConfigLoja | null = null;
+let cfgTimer: ReturnType<typeof setInterval> | null = null;
+let assinantes = 0;
+
+function notificar() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(EVT));
+}
+
+// Fonte de verdade para as telas: banco quando há linha; senão localStorage/padrão.
+function snapshotCfg(): ConfigLoja {
+  if (modoServidor && servidorCfg) return servidorCfg;
+  return lerConfig();
+}
+
+async function refetchCfg() {
+  try {
+    const res = await fetch("/api/config", { cache: "no-store" });
+    const j = await res.json();
+    if (j.semBanco || j.error) {
+      modoServidor = false;
+    } else {
+      modoServidor = true;
+      if (j.dados) {
+        servidorCfg = { ...CONFIG_PADRAO, ...j.dados };
+        if (typeof window !== "undefined")
+          localStorage.setItem(KEY, JSON.stringify(servidorCfg));
+      }
+    }
+  } catch {
+    modoServidor = false;
+  }
+  notificar();
+}
+
+// Carrega a config atual de forma assíncrona (usado pela tela de configurações
+// para editar sempre o que está no banco, não um cache velho do aparelho).
+export async function carregarConfig(): Promise<ConfigLoja> {
+  await refetchCfg();
+  return snapshotCfg();
+}
+
 export function salvarConfig(c: ConfigLoja) {
-  localStorage.setItem(KEY, JSON.stringify(c));
-  window.dispatchEvent(new Event(EVT));
+  localStorage.setItem(KEY, JSON.stringify(c)); // cache imediato
+  servidorCfg = c; // otimista para o modo servidor
+  notificar();
+  // Sobe para o Supabase — faz o config bater em qualquer aparelho.
+  fetch("/api/config", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dados: c }),
+  })
+    .then(() => refetchCfg())
+    .catch(() => {});
 }
 
 export function useConfig(): ConfigLoja {
-  const [cfg, setCfg] = useState<ConfigLoja>(CONFIG_PADRAO);
+  const [cfg, setCfg] = useState<ConfigLoja>(() => snapshotCfg());
   useEffect(() => {
-    const recomputar = () => setCfg(lerConfig());
-    recomputar();
+    const recomputar = () => setCfg(snapshotCfg());
+    // Assina o polling compartilhado (uma só chamada mesmo com vários useConfig).
+    assinantes += 1;
+    if (!cfgTimer) {
+      refetchCfg();
+      cfgTimer = setInterval(refetchCfg, 15000);
+    } else {
+      recomputar();
+    }
     window.addEventListener(EVT, recomputar);
     window.addEventListener("storage", recomputar);
     return () => {
       window.removeEventListener(EVT, recomputar);
       window.removeEventListener("storage", recomputar);
+      assinantes = Math.max(0, assinantes - 1);
+      if (assinantes === 0 && cfgTimer) {
+        clearInterval(cfgTimer);
+        cfgTimer = null;
+      }
     };
   }, []);
   return cfg;

@@ -198,6 +198,19 @@ create table configuracoes_loja (
   atualizado_em      timestamptz not null default now()
 );
 
+-- ---------- Config do app (uma linha, JSON) ----------
+-- Config da loja (telefone, horários, taxa, Pix, redes, cupons, hero...) numa
+-- única linha em JSON, para bater entre aparelhos sem depender de Auth/multi-loja.
+-- RLS LIGADO e SEM policies anon: leitura/escrita só pelas rotas de servidor
+-- (service_role). A tabela normalizada configuracoes_loja acima fica para a fase
+-- de Auth/multi-loja.
+create table config_app (
+  id            text primary key default 'principal',
+  dados         jsonb not null default '{}'::jsonb,
+  atualizado_em timestamptz not null default now()
+);
+alter table config_app enable row level security;
+
 -- ---------- Pedidos ao vivo (board delivery/PDV, denormalizado) ----------
 -- Tabela pragmática para o fluxo ao vivo (recebimento/acompanhamento). Itens
 -- ficam em jsonb (não precisa seedar o catálogo normalizado ainda). O relatório

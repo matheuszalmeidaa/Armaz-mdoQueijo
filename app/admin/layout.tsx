@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useConfig, lerConfig, salvarConfig, lojaAbertaAgora } from "@/lib/config-store";
+import { useConfig, salvarConfig, lojaAbertaAgora } from "@/lib/config-store";
 
 const NAV = [
   { href: "/admin", icon: "dashboard", label: "Dashboard" },
@@ -27,8 +27,7 @@ export default function AdminLayout({
   // Clicar liga/desliga o "aceitar pedidos" (mestre) e salva — reflete em todo
   // o app na hora.
   const alternarLoja = () => {
-    const c = lerConfig();
-    salvarConfig({ ...c, aceitaPedidos: !c.aceitaPedidos });
+    salvarConfig({ ...cfg, aceitaPedidos: !cfg.aceitaPedidos });
   };
 
   const ativo = (href: string) =>

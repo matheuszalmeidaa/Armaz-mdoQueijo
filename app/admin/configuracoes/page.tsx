@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ZONAS } from "@/lib/regras";
 import {
   CONFIG_PADRAO,
-  lerConfig,
+  carregarConfig,
   salvarConfig,
   DIAS_SEMANA,
   FOTOS_VITRINE,
@@ -50,9 +50,11 @@ export default function Configuracoes() {
   );
   const [salvo, setSalvo] = useState(false);
 
-  // Carrega o que já foi salvo (localStorage) ao abrir a tela.
+  // Carrega o config atual do servidor (Supabase) ao abrir a tela.
   useEffect(() => {
-    const c = lerConfig();
+    let vivo = true;
+    carregarConfig().then((c) => {
+      if (!vivo) return;
     setTaxa(String(c.frete));
     setPix(String(Math.round(c.descontoPix * 100)));
     setPreparoMin(String(c.tempoEntregaMin));
@@ -75,6 +77,10 @@ export default function Configuracoes() {
     setEntregaAtiva(c.entregaAtiva);
     setRetiradaAtiva(c.retiradaAtiva);
     setAgendamentoAtivo(c.agendamentoAtivo);
+    });
+    return () => {
+      vivo = false;
+    };
   }, []);
 
   function salvar() {
