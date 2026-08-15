@@ -32,6 +32,11 @@ export default function Configuracoes() {
   );
   const [cupons, setCupons] = useState<CupomCfg[]>(CONFIG_PADRAO.cupons);
   const [aceitaPedidos, setAceitaPedidos] = useState(CONFIG_PADRAO.aceitaPedidos);
+  const [entregaAtiva, setEntregaAtiva] = useState(CONFIG_PADRAO.entregaAtiva);
+  const [retiradaAtiva, setRetiradaAtiva] = useState(CONFIG_PADRAO.retiradaAtiva);
+  const [agendamentoAtivo, setAgendamentoAtivo] = useState(
+    CONFIG_PADRAO.agendamentoAtivo
+  );
   const [horarios, setHorarios] = useState<DiaHorario[]>(CONFIG_PADRAO.horarios);
   const [excecoes, setExcecoes] = useState<Excecao[]>(CONFIG_PADRAO.excecoes);
   const [instagram, setInstagram] = useState(CONFIG_PADRAO.redes.instagram);
@@ -67,6 +72,9 @@ export default function Configuracoes() {
     setHeroTitulo(c.heroTitulo);
     setPixChave(c.pixChave);
     setPedidoMinimo(String(c.pedidoMinimo));
+    setEntregaAtiva(c.entregaAtiva);
+    setRetiradaAtiva(c.retiradaAtiva);
+    setAgendamentoAtivo(c.agendamentoAtivo);
   }, []);
 
   function salvar() {
@@ -96,6 +104,9 @@ export default function Configuracoes() {
       heroTitulo: heroTitulo.trim(),
       pixChave: pixChave.trim(),
       pedidoMinimo: num(pedidoMinimo),
+      entregaAtiva,
+      retiradaAtiva,
+      agendamentoAtivo,
     };
     salvarConfig(c);
     setSalvo(true);
@@ -166,6 +177,28 @@ export default function Configuracoes() {
             />
           </button>
         </div>
+      </Secao>
+
+      {/* Formas de recebimento */}
+      <Secao icone="takeout_dining" titulo="Formas de recebimento">
+        <ToggleLinha
+          titulo="Entrega (delivery)"
+          sub="Cliente recebe no endereço."
+          ativo={entregaAtiva}
+          onToggle={() => setEntregaAtiva((v) => !v)}
+        />
+        <ToggleLinha
+          titulo="Retirada na loja"
+          sub="Cliente busca no balcão. Desligado, some do checkout."
+          ativo={retiradaAtiva}
+          onToggle={() => setRetiradaAtiva((v) => !v)}
+        />
+        <ToggleLinha
+          titulo="Permitir pedidos agendados"
+          sub="Com a loja fechada, o cliente ainda envia o pedido como AGENDADO (vocês combinam o horário no WhatsApp)."
+          ativo={agendamentoAtivo}
+          onToggle={() => setAgendamentoAtivo((v) => !v)}
+        />
       </Secao>
 
       {/* Vitrine */}
@@ -601,6 +634,40 @@ export default function Configuracoes() {
         cashback). Ao ligar o Supabase, passa a valer por loja em todos os
         aparelhos.
       </p>
+    </div>
+  );
+}
+
+function ToggleLinha({
+  titulo,
+  sub,
+  ativo,
+  onToggle,
+}: {
+  titulo: string;
+  sub: string;
+  ativo: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-md">
+      <div>
+        <p className="text-label-md text-on-surface">{titulo}</p>
+        <p className="text-label-sm text-on-surface-variant">{sub}</p>
+      </div>
+      <button
+        onClick={onToggle}
+        className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors ${
+          ativo ? "bg-tertiary" : "bg-outline-variant"
+        }`}
+        aria-pressed={ativo}
+      >
+        <span
+          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
+            ativo ? "left-[22px]" : "left-0.5"
+          }`}
+        />
+      </button>
     </div>
   );
 }

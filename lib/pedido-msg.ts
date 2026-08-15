@@ -34,12 +34,14 @@ type Args = {
   };
   pixChave?: string;
   lojaRetiradaNome?: string;
+  agendado?: boolean;
 };
 
 export function mensagemPedido(a: Args): string {
   const d = a.dados;
   const L: string[] = [];
   L.push(`*Novo pedido #${a.numero}* — Armazém do Queijo`);
+  if (a.agendado) L.push("*⏰ PEDIDO AGENDADO — combinar horário*");
   L.push("");
   L.push(`*Cliente:* ${d.nome ?? "-"}`);
   if (d.telefone) L.push(`*WhatsApp:* ${d.telefone}`);

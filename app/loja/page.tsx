@@ -65,8 +65,10 @@ export default function LojaHome() {
       {!status.aberta && (
         <div className="flex items-center justify-center gap-sm bg-primary px-md py-2 text-center text-label-md text-on-primary">
           <span className="material-symbols-outlined text-[18px]">schedule</span>
-          Loja fechada — {status.motivo} Você pode montar o pedido e enviar quando
-          abrirmos.
+          Loja fechada — {status.motivo}{" "}
+          {cfg.agendamentoAtivo
+            ? "Você pode agendar seu pedido."
+            : "Fique à vontade para ver o catálogo."}
         </div>
       )}
 
@@ -154,8 +156,10 @@ export default function LojaHome() {
               Estamos fechados no momento
             </h2>
             <p className="mt-1 text-body-md text-on-surface-variant">
-              {status.motivo} Fique à vontade para ver o catálogo — é só fechar
-              este aviso.
+              {status.motivo}{" "}
+              {cfg.agendamentoAtivo
+                ? "Você ainda pode montar o pedido e enviar como agendado — combinamos o horário."
+                : "Fique à vontade para ver o catálogo — é só fechar este aviso."}
             </p>
 
             {linksRedes(cfg.redes, cfg.whatsapp).length > 0 && (

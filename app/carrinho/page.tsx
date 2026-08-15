@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cart";
 import {
   CATALOGO,
@@ -13,7 +13,7 @@ import {
   type Produto,
 } from "@/lib/catalogo";
 import { calcularResumo, buscarCupom, LOJAS_RETIRADA } from "@/lib/regras";
-import { useConfig } from "@/lib/config-store";
+import { useConfig, lojaAbertaAgora } from "@/lib/config-store";
 
 export default function Carrinho() {
   const router = useRouter();
@@ -31,6 +31,19 @@ export default function Carrinho() {
     modo === "entrega" &&
     cfg.pedidoMinimo > 0 &&
     r.subtotal < cfg.pedidoMinimo;
+
+  const status = lojaAbertaAgora(cfg);
+  const podeAgendar = !status.aberta && cfg.agendamentoAtivo;
+  const soVisualiza = !status.aberta && !cfg.agendamentoAtivo;
+
+  // Garante que o modo escolhido está entre os ativos na config.
+  useEffect(() => {
+    if (modo === "entrega" && !cfg.entregaAtiva && cfg.retiradaAtiva) {
+      setDados({ modo: "retirada" });
+    } else if (modo === "retirada" && !cfg.retiradaAtiva && cfg.entregaAtiva) {
+      setDados({ modo: "entrega" });
+    }
+  }, [modo, cfg.entregaAtiva, cfg.retiradaAtiva, setDados]);
 
   const noCarrinho = (id: string) => itens.some((i) => i.produtoId === id);
 
@@ -174,18 +187,22 @@ export default function Carrinho() {
               Como quer receber?
             </h3>
             <div className="flex rounded-lg border border-outline-variant p-1">
-              <SegBtn
-                ativo={modo === "entrega"}
-                onClick={() => setDados({ modo: "entrega" })}
-                icone="local_shipping"
-                label="Entrega"
-              />
-              <SegBtn
-                ativo={modo === "retirada"}
-                onClick={() => setDados({ modo: "retirada" })}
-                icone="storefront"
-                label="Retirar na loja"
-              />
+              {cfg.entregaAtiva && (
+                <SegBtn
+                  ativo={modo === "entrega"}
+                  onClick={() => setDados({ modo: "entrega" })}
+                  icone="local_shipping"
+                  label="Entrega"
+                />
+              )}
+              {cfg.retiradaAtiva && (
+                <SegBtn
+                  ativo={modo === "retirada"}
+                  onClick={() => setDados({ modo: "retirada" })}
+                  icone="storefront"
+                  label="Retirar na loja"
+                />
+              )}
             </div>
 
             {modo === "entrega" ? (
@@ -467,7 +484,19 @@ export default function Carrinho() {
 
           {/* Continuar */}
           <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
-            {faltaMinimo && (
+            {soVisualiza && (
+              <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-danger-red">
+                <span className="material-symbols-outlined text-[16px]">schedule</span>
+                Loja fechada — {status.motivo} Só visualização agora.
+              </p>
+            )}
+            {podeAgendar && (
+              <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-secondary">
+                <span className="material-symbols-outlined text-[16px]">event</span>
+                Loja fechada — seu pedido será enviado como AGENDADO.
+              </p>
+            )}
+            {faltaMinimo && !soVisualiza && (
               <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-danger-red">
                 <span className="material-symbols-outlined text-[16px]">info</span>
                 Pedido mínimo de {brl(cfg.pedidoMinimo)} — faltam{" "}
@@ -476,12 +505,18 @@ export default function Carrinho() {
             )}
             <button
               onClick={() => router.push("/checkout/identificacao")}
-              disabled={faltaMinimo}
+              disabled={faltaMinimo || soVisualiza}
               className="flex w-full items-center justify-between rounded-lg bg-primary px-lg py-4 text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
             >
               <span className="flex items-center gap-2 text-body-lg font-semibold">
-                Continuar
-                <span className="material-symbols-outlined">arrow_forward</span>
+                {soVisualiza
+                  ? "Loja fechada"
+                  : podeAgendar
+                    ? "Agendar pedido"
+                    : "Continuar"}
+                {!soVisualiza && (
+                  <span className="material-symbols-outlined">arrow_forward</span>
+                )}
               </span>
               <span className="font-headline-md text-headline-md">
                 {brl(r.total)}

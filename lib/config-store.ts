@@ -49,6 +49,9 @@ export type ConfigLoja = {
   heroTitulo: string; // título do banner
   pixChave: string; // chave Pix mostrada ao cliente
   pedidoMinimo: number; // valor mínimo do pedido (entrega); 0 = sem mínimo
+  entregaAtiva: boolean; // oferece entrega no delivery
+  retiradaAtiva: boolean; // oferece retirada na loja
+  agendamentoAtivo: boolean; // permite pedido agendado quando fechada
 };
 
 export const CONFIG_PADRAO: ConfigLoja = {
@@ -82,6 +85,9 @@ export const CONFIG_PADRAO: ConfigLoja = {
   heroTitulo: "Queijo Canastra com Mel de Laranjeira",
   pixChave: "",
   pedidoMinimo: 0,
+  entregaAtiva: true,
+  retiradaAtiva: true,
+  agendamentoAtivo: false,
 };
 
 // Fotos disponíveis para o banner sem upload (as que já vêm no projeto).

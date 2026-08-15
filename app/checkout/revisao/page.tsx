@@ -22,11 +22,14 @@ export default function Revisao() {
   const modo = dados.modo ?? "entrega";
   const cfg = useConfig();
   const status = lojaAbertaAgora(cfg);
+  const agendado = !status.aberta; // fechada → pedido agendado
+  const podeAgendar = agendado && cfg.agendamentoAtivo;
+  const podeFinalizar = status.aberta || podeAgendar;
   const r = calcularResumo(total, dados, cfg);
   const lojaRetirada = LOJAS_RETIRADA.find((l) => l.id === dados.lojaRetiradaId);
 
   function finalizar() {
-    if (!status.aberta) return;
+    if (!podeFinalizar) return;
 
     const itensMsg = itens.map((it) => ({
       nome: it.nome,
@@ -48,6 +51,7 @@ export default function Revisao() {
       pagamento: PAG_LABEL[pagamento] ?? pagamento,
       itens: itensMsg,
       total: r.total,
+      agendado,
     });
 
     // Envia o pedido para o WhatsApp da loja (é como o pedido chega hoje).
@@ -58,6 +62,7 @@ export default function Revisao() {
       resumo: r,
       pixChave: cfg.pixChave,
       lojaRetiradaNome: lojaRetirada?.nome,
+      agendado,
     });
     const link = linkWhatsApp(cfg.whatsapp, texto);
     if (link) window.open(link, "_blank");
@@ -223,7 +228,13 @@ export default function Revisao() {
 
       {/* Finalizar */}
       <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
-        {!status.aberta && (
+        {podeAgendar && (
+          <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-secondary">
+            <span className="material-symbols-outlined text-[16px]">event</span>
+            Loja fechada — enviado como AGENDADO (combinamos o horário).
+          </p>
+        )}
+        {!podeFinalizar && (
           <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-danger-red">
             <span className="material-symbols-outlined text-[16px]">schedule</span>
             Loja fechada — {status.motivo}
@@ -231,11 +242,15 @@ export default function Revisao() {
         )}
         <button
           onClick={finalizar}
-          disabled={!status.aberta}
+          disabled={!podeFinalizar}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-lg py-4 text-body-lg font-semibold text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
         >
-          {status.aberta ? "Enviar pedido pelo WhatsApp" : "Loja fechada no momento"}
-          {status.aberta && (
+          {podeFinalizar
+            ? podeAgendar
+              ? "Enviar pedido agendado pelo WhatsApp"
+              : "Enviar pedido pelo WhatsApp"
+            : "Loja fechada no momento"}
+          {podeFinalizar && (
             <span className="material-symbols-outlined">chat</span>
           )}
         </button>

@@ -24,6 +24,7 @@ export type PedidoLive = {
   itens: ItemLive[];
   total: number;
   status: StatusLive;
+  agendado?: boolean; // pedido feito com a loja fechada (combinar horário)
 };
 
 const KEY = "armazem-pedidos-live";

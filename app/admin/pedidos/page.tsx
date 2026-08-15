@@ -106,10 +106,16 @@ export default function AdminPedidos() {
                       {brl(p.total)}
                     </span>
                   </div>
-                  <div className="mt-0.5 flex items-center gap-sm text-caption text-on-surface-variant">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-sm text-caption text-on-surface-variant">
                     <span className="rounded-full bg-surface-container px-2 py-0.5">
                       {p.canal}
                     </span>
+                    {p.agendado && (
+                      <span className="flex items-center gap-0.5 rounded-full bg-secondary-container px-2 py-0.5 font-semibold text-on-secondary-container">
+                        <span className="material-symbols-outlined text-[13px]">event</span>
+                        Agendado
+                      </span>
+                    )}
                     <span>
                       {p.itens.length} {p.itens.length === 1 ? "item" : "itens"}
                     </span>
