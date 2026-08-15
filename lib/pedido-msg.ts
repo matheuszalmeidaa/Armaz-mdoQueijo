@@ -49,6 +49,7 @@ export function mensagemPedido(a: Args): string {
     L.push(`*Retirada:* ${a.lojaRetiradaNome ?? "na loja"}`);
   } else {
     L.push(`*Entrega:* ${formatarEndereco(d)}`);
+    if (d.geoLink) L.push(`*Mapa:* ${d.geoLink}`);
   }
   L.push("");
   L.push("*Itens:*");

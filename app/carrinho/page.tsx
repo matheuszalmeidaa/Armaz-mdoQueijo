@@ -26,11 +26,8 @@ export default function Carrinho() {
   const [cupomErro, setCupomErro] = useState(false);
 
   const cfg = useConfig();
-  const r = calcularResumo(total, dados, cfg);
   const faltaMinimo =
-    modo === "entrega" &&
-    cfg.pedidoMinimo > 0 &&
-    r.subtotal < cfg.pedidoMinimo;
+    modo === "entrega" && cfg.pedidoMinimo > 0 && total < cfg.pedidoMinimo;
 
   const status = lojaAbertaAgora(cfg);
   const podeAgendar = !status.aberta && cfg.agendamentoAtivo;
@@ -276,10 +273,9 @@ export default function Carrinho() {
             {modo === "entrega" ? (
               <p className="mt-sm flex items-center gap-sm rounded-lg bg-surface-container-low px-md py-2.5 text-body-md text-on-surface-variant">
                 <span className="material-symbols-outlined text-secondary">
-                  local_shipping
+                  location_on
                 </span>
-                Taxa de entrega:{" "}
-                <strong className="text-on-surface">{brl(cfg.frete)}</strong>
+                Você informa o endereço no próximo passo.
               </p>
             ) : (
               <div className="mt-sm">
@@ -305,182 +301,10 @@ export default function Carrinho() {
             )}
           </section>
 
-          {/* Forma de pagamento */}
-          <section className="mt-lg px-md">
-            <h3 className="mb-sm font-headline-md text-headline-md text-on-surface">
-              Forma de Pagamento
-            </h3>
-            <div className="flex flex-col gap-sm">
-              <OpcaoPagamento
-                ativo={pagamento === "pix"}
-                onClick={() => setDados({ pagamento: "pix" })}
-                icone="qr_code_2"
-                titulo="Pix"
-                sub="5% de desconto extra"
-                destaque
-              />
-              <OpcaoPagamento
-                ativo={pagamento === "cartao"}
-                onClick={() => setDados({ pagamento: "cartao" })}
-                icone="credit_card"
-                titulo="Cartão (maquineta na entrega)"
-                sub="Débito ou crédito"
-              />
-              <OpcaoPagamento
-                ativo={pagamento === "dinheiro"}
-                onClick={() => setDados({ pagamento: "dinheiro" })}
-                icone="payments"
-                titulo="Dinheiro"
-                sub="Pague na entrega"
-              />
-            </div>
-
-            {pagamento === "pix" && cfg.pixChave && (
-              <div className="mt-sm flex items-center justify-between gap-sm rounded-lg bg-surface-container-low px-md py-2.5">
-                <div className="min-w-0">
-                  <p className="text-label-sm text-on-surface-variant">Chave Pix</p>
-                  <p className="truncate text-body-md text-on-surface">
-                    {cfg.pixChave}
-                  </p>
-                </div>
-                <button
-                  onClick={() => navigator.clipboard?.writeText(cfg.pixChave)}
-                  className="flex flex-shrink-0 items-center gap-1 rounded-lg border border-outline-variant px-3 py-2 text-label-md text-primary active:scale-95"
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    content_copy
-                  </span>
-                  Copiar
-                </button>
-              </div>
-            )}
-
-            {pagamento === "dinheiro" && (
-              <div className="mt-sm rounded-lg bg-surface-container-low px-md py-2.5">
-                <label className="block text-label-sm text-on-surface-variant">
-                  Precisa de troco? Troco para quanto?
-                </label>
-                <div className="mt-1 flex items-center gap-1">
-                  <span className="text-body-md text-on-surface-variant">R$</span>
-                  <input
-                    inputMode="decimal"
-                    value={dados.trocoPara ? String(dados.trocoPara) : ""}
-                    onChange={(e) =>
-                      setDados({
-                        trocoPara: Number(e.target.value.replace(",", ".")) || undefined,
-                      })
-                    }
-                    placeholder="Sem troco"
-                    className="w-full bg-transparent text-body-lg outline-none"
-                  />
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Cupom */}
-          <section className="mt-lg px-md">
-            <h3 className="mb-sm font-headline-md text-headline-md text-on-surface">
-              Cupom de desconto
-            </h3>
-            {r.cupom ? (
-              <div className="rounded-lg bg-tertiary-container/40 px-md py-3">
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-sm text-body-md text-on-surface">
-                    <span className="material-symbols-outlined text-tertiary">
-                      local_activity
-                    </span>
-                    <strong>{r.cupom.codigo}</strong> — {r.cupom.descricao}
-                  </span>
-                  <button
-                    onClick={() => {
-                      setDados({ cupom: "" });
-                      setCupomInput("");
-                    }}
-                    className="text-danger-red"
-                  >
-                    <span className="material-symbols-outlined">close</span>
-                  </button>
-                </div>
-                {!r.atingiuMinimo && (
-                  <p className="mt-1 flex items-center gap-1 text-label-sm text-secondary">
-                    <span className="material-symbols-outlined text-[16px]">info</span>
-                    Válido a partir de {brl(r.cupom.minimo)} — faltam{" "}
-                    {brl(r.cupom.minimo - r.subtotal)} em produtos.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="flex gap-sm">
-                  <input
-                    value={cupomInput}
-                    onChange={(e) => {
-                      setCupomInput(e.target.value);
-                      setCupomErro(false);
-                    }}
-                    placeholder="Digite o código"
-                    className="flex-grow rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg uppercase outline-none focus:border-primary"
-                  />
-                  <button
-                    onClick={aplicarCupom}
-                    className="rounded-lg bg-secondary px-lg text-label-md text-on-secondary active:scale-95"
-                  >
-                    Aplicar
-                  </button>
-                </div>
-                {cupomErro && (
-                  <p className="mt-1 text-label-sm text-danger-red">
-                    Cupom inválido ou inativo.
-                  </p>
-                )}
-              </>
-            )}
-          </section>
-
-          {/* Resumo */}
-          <section className="mt-lg px-md">
-            <div className="rounded-xl bg-cream-surface p-md">
-              <Linha rotulo="Subtotal" valor={brl(r.subtotal)} />
-              <Linha
-                rotulo={modo === "retirada" ? "Retirada na loja" : "Frete"}
-                valor={r.frete > 0 ? brl(r.frete) : "Grátis"}
-                verde={r.frete === 0}
-              />
-              {r.descontoPix > 0 && (
-                <Linha
-                  rotulo="Desconto Pix (5%)"
-                  valor={`- ${brl(r.descontoPix)}`}
-                  verde
-                />
-              )}
-              {r.descontoCupom > 0 && (
-                <Linha
-                  rotulo={`Cupom ${r.cupom?.codigo ?? ""}`}
-                  valor={`- ${brl(r.descontoCupom)}`}
-                  verde
-                />
-              )}
-              <div className="my-sm border-t border-dashed border-outline/20" />
-              <Linha rotulo="Total" valor={brl(r.total)} destaque />
-            </div>
-            {cfg.cashbackAtivo && (
-              <div className="mt-sm flex items-center gap-sm rounded-lg bg-tertiary-container/40 px-md py-2.5">
-                <span className="material-symbols-outlined text-tertiary">loyalty</span>
-                <span className="text-body-md text-on-surface">
-                  Você ganha{" "}
-                  <strong className="text-tertiary">
-                    {brl(r.total * cfg.cashbackPercent)}
-                  </strong>{" "}
-                  em cashback nesta compra.
-                </span>
-              </div>
-            )}
-            <p className="mt-sm text-caption text-on-surface-variant">
-              * Itens por peso são aproximados; o valor final pode ajustar ao
-              corte, dentro da faixa escolhida.
-            </p>
-          </section>
+          <p className="mt-lg px-md text-caption text-on-surface-variant">
+            * Itens por peso são aproximados; o valor final pode ajustar ao corte,
+            dentro da faixa escolhida. Pagamento e cupom no próximo passo.
+          </p>
 
           {/* Continuar */}
           <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
@@ -500,7 +324,7 @@ export default function Carrinho() {
               <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-danger-red">
                 <span className="material-symbols-outlined text-[16px]">info</span>
                 Pedido mínimo de {brl(cfg.pedidoMinimo)} — faltam{" "}
-                {brl(cfg.pedidoMinimo - r.subtotal)}.
+                {brl(cfg.pedidoMinimo - total)}.
               </p>
             )}
             <button
@@ -519,7 +343,7 @@ export default function Carrinho() {
                 )}
               </span>
               <span className="font-headline-md text-headline-md">
-                {brl(r.total)}
+                {brl(total)}
               </span>
             </button>
           </div>

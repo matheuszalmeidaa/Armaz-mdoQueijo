@@ -28,6 +28,7 @@ export type DadosCheckout = {
   complemento?: string;
   bairro?: string;
   referencia?: string;
+  geoLink?: string; // link do Google Maps (GPS) anexado ao pedido
   pagamento?: "pix" | "cartao" | "dinheiro";
   trocoPara?: number; // quando pagamento = dinheiro
   modo?: "entrega" | "retirada";

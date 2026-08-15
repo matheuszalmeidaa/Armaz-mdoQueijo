@@ -15,6 +15,7 @@ function mascarar(valor: string, visiveis: number) {
 export default function Endereco() {
   const router = useRouter();
   const { dados, setDados } = useCart();
+  const [geoStatus, setGeoStatus] = useState<"" | "carregando" | "ok" | "erro">("");
   const [rua, setRua] = useState(dados.rua ?? "");
   const [numero, setNumero] = useState(dados.numero ?? "");
   const [complemento, setComplemento] = useState(dados.complemento ?? "");
@@ -23,6 +24,25 @@ export default function Endereco() {
 
   const valido =
     rua.trim().length > 2 && numero.trim().length > 0 && bairro.trim().length > 1;
+
+  function usarLocalizacao() {
+    if (!navigator.geolocation) {
+      setGeoStatus("erro");
+      return;
+    }
+    setGeoStatus("carregando");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setDados({
+          geoLink: `https://www.google.com/maps?q=${latitude},${longitude}`,
+        });
+        setGeoStatus("ok");
+      },
+      () => setGeoStatus("erro"),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
 
   function confirmar() {
     if (!valido) return;
@@ -97,6 +117,31 @@ export default function Endereco() {
         <h2 className="mt-lg font-headline-md text-headline-md text-on-surface">
           Endereço de entrega
         </h2>
+
+        <button
+          onClick={usarLocalizacao}
+          className="mt-sm flex w-full items-center justify-center gap-sm rounded-lg border border-primary/40 bg-primary-container/5 py-3 text-label-md font-medium text-primary active:scale-[0.99]"
+        >
+          <span className="material-symbols-outlined text-[20px]">
+            {geoStatus === "ok" ? "check_circle" : "my_location"}
+          </span>
+          {geoStatus === "carregando"
+            ? "Obtendo localização..."
+            : geoStatus === "ok"
+              ? "Localização anexada ✓"
+              : "Usar minha localização"}
+        </button>
+        {geoStatus === "erro" && (
+          <p className="mt-1 text-label-sm text-danger-red">
+            Não foi possível obter a localização. Preencha o endereço abaixo.
+          </p>
+        )}
+        {geoStatus === "ok" && (
+          <p className="mt-1 text-label-sm text-on-surface-variant">
+            Ainda assim, confirme rua, número e bairro abaixo (número obrigatório).
+          </p>
+        )}
+
         <div className="mt-sm space-y-sm">
           <div className="grid grid-cols-3 gap-sm">
             <CampoEnd

@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import { brl, gramas } from "@/lib/catalogo";
-import { calcularResumo, prazoDe, LOJAS_RETIRADA } from "@/lib/regras";
+import { calcularResumo, prazoDe, buscarCupom, LOJAS_RETIRADA } from "@/lib/regras";
 import { useConfig, lojaAbertaAgora } from "@/lib/config-store";
 import { adicionarPedido } from "@/lib/pedidos-store";
 import { mensagemPedido, linkWhatsApp, formatarEndereco } from "@/lib/pedido-msg";
@@ -17,10 +18,22 @@ const PAG_LABEL: Record<string, string> = {
 
 export default function Revisao() {
   const router = useRouter();
-  const { itens, total, dados, limpar } = useCart();
+  const { itens, total, dados, setDados, limpar } = useCart();
   const pagamento = dados.pagamento ?? "pix";
   const modo = dados.modo ?? "entrega";
   const cfg = useConfig();
+  const [cupomInput, setCupomInput] = useState(dados.cupom ?? "");
+  const [cupomErro, setCupomErro] = useState(false);
+
+  function aplicarCupom() {
+    const c = buscarCupom(cupomInput, cfg.cupons);
+    if (c) {
+      setDados({ cupom: c.codigo });
+      setCupomErro(false);
+    } else {
+      setCupomErro(true);
+    }
+  }
   const status = lojaAbertaAgora(cfg);
   const agendado = !status.aberta; // fechada → pedido agendado
   const podeAgendar = agendado && cfg.agendamentoAtivo;
@@ -165,39 +178,109 @@ export default function Revisao() {
           + Adicionar mais itens
         </Link>
 
-        {/* Pagamento */}
+        {/* Pagamento (escolha aqui) */}
         <h3 className="mt-lg text-label-sm uppercase tracking-wide text-on-surface-variant">
           Forma de pagamento
         </h3>
-        <div className="mt-sm flex items-center justify-between rounded-xl bg-surface-container-lowest p-md shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-          <div className="flex items-center gap-sm">
-            <span className="material-symbols-outlined text-secondary">
-              {pagamento === "pix"
-                ? "qr_code_2"
-                : pagamento === "dinheiro"
-                  ? "payments"
-                  : "credit_card"}
-            </span>
-            <div className="leading-tight">
-              <span className="block text-body-lg text-on-surface">
-                {PAG_LABEL[pagamento] ?? pagamento}
-              </span>
-              {pagamento === "dinheiro" && dados.trocoPara ? (
-                <span className="text-label-sm text-on-surface-variant">
-                  Troco para {brl(dados.trocoPara)}
-                </span>
-              ) : null}
-              {pagamento === "pix" && cfg.pixChave ? (
-                <span className="text-label-sm text-on-surface-variant">
-                  Chave: {cfg.pixChave}
-                </span>
-              ) : null}
+        <div className="mt-sm flex flex-col gap-sm">
+          <PagBtn ativo={pagamento === "pix"} onClick={() => setDados({ pagamento: "pix" })} icone="qr_code_2" titulo="Pix" sub="5% de desconto extra" />
+          <PagBtn ativo={pagamento === "cartao"} onClick={() => setDados({ pagamento: "cartao" })} icone="credit_card" titulo="Cartão (maquineta na entrega)" sub="Débito ou crédito" />
+          <PagBtn ativo={pagamento === "dinheiro"} onClick={() => setDados({ pagamento: "dinheiro" })} icone="payments" titulo="Dinheiro" sub="Pague na entrega" />
+        </div>
+
+        {pagamento === "pix" && cfg.pixChave && (
+          <div className="mt-sm flex items-center justify-between gap-sm rounded-lg bg-surface-container-low px-md py-2.5">
+            <div className="min-w-0">
+              <p className="text-label-sm text-on-surface-variant">Chave Pix</p>
+              <p className="truncate text-body-md text-on-surface">{cfg.pixChave}</p>
+            </div>
+            <button
+              onClick={() => navigator.clipboard?.writeText(cfg.pixChave)}
+              className="flex flex-shrink-0 items-center gap-1 rounded-lg border border-outline-variant px-3 py-2 text-label-md text-primary active:scale-95"
+            >
+              <span className="material-symbols-outlined text-[18px]">content_copy</span>
+              Copiar
+            </button>
+          </div>
+        )}
+
+        {pagamento === "dinheiro" && (
+          <div className="mt-sm rounded-lg bg-surface-container-low px-md py-2.5">
+            <label className="block text-label-sm text-on-surface-variant">
+              Precisa de troco? Troco para quanto?
+            </label>
+            <div className="mt-1 flex items-center gap-1">
+              <span className="text-body-md text-on-surface-variant">R$</span>
+              <input
+                inputMode="decimal"
+                value={dados.trocoPara ? String(dados.trocoPara) : ""}
+                onChange={(e) =>
+                  setDados({
+                    trocoPara: Number(e.target.value.replace(",", ".")) || undefined,
+                  })
+                }
+                placeholder="Sem troco"
+                className="w-full bg-transparent text-body-lg outline-none"
+              />
             </div>
           </div>
-          <Link href="/carrinho" className="text-label-md text-secondary">
-            Alterar
-          </Link>
-        </div>
+        )}
+
+        {/* Cupom */}
+        <h3 className="mt-lg text-label-sm uppercase tracking-wide text-on-surface-variant">
+          Cupom de desconto
+        </h3>
+        {r.cupom ? (
+          <div className="mt-sm rounded-lg bg-tertiary-container/40 px-md py-3">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-sm text-body-md text-on-surface">
+                <span className="material-symbols-outlined text-tertiary">local_activity</span>
+                <strong>{r.cupom.codigo}</strong> — {r.cupom.descricao}
+              </span>
+              <button
+                onClick={() => {
+                  setDados({ cupom: "" });
+                  setCupomInput("");
+                }}
+                className="text-danger-red"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            {!r.atingiuMinimo && (
+              <p className="mt-1 flex items-center gap-1 text-label-sm text-secondary">
+                <span className="material-symbols-outlined text-[16px]">info</span>
+                Válido a partir de {brl(r.cupom.minimo)} — faltam{" "}
+                {brl(r.cupom.minimo - r.subtotal)} em produtos.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="mt-sm">
+            <div className="flex gap-sm">
+              <input
+                value={cupomInput}
+                onChange={(e) => {
+                  setCupomInput(e.target.value);
+                  setCupomErro(false);
+                }}
+                placeholder="Digite o código"
+                className="flex-grow rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg uppercase outline-none focus:border-primary"
+              />
+              <button
+                onClick={aplicarCupom}
+                className="rounded-lg bg-secondary px-lg text-label-md text-on-secondary active:scale-95"
+              >
+                Aplicar
+              </button>
+            </div>
+            {cupomErro && (
+              <p className="mt-1 text-label-sm text-danger-red">
+                Cupom inválido ou inativo.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Resumo */}
         <div className="mt-lg rounded-xl bg-cream-surface p-md">
@@ -256,6 +339,46 @@ export default function Revisao() {
         </button>
       </div>
     </main>
+  );
+}
+
+function PagBtn({
+  ativo,
+  onClick,
+  icone,
+  titulo,
+  sub,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  icone: string;
+  titulo: string;
+  sub: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-sm rounded-xl border p-md text-left transition-all active:scale-[0.99] ${
+        ativo
+          ? "border-primary bg-primary-container/10"
+          : "border-outline-variant bg-surface-container-lowest"
+      }`}
+    >
+      <span
+        className={`material-symbols-outlined ${ativo ? "text-primary" : "text-secondary"}`}
+      >
+        {icone}
+      </span>
+      <span className="leading-tight">
+        <span className="block text-body-lg text-on-surface">{titulo}</span>
+        <span className="block text-label-sm text-on-surface-variant">{sub}</span>
+      </span>
+      {ativo && (
+        <span className="material-symbols-outlined ml-auto text-primary">
+          check_circle
+        </span>
+      )}
+    </button>
   );
 }
 
