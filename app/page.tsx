@@ -1,159 +1,151 @@
+"use client";
+
 import Link from "next/link";
-
-type Modulo = {
-  href: string;
-  icon: string;
-  titulo: string;
-  descricao: string;
-  fase: string;
-  ativo: boolean;
-};
-
-const modulos: Modulo[] = [
-  {
-    href: "/pdv",
-    icon: "point_of_sale",
-    titulo: "PDV",
-    descricao:
-      "Registra a venda em poucos toques, baixa o estoque na hora e aposenta o caderninho.",
-    fase: "Fase 1",
-    ativo: true,
-  },
-  {
-    href: "/admin",
-    icon: "dashboard",
-    titulo: "Gestão (Painel do Lojista)",
-    descricao:
-      "Dashboard, produtos e as regras da loja (taxa, Pix, tolerância de corte). Vendas por loja e canal.",
-    fase: "Fase 2",
-    ativo: true,
-  },
-  {
-    href: "/loja",
-    icon: "storefront",
-    titulo: "Delivery",
-    descricao:
-      "A loja do cliente (Fusqueijão), reusando o mesmo catálogo. Substitui o OlaClick.",
-    fase: "Fase 3",
-    ativo: true,
-  },
-];
+import { useConfig, lojaAbertaAgora } from "@/lib/config-store";
 
 export default function Home() {
+  const cfg = useConfig();
+  const status = lojaAbertaAgora(cfg);
+
+  const zap = cfg.whatsapp.replace(/\D/g, "");
+  const ig = cfg.redes.instagram.trim();
+  const igHref = ig
+    ? ig.startsWith("http")
+      ? ig
+      : `https://instagram.com/${ig.replace(/^@/, "")}`
+    : "";
+  const fb = cfg.redes.facebook.trim();
+  const fbHref = fb ? (fb.startsWith("http") ? fb : `https://facebook.com/${fb}`) : "";
+
   return (
-    <main className="min-h-full">
-      {/* Cabeçalho da marca */}
-      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-outline-variant/30 bg-surface/90 px-md py-sm shadow-sm backdrop-blur-md">
-        <div className="flex items-center gap-sm">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-on-primary">
-            <span className="material-symbols-outlined">restaurant</span>
-          </div>
-          <h1 className="font-display text-headline-lg tracking-tight text-primary">
-            Armazém do Queijo
-          </h1>
+    <main className="relative min-h-dvh overflow-hidden bg-gradient-to-b from-primary to-primary-container">
+      {/* Textura sutil */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 20% 20%, #fff 1px, transparent 1px), radial-gradient(circle at 70% 60%, #fff 1px, transparent 1px)",
+          backgroundSize: "60px 60px, 90px 90px",
+        }}
+      />
+
+      <div className="relative mx-auto flex min-h-dvh max-w-[26rem] flex-col items-center px-md py-xl">
+        {/* Marca */}
+        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-on-primary/15 backdrop-blur-sm">
+          <span className="material-symbols-outlined text-[42px] text-cream-surface">
+            restaurant
+          </span>
         </div>
-        <span className="rounded-full bg-secondary-container px-3 py-1 text-label-sm font-medium text-on-secondary-container">
-          MVP
+        <h1 className="mt-md font-display text-[2rem] font-bold leading-none text-cream-surface">
+          Armazém do Queijo
+        </h1>
+        <p className="mt-1 text-body-md text-primary-fixed">
+          Queijos artesanais e iguarias da roça
+        </p>
+
+        <span
+          className={`mt-md flex items-center gap-1.5 rounded-full px-3 py-1 text-label-md font-semibold ${
+            status.aberta
+              ? "bg-tertiary text-on-tertiary"
+              : "bg-on-primary/15 text-cream-surface"
+          }`}
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${status.aberta ? "bg-cream-surface" : "bg-warning-amber"}`}
+          />
+          {status.aberta ? "Aberto agora" : "Fechado no momento"}
         </span>
-      </header>
 
-      <div className="mx-auto max-w-4xl px-md pb-xl">
-        {/* Hero */}
-        <section className="mt-lg overflow-hidden rounded-xl bg-primary p-lg text-on-primary shadow-lg">
-          <p className="text-label-md uppercase tracking-wide text-primary-fixed-dim">
-            Uma plataforma. Três frentes.
-          </p>
-          <h2 className="mt-sm max-w-[36rem] text-headline-lg leading-tight text-cream-surface">
-            Delivery, PDV e estoque das duas lojas — no mesmo lugar, com os
-            mesmos dados.
-          </h2>
-          <p className="mt-sm max-w-[36rem] text-body-md text-primary-fixed">
-            A espinha guarda produtos, estoque por loja e cada venda. PDV,
-            delivery e dashboard são só janelas para o mesmo livro-caixa.
-          </p>
-        </section>
+        {/* Links */}
+        <nav className="mt-xl flex w-full flex-col gap-sm">
+          <LinkGrande
+            href="/loja"
+            icone="shopping_basket"
+            titulo="Fazer meu pedido"
+            sub="Delivery e retirada"
+            destaque
+          />
+          <LinkGrande
+            href="/pedidos-atacado"
+            icone="inventory_2"
+            titulo="Compra no atacado"
+            sub="Preços por volume (kg/peça)"
+          />
+          {zap && (
+            <LinkGrande
+              href={`https://wa.me/55${zap}`}
+              externo
+              icone="chat"
+              titulo="Falar no WhatsApp"
+              sub="Tire dúvidas ou peça por aqui"
+            />
+          )}
+          {igHref && (
+            <LinkGrande href={igHref} externo icone="photo_camera" titulo="Instagram" sub="Novidades e bastidores" />
+          )}
+          {fbHref && (
+            <LinkGrande href={fbHref} externo icone="thumb_up" titulo="Facebook" sub="Siga a gente" />
+          )}
+        </nav>
 
-        {/* Módulos */}
-        <section className="mt-xl">
-          <div className="mb-md flex items-center justify-between">
-            <h3 className="font-headline-md text-headline-md text-primary">
-              Módulos
-            </h3>
-            <span className="text-label-sm text-on-surface-variant">
-              Construídos em ordem — cada fase entra em uso
-            </span>
-          </div>
-
-          <div className="grid gap-gutter sm:grid-cols-3">
-            {modulos.map((m) => (
-              <ModuloCard key={m.href} modulo={m} />
-            ))}
-          </div>
-        </section>
-
-        {/* Espinha */}
-        <section className="mt-xl rounded-xl border border-dashed border-outline/30 bg-cream-surface p-lg">
-          <div className="flex items-center gap-sm">
-            <span className="material-symbols-outlined text-secondary">
-              database
-            </span>
-            <h3 className="font-headline-md text-headline-md text-on-surface">
-              A espinha (Supabase)
-            </h3>
-          </div>
-          <p className="mt-sm text-body-md text-on-surface-variant">
-            Fonte única da verdade. Se está bem alimentada, todo indicador —
-            mais vendido por época, cliente inativo, perda de produto — é só uma
-            consulta.
-          </p>
-          <div className="mt-md flex flex-wrap gap-sm">
-            {[
-              "lojas",
-              "produtos",
-              "estoque",
-              "movimentacoes",
-              "vendas",
-              "clientes",
-            ].map((t) => (
-              <code
-                key={t}
-                className="rounded-lg bg-surface-container px-3 py-1.5 text-label-sm text-on-surface"
-              >
-                {t}
-              </code>
-            ))}
-          </div>
-        </section>
+        <div className="mt-auto pt-xl">
+          <Link
+            href="/admin"
+            className="text-label-md text-primary-fixed/80 underline underline-offset-2"
+          >
+            Acesso da equipe
+          </Link>
+        </div>
       </div>
     </main>
   );
 }
 
-function ModuloCard({ modulo }: { modulo: Modulo }) {
-  return (
-    <Link
-      href={modulo.ativo ? modulo.href : "#"}
-      aria-disabled={!modulo.ativo}
-      className={`group flex flex-col rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-md shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all ${
-        modulo.ativo
-          ? "hover:-translate-y-0.5 hover:shadow-md"
-          : "cursor-not-allowed opacity-70"
-      }`}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary-container/10 text-primary">
-          <span className="material-symbols-outlined">{modulo.icon}</span>
-        </div>
-        <span className="rounded-full border border-outline-variant/40 px-2.5 py-0.5 text-label-sm text-on-surface-variant">
-          {modulo.fase}
+function LinkGrande({
+  href,
+  icone,
+  titulo,
+  sub,
+  destaque,
+  externo,
+}: {
+  href: string;
+  icone: string;
+  titulo: string;
+  sub: string;
+  destaque?: boolean;
+  externo?: boolean;
+}) {
+  const cls = `flex items-center gap-md rounded-2xl px-md py-3.5 shadow-lg transition-transform active:scale-[0.98] ${
+    destaque
+      ? "bg-cream-surface text-primary"
+      : "bg-on-primary/10 text-cream-surface backdrop-blur-sm ring-1 ring-on-primary/15"
+  }`;
+  const inner = (
+    <>
+      <span
+        className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ${
+          destaque ? "bg-primary/10 text-primary" : "bg-on-primary/15 text-cream-surface"
+        }`}
+      >
+        <span className="material-symbols-outlined">{icone}</span>
+      </span>
+      <span className="min-w-0 flex-grow leading-tight">
+        <span className="block font-headline-md text-headline-md">{titulo}</span>
+        <span className={`block text-label-sm ${destaque ? "text-on-surface-variant" : "text-primary-fixed"}`}>
+          {sub}
         </span>
-      </div>
-      <h4 className="mt-md font-headline-md text-headline-md text-primary">
-        {modulo.titulo}
-      </h4>
-      <p className="mt-xs text-body-md text-on-surface-variant">
-        {modulo.descricao}
-      </p>
+      </span>
+      <span className="material-symbols-outlined opacity-60">chevron_right</span>
+    </>
+  );
+  return externo ? (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>
+      {inner}
+    </a>
+  ) : (
+    <Link href={href} className={cls}>
+      {inner}
     </Link>
   );
 }
