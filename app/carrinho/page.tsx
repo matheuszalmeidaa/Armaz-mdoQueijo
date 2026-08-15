@@ -181,6 +181,74 @@ export default function Carrinho() {
             ))}
           </ul>
 
+          {/* Upsell — produto vinculado ("Vai bem com") ou sugestão genérica */}
+          {sugestoes.length > 0 && (
+            <section className="mt-lg px-md">
+              <h3 className="mb-sm font-headline-md text-headline-md text-on-surface">
+                {tituloUpsell}
+              </h3>
+              <div className="grid grid-cols-2 gap-gutter">
+                {sugestoes.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex flex-col overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-sm"
+                  >
+                    <div className="mb-sm flex aspect-video items-center justify-center rounded-lg bg-gradient-to-br from-secondary-container to-primary-container/20">
+                      <span className="material-symbols-outlined text-[32px] text-primary/40">
+                        {p.icone}
+                      </span>
+                    </div>
+                    <h4 className="line-clamp-1 text-label-md text-on-surface">
+                      {p.nome}
+                    </h4>
+                    <div className="mt-auto flex items-end justify-between pt-sm">
+                      <div className="flex flex-col leading-tight">
+                        {p.tipo === "peso" && (
+                          <span className="text-caption text-on-surface-variant">
+                            a partir de
+                          </span>
+                        )}
+                        <span className="font-headline-md text-headline-md text-primary">
+                          {brl(precoBase(p))}
+                        </span>
+                      </div>
+                      {p.tipo === "unidade" ? (
+                        <button
+                          aria-label={`Adicionar ${p.nome}`}
+                          onClick={() =>
+                            add({
+                              key: p.id,
+                              produtoId: p.id,
+                              nome: p.nome,
+                              icone: p.icone,
+                              qtd: 1,
+                              precoLinha: p.preco,
+                            })
+                          }
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-container text-white active:scale-90"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">
+                            add
+                          </span>
+                        </button>
+                      ) : (
+                        <Link
+                          href={`/produto/${p.id}`}
+                          aria-label={`Escolher peso de ${p.nome}`}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-container text-white active:scale-90"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">
+                            scale
+                          </span>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Como quer receber */}
           <section className="mt-lg px-md">
             <h3 className="mb-sm font-headline-md text-headline-md text-on-surface">
@@ -369,74 +437,6 @@ export default function Carrinho() {
               </>
             )}
           </section>
-
-          {/* Upsell — produto vinculado ("Vai bem com") ou sugestão genérica */}
-          {sugestoes.length > 0 && (
-            <section className="mt-lg px-md">
-              <h3 className="mb-sm font-headline-md text-headline-md text-on-surface">
-                {tituloUpsell}
-              </h3>
-              <div className="grid grid-cols-2 gap-gutter">
-                {sugestoes.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex flex-col overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-sm"
-                  >
-                    <div className="mb-sm flex aspect-video items-center justify-center rounded-lg bg-gradient-to-br from-secondary-container to-primary-container/20">
-                      <span className="material-symbols-outlined text-[32px] text-primary/40">
-                        {p.icone}
-                      </span>
-                    </div>
-                    <h4 className="line-clamp-1 text-label-md text-on-surface">
-                      {p.nome}
-                    </h4>
-                    <div className="mt-auto flex items-end justify-between pt-sm">
-                      <div className="flex flex-col leading-tight">
-                        {p.tipo === "peso" && (
-                          <span className="text-caption text-on-surface-variant">
-                            a partir de
-                          </span>
-                        )}
-                        <span className="font-headline-md text-headline-md text-primary">
-                          {brl(precoBase(p))}
-                        </span>
-                      </div>
-                      {p.tipo === "unidade" ? (
-                        <button
-                          aria-label={`Adicionar ${p.nome}`}
-                          onClick={() =>
-                            add({
-                              key: p.id,
-                              produtoId: p.id,
-                              nome: p.nome,
-                              icone: p.icone,
-                              qtd: 1,
-                              precoLinha: p.preco,
-                            })
-                          }
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-container text-white active:scale-90"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">
-                            add
-                          </span>
-                        </button>
-                      ) : (
-                        <Link
-                          href={`/produto/${p.id}`}
-                          aria-label={`Escolher peso de ${p.nome}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-container text-white active:scale-90"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">
-                            scale
-                          </span>
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
 
           {/* Resumo */}
           <section className="mt-lg px-md">
