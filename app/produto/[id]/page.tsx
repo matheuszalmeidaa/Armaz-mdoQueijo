@@ -47,7 +47,7 @@ export default function ProdutoPage() {
 
   return (
     <main className="min-h-full pb-32 lg:pb-lg">
-      <Header nome={produto.produtor ?? "Armazém do Queijo"} />
+      <Header nome="Armazém do Queijo" />
 
       <div className="mx-auto max-w-5xl lg:grid lg:grid-cols-2 lg:items-start lg:gap-xl lg:px-md lg:pt-lg">
         {/* Imagem / vídeo */}
@@ -286,7 +286,7 @@ function SeletorPeso({
       qtd: 1,
       precoLinha: total,
     });
-    router.push("/carrinho");
+    router.push("/loja");
   }
 
   return (
@@ -401,7 +401,7 @@ function SeletorUnidade({
       qtd,
       precoLinha: total,
     });
-    router.push("/carrinho");
+    router.push("/loja");
   }
 
   return (

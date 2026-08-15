@@ -122,13 +122,24 @@ export default function LojaHome() {
           </div>
         </section>
 
-        {/* Grade de produtos */}
+        {/* Grade de produtos agrupada por categoria */}
         <section className="mt-lg px-md">
-          <div className="grid grid-cols-2 gap-gutter sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {lista.map((p) => (
-              <CardProduto key={p.id} produto={p} />
-            ))}
-          </div>
+          {CATEGORIAS.filter((c) => lista.some((p) => p.categoria === c)).map(
+            (c) => (
+              <div key={c} className="mb-lg">
+                <h3 className="mb-sm font-headline-md text-headline-md text-on-surface">
+                  {c}
+                </h3>
+                <div className="grid grid-cols-2 gap-gutter sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                  {lista
+                    .filter((p) => p.categoria === c)
+                    .map((p) => (
+                      <CardProduto key={p.id} produto={p} />
+                    ))}
+                </div>
+              </div>
+            )
+          )}
         </section>
       </div>
 
@@ -146,8 +157,11 @@ export default function LojaHome() {
                   {qtdItens}
                 </span>
               </span>
-              <span className="text-body-lg font-semibold">
-                {qtdItens} {qtdItens === 1 ? "item" : "itens"}
+              <span className="flex flex-col leading-tight">
+                <span className="text-body-lg font-semibold">Ver meu pedido</span>
+                <span className="text-label-sm text-primary-fixed">
+                  {qtdItens} {qtdItens === 1 ? "item" : "itens"}
+                </span>
               </span>
             </span>
             <span className="flex items-center gap-2 text-body-lg font-semibold">
