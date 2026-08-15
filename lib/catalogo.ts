@@ -35,7 +35,20 @@ export type Variante = {
   descricao?: string;
   fotoUrl?: string;
 };
-export type ProdutoCfg = { videoUrl?: string; variantes?: Variante[] };
+// Preço de atacado (fluxo à parte em /pedidos-atacado). Por quilo ou por peça,
+// com faixas de volume ("a partir de N → R$ X" o kg/peça).
+export type FaixaAtacado = { min: number; preco: number };
+export type Atacado = {
+  ativo: boolean;
+  unidade: "kg" | "peca";
+  minimo?: number; // quantidade mínima do pedido de atacado (kg/peças)
+  faixas: FaixaAtacado[];
+};
+export type ProdutoCfg = {
+  videoUrl?: string;
+  variantes?: Variante[];
+  atacado?: Atacado;
+};
 
 // Catálogo começa VAZIO — o lojista cadastra os produtos reais em
 // Produtos → Novo produto (salvos no Supabase via catalogo-store). A lista viva

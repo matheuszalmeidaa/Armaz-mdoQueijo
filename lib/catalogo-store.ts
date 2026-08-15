@@ -121,3 +121,10 @@ export function useProdutoCfg(id: string): ProdutoCfg {
   useEffect(() => assinar(() => setCfg(lerCfg(id))), [id]);
   return cfg;
 }
+
+// Mapa completo de config (usado pelo catálogo de atacado para filtrar produtos).
+export function useCfgMapa(): CfgMapa {
+  const [m, setM] = useState<CfgMapa>(() => ({ ...cacheCfg }));
+  useEffect(() => assinar(() => setM({ ...cacheCfg })), []);
+  return m;
+}

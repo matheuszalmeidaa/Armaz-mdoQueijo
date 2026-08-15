@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CATEGORIAS, brl, type Produto } from "@/lib/catalogo";
+import { CATEGORIAS, brl, type Produto, type FaixaAtacado } from "@/lib/catalogo";
 import {
   useCatalogo,
   salvarProduto,
@@ -74,17 +74,37 @@ export function FormProduto({
   const [codigoBarras, setCodigoBarras] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [variantes, setVariantes] = useState<Variante[]>([]);
+  // Atacado (fluxo à parte /pedidos-atacado)
+  const [atacadoAtivo, setAtacadoAtivo] = useState(false);
+  const [atacadoUnidade, setAtacadoUnidade] = useState<"kg" | "peca">("kg");
+  const [atacadoMinimo, setAtacadoMinimo] = useState("");
+  const [atacadoFaixas, setAtacadoFaixas] = useState<
+    { min: string; preco: string }[]
+  >([{ min: "", preco: "" }]);
   const [salvo, setSalvo] = useState(false);
   const router = useRouter();
   const catalogo = useCatalogo();
 
-  // Carrega vídeo/variantes salvos deste produto uma vez (não a cada polling,
-  // senão resetaria os campos enquanto o lojista edita).
+  // Carrega vídeo/variantes/atacado salvos deste produto uma vez (não a cada
+  // polling, senão resetaria os campos enquanto o lojista edita).
   useEffect(() => {
     if (!inicial?.id) return;
     const c = lerCfg(inicial.id);
     setVideoUrl(c.videoUrl ?? "");
     setVariantes(c.variantes ?? []);
+    if (c.atacado) {
+      setAtacadoAtivo(c.atacado.ativo);
+      setAtacadoUnidade(c.atacado.unidade);
+      setAtacadoMinimo(c.atacado.minimo ? String(c.atacado.minimo) : "");
+      setAtacadoFaixas(
+        c.atacado.faixas.length
+          ? c.atacado.faixas.map((f) => ({
+              min: String(f.min),
+              preco: String(f.preco),
+            }))
+          : [{ min: "", preco: "" }]
+      );
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inicial?.id]);
 
@@ -150,12 +170,26 @@ export function FormProduto({
 
     // Salva o produto e a config (vídeo/variantes) no Supabase — reflete no
     // delivery e no PDV em qualquer aparelho.
+    const faixasAtacado: FaixaAtacado[] = atacadoFaixas
+      .map((f) => ({ min: num(f.min), preco: num(f.preco) }))
+      .filter((f) => f.min > 0 && f.preco > 0)
+      .sort((a, b) => a.min - b.min);
+
     salvarProduto(produto);
     salvarCfg(id, {
       videoUrl: videoUrl.trim() || undefined,
       variantes: variantes
         .map((v) => ({ ...v, nome: v.nome.trim() }))
         .filter((v) => v.nome),
+      atacado:
+        atacadoAtivo && faixasAtacado.length
+          ? {
+              ativo: true,
+              unidade: atacadoUnidade,
+              minimo: num(atacadoMinimo) || undefined,
+              faixas: faixasAtacado,
+            }
+          : undefined,
     });
     setSalvo(true);
     setTimeout(() => router.push("/admin/produtos"), 700);
@@ -502,6 +536,138 @@ export function FormProduto({
             Adicionar variante
           </button>
         </div>
+      </Secao>
+
+      {/* Atacado */}
+      <Secao titulo="Atacado (venda por volume)">
+        <p className="text-label-sm text-on-surface-variant">
+          Ative para o produto aparecer no catálogo de atacado
+          (/pedidos-atacado). Preço por volume: quanto maior a quantidade, menor
+          o preço por {atacadoUnidade === "kg" ? "quilo" : "peça"}.
+        </p>
+        <label className="flex items-center gap-sm">
+          <input
+            type="checkbox"
+            checked={atacadoAtivo}
+            onChange={(e) => setAtacadoAtivo(e.target.checked)}
+            className="h-5 w-5 accent-primary"
+          />
+          <span className="text-body-lg text-on-surface">
+            Vender este produto no atacado
+          </span>
+        </label>
+
+        {atacadoAtivo && (
+          <div className="space-y-md">
+            <div className="grid gap-md sm:grid-cols-2">
+              <div>
+                <label className="block text-label-md text-on-surface">
+                  Vendido por
+                </label>
+                <div className="mt-1 flex rounded-lg border border-outline-variant p-1">
+                  <BotaoTipo
+                    ativo={atacadoUnidade === "kg"}
+                    onClick={() => setAtacadoUnidade("kg")}
+                    icone="scale"
+                    label="Quilo"
+                  />
+                  <BotaoTipo
+                    ativo={atacadoUnidade === "peca"}
+                    onClick={() => setAtacadoUnidade("peca")}
+                    icone="package_2"
+                    label="Peça"
+                  />
+                </div>
+              </div>
+              <Campo
+                rotulo={`Pedido mínimo (${atacadoUnidade === "kg" ? "kg" : "peças"}) — opcional`}
+              >
+                <input
+                  value={atacadoMinimo}
+                  onChange={(e) => setAtacadoMinimo(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="ex: 10"
+                  className="w-full bg-transparent text-body-lg outline-none"
+                />
+              </Campo>
+            </div>
+
+            <div>
+              <label className="block text-label-md text-on-surface">
+                Faixas de preço por volume
+              </label>
+              <p className="mb-sm text-label-sm text-on-surface-variant">
+                Ex.: a partir de 10 {atacadoUnidade === "kg" ? "kg" : "peças"} →
+                R$ X {atacadoUnidade === "kg" ? "o kg" : "a peça"}.
+              </p>
+              <div className="space-y-sm">
+                {atacadoFaixas.map((f, i) => (
+                  <div key={i} className="flex items-center gap-sm">
+                    <span className="text-body-md text-on-surface-variant">
+                      a partir de
+                    </span>
+                    <div className="flex w-28 items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2">
+                      <input
+                        value={f.min}
+                        onChange={(e) =>
+                          setAtacadoFaixas(
+                            atacadoFaixas.map((x, j) =>
+                              j === i ? { ...x, min: e.target.value } : x
+                            )
+                          )
+                        }
+                        inputMode="decimal"
+                        className="w-full bg-transparent text-body-md outline-none"
+                      />
+                      <span className="text-label-sm text-on-surface-variant">
+                        {atacadoUnidade === "kg" ? "kg" : "pç"}
+                      </span>
+                    </div>
+                    <span className="material-symbols-outlined text-outline">
+                      arrow_forward
+                    </span>
+                    <div className="flex w-32 items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2">
+                      <span className="text-label-sm text-on-surface-variant">R$</span>
+                      <input
+                        value={f.preco}
+                        onChange={(e) =>
+                          setAtacadoFaixas(
+                            atacadoFaixas.map((x, j) =>
+                              j === i ? { ...x, preco: e.target.value } : x
+                            )
+                          )
+                        }
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        className="w-full bg-transparent text-body-md outline-none"
+                      />
+                      <span className="text-label-sm text-on-surface-variant">
+                        /{atacadoUnidade === "kg" ? "kg" : "pç"}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() =>
+                        setAtacadoFaixas(atacadoFaixas.filter((_, j) => j !== i))
+                      }
+                      className="material-symbols-outlined text-danger-red"
+                    >
+                      delete
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() =>
+                    setAtacadoFaixas([...atacadoFaixas, { min: "", preco: "" }])
+                  }
+                  className="flex items-center gap-1 text-label-md text-secondary"
+                >
+                  <span className="material-symbols-outlined text-[18px]">add</span>
+                  Adicionar faixa
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </Secao>
 
       <div className="flex flex-wrap items-center justify-between gap-md rounded-xl bg-cream-surface p-md">
