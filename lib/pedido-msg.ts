@@ -105,3 +105,43 @@ export function linkWhatsApp(numero: string, texto: string): string | null {
   if (!zap) return null;
   return `https://wa.me/55${zap}?text=${encodeURIComponent(texto)}`;
 }
+
+// WhatsApp sem destinatário: abre o app e o lojista escolhe o contato (motoboy).
+export function linkWhatsAppLivre(texto: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(texto)}`;
+}
+
+// Comanda a partir de um pedido já registrado (para motoboy / impressão).
+type PedidoComanda = {
+  numero: string;
+  cliente: string;
+  telefone?: string;
+  modo: "entrega" | "retirada";
+  entrega: string;
+  pagamento: string;
+  itens: { nome: string; qtd: string; preco: number }[];
+  total: number;
+  agendado?: boolean;
+};
+
+export function comandaPedidoLive(p: PedidoComanda): string {
+  const L: string[] = [];
+  L.push("🧀 *ARMAZÉM DO QUEIJO*");
+  L.push(`Comanda *#${p.numero}*`);
+  if (p.agendado) L.push("⏰ *AGENDADO — combinar horário*");
+  L.push("");
+  L.push(`👤 *${p.cliente}*`);
+  if (p.telefone) L.push(`📱 ${telFmt(p.telefone)}`);
+  L.push(
+    p.modo === "retirada"
+      ? "🏬 *Retirada na loja*"
+      : `🛵 *Entrega:* ${p.entrega}`
+  );
+  L.push("");
+  L.push("🛍️ *Itens*");
+  p.itens.forEach((it) => L.push(`• ${it.qtd} · ${it.nome} — ${brl(it.preco)}`));
+  L.push("");
+  L.push(`💳 ${p.pagamento}`);
+  L.push(`*Total: ${brl(p.total)}*`);
+  return L.join("\n");
+}

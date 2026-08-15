@@ -10,6 +10,19 @@ import {
   type StatusLive,
   type PedidoLive,
 } from "@/lib/pedidos-store";
+import { comandaPedidoLive, linkWhatsAppLivre } from "@/lib/pedido-msg";
+
+function imprimirComanda(p: PedidoLive) {
+  const w = window.open("", "_blank", "width=380,height=640");
+  if (!w) return;
+  const texto = comandaPedidoLive(p).replace(/\*/g, "");
+  w.document.write(
+    `<pre style="font-family:ui-monospace,monospace;font-size:13px;line-height:1.5;white-space:pre-wrap;padding:16px;margin:0;">${texto.replace(/</g, "&lt;")}</pre>`
+  );
+  w.document.close();
+  w.focus();
+  w.print();
+}
 
 const COL_STYLE: Record<StatusLive, string> = {
   Novo: "border-error/40",
@@ -195,6 +208,26 @@ function CartaoPedido({
         <span className="font-headline-md text-headline-md text-primary">
           {brl(pedido.total)}
         </span>
+      </div>
+
+      {/* Comanda para o motoboy / impressão */}
+      <div className="mt-sm flex gap-sm">
+        <a
+          href={linkWhatsAppLivre(comandaPedidoLive(pedido))}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-tertiary/40 py-2 text-label-md text-tertiary active:scale-[0.98]"
+        >
+          <span className="material-symbols-outlined text-[18px]">chat</span>
+          Comanda
+        </a>
+        <button
+          onClick={() => imprimirComanda(pedido)}
+          className="flex items-center justify-center gap-1 rounded-lg border border-outline-variant px-3 py-2 text-label-md text-on-surface active:scale-[0.98]"
+          title="Imprimir comanda"
+        >
+          <span className="material-symbols-outlined text-[18px]">print</span>
+        </button>
       </div>
 
       {pedido.status !== "Entregue" && (
