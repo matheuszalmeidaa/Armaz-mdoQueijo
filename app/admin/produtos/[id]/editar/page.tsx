@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { getProduto } from "@/lib/catalogo";
+import { useCatalogo } from "@/lib/catalogo-store";
 import { FormProduto } from "@/components/FormProduto";
 
 export default function EditarProduto() {
   const { id } = useParams<{ id: string }>();
+  // Assina o catálogo vivo para re-renderizar quando ele carregar do Supabase.
+  useCatalogo();
   const produto = getProduto(id);
 
   if (!produto) {

@@ -1,15 +1,38 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CATALOGO, CATEGORIAS, brl, type Produto } from "@/lib/catalogo";
+import { CATEGORIAS, brl, type Produto } from "@/lib/catalogo";
 import {
-  lerProdutoCfg,
-  salvarProdutoCfg,
-  type Variante,
-} from "@/lib/produto-config-store";
+  useCatalogo,
+  salvarProduto,
+  lerCfg,
+  salvarCfg,
+} from "@/lib/catalogo-store";
+import type { Variante } from "@/lib/produto-config-store";
 
 type Faixa = { min: string; kg: string };
+
+const num = (v: string) => Number(String(v).replace(",", ".")) || 0;
+
+const ICONE_CATEGORIA: Record<string, string> = {
+  Queijos: "nutrition",
+  Doces: "icecream",
+  Mel: "water_drop",
+  Charcutaria: "restaurant",
+};
+
+function slug(s: string) {
+  return (
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || crypto.randomUUID()
+  );
+}
 
 export function FormProduto({
   inicial,
@@ -52,13 +75,17 @@ export function FormProduto({
   const [videoUrl, setVideoUrl] = useState("");
   const [variantes, setVariantes] = useState<Variante[]>([]);
   const [salvo, setSalvo] = useState(false);
+  const router = useRouter();
+  const catalogo = useCatalogo();
 
-  // Carrega vídeo/variantes salvos deste produto (só produtos existentes).
+  // Carrega vídeo/variantes salvos deste produto uma vez (não a cada polling,
+  // senão resetaria os campos enquanto o lojista edita).
   useEffect(() => {
     if (!inicial?.id) return;
-    const c = lerProdutoCfg(inicial.id);
+    const c = lerCfg(inicial.id);
     setVideoUrl(c.videoUrl ?? "");
     setVariantes(c.variantes ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inicial?.id]);
 
   function addPeso() {
@@ -81,17 +108,57 @@ export function FormProduto({
   }
 
   function acao() {
-    // Vídeo e variantes valem de verdade para produtos existentes (localStorage).
-    if (inicial?.id) {
-      salvarProdutoCfg(inicial.id, {
-        videoUrl: videoUrl.trim() || undefined,
-        variantes: variantes
-          .map((v) => ({ ...v, nome: v.nome.trim() }))
-          .filter((v) => v.nome),
-      });
+    const id = inicial?.id ?? slug(nome);
+    const base = {
+      id,
+      nome: nome.trim(),
+      produtor: inicial?.produtor,
+      categoria,
+      icone: inicial?.icone ?? ICONE_CATEGORIA[categoria] ?? "nutrition",
+      img: inicial?.img ?? "",
+      descricao: descricao.trim() || undefined,
+      nota: inicial?.nota,
+      origem: inicial?.origem,
+      intensidade: inicial?.intensidade,
+      novidade: inicial?.novidade,
+      vinculadoId: vinculadoId || undefined,
+    };
+
+    let produto: Produto;
+    if (tipo === "peso") {
+      const pesosOrd = [...pesos].sort((a, b) => a - b);
+      const minPeso = pesosOrd[0] ?? 200;
+      const kgBase = num(precoKg);
+      const extras = faixas
+        .map((f) => ({ min: parseInt(f.min) || 0, kg: num(f.kg) }))
+        .filter((f) => f.kg > 0 && f.min > minPeso)
+        .sort((a, b) => a.min - b.min);
+      const faixasFinal = [
+        { min: minPeso, kg: kgBase > 0 ? kgBase : extras[0]?.kg ?? 0 },
+        ...extras,
+      ];
+      produto = { ...base, tipo: "peso", pesos: pesosOrd, faixas: faixasFinal };
+    } else {
+      produto = {
+        ...base,
+        tipo: "unidade",
+        preco: num(preco),
+        precoAntigo:
+          inicial?.tipo === "unidade" ? inicial.precoAntigo : undefined,
+      };
     }
+
+    // Salva o produto e a config (vídeo/variantes) no Supabase — reflete no
+    // delivery e no PDV em qualquer aparelho.
+    salvarProduto(produto);
+    salvarCfg(id, {
+      videoUrl: videoUrl.trim() || undefined,
+      variantes: variantes
+        .map((v) => ({ ...v, nome: v.nome.trim() }))
+        .filter((v) => v.nome),
+    });
     setSalvo(true);
-    setTimeout(() => setSalvo(false), 2200);
+    setTimeout(() => router.push("/admin/produtos"), 700);
   }
 
   const previewPreco =
@@ -343,7 +410,9 @@ export function FormProduto({
             className="w-full bg-transparent text-body-lg outline-none"
           >
             <option value="">Nenhum</option>
-            {CATALOGO.filter((p) => p.id !== inicial?.id).map((p) => (
+            {catalogo
+              .filter((p) => p.id !== inicial?.id)
+              .map((p) => (
               <option key={p.id} value={p.id}>
                 {p.nome}
               </option>
@@ -366,12 +435,6 @@ export function FormProduto({
             className="w-full bg-transparent text-body-lg outline-none placeholder:text-on-surface-variant/60"
           />
         </Campo>
-        {!inicial?.id && (
-          <p className="text-label-sm text-danger-red">
-            * Vídeo e variantes só salvam ao editar um produto já existente (sem
-            backend ainda).
-          </p>
-        )}
       </Secao>
 
       {/* Variantes */}
@@ -466,10 +529,6 @@ export function FormProduto({
           </button>
         </div>
       </div>
-      <p className="text-caption text-on-surface-variant">
-        * Maquete — ao ligar o Supabase, salva de verdade e reflete no PDV e no
-        delivery na hora.
-      </p>
     </div>
   );
 }

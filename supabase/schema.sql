@@ -211,6 +211,18 @@ create table config_app (
 );
 alter table config_app enable row level security;
 
+-- ---------- Catálogo do app (uma linha, JSON) ----------
+-- Produtos + config por produto (vídeo/variantes) numa única linha JSON, para
+-- o lojista editar/adicionar e refletir no delivery e no PDV em qualquer
+-- aparelho. RLS ligado, sem policies anon: só as rotas de servidor acessam.
+create table catalogo_app (
+  id            text primary key default 'principal',
+  produtos      jsonb not null default '[]'::jsonb,
+  cfg           jsonb not null default '{}'::jsonb,
+  atualizado_em timestamptz not null default now()
+);
+alter table catalogo_app enable row level security;
+
 -- ---------- Pedidos ao vivo (board delivery/PDV, denormalizado) ----------
 -- Tabela pragmática para o fluxo ao vivo (recebimento/acompanhamento). Itens
 -- ficam em jsonb (não precisa seedar o catálogo normalizado ainda). O relatório

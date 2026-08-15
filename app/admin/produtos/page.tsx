@@ -1,7 +1,11 @@
+"use client";
+
 import Link from "next/link";
-import { CATALOGO, brl } from "@/lib/catalogo";
+import { brl } from "@/lib/catalogo";
+import { useCatalogo, excluirProduto } from "@/lib/catalogo-store";
 
 export default function AdminProdutos() {
+  const CATALOGO = useCatalogo();
   return (
     <div className="space-y-lg">
       <div className="flex items-center justify-between">
@@ -76,13 +80,25 @@ export default function AdminProdutos() {
                     : brl(p.preco)}
                 </td>
                 <td className="px-md py-3 text-right">
-                  <Link
-                    href={`/admin/produtos/${p.id}/editar`}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary hover:bg-surface-container active:scale-95"
-                    title="Editar"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">edit</span>
-                  </Link>
+                  <div className="flex items-center justify-end gap-1">
+                    <Link
+                      href={`/admin/produtos/${p.id}/editar`}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary hover:bg-surface-container active:scale-95"
+                      title="Editar"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">edit</span>
+                    </Link>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Excluir "${p.nome}" do catálogo?`))
+                          excluirProduto(p.id);
+                      }}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full text-danger-red hover:bg-surface-container active:scale-95"
+                      title="Excluir"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">delete</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -91,9 +107,8 @@ export default function AdminProdutos() {
       </div>
 
       <p className="text-caption text-on-surface-variant">
-        * Cadastro e edição já em maquete (o lápis edita). Cada produto é por
-        peso (preço/kg + faixas) ou por unidade. Salvar de verdade entra com o
-        Supabase.
+        Cada produto é por peso (preço/kg + faixas de desconto) ou por unidade.
+        Salvar reflete no delivery e no PDV em qualquer aparelho.
       </p>
     </div>
   );

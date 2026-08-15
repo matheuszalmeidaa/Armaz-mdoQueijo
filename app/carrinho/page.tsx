@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cart";
 import {
-  CATALOGO,
   brl,
   gramas,
   getProduto,
   precoBase,
   type Produto,
 } from "@/lib/catalogo";
+import { useCatalogo } from "@/lib/catalogo-store";
 import { calcularResumo, buscarCupom, LOJAS_RETIRADA } from "@/lib/regras";
 import { useConfig, lojaAbertaAgora } from "@/lib/config-store";
 
@@ -26,6 +26,7 @@ export default function Carrinho() {
   const [cupomErro, setCupomErro] = useState(false);
 
   const cfg = useConfig();
+  const CATALOGO = useCatalogo();
   const faltaMinimo =
     modo === "entrega" && cfg.pedidoMinimo > 0 && total < cfg.pedidoMinimo;
 

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CATALOGO, CATEGORIAS, brl, precoBase, type Produto } from "@/lib/catalogo";
+import { CATEGORIAS, brl, precoBase, type Produto } from "@/lib/catalogo";
+import { useCatalogo } from "@/lib/catalogo-store";
 import { useCart } from "@/lib/cart";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
 import { badgesDe, BADGE_CLS, estaEsgotado } from "@/lib/badges";
@@ -33,6 +34,7 @@ export default function LojaHome() {
   const [cat, setCat] = useState<string>("Todos");
   const { qtdItens, total } = useCart();
   const cfg = useConfig();
+  const CATALOGO = useCatalogo();
   const status = lojaAbertaAgora(cfg);
   const [avisoVisto, setAvisoVisto] = useState(false);
 

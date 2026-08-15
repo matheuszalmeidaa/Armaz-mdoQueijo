@@ -1,37 +1,54 @@
+"use client";
+
 import { brl } from "@/lib/catalogo";
+import { usePedidosLive } from "@/lib/pedidos-store";
 
-const MESES = [
-  { mes: "Mar", valor: 38200 },
-  { mes: "Abr", valor: 41500 },
-  { mes: "Mai", valor: 39800 },
-  { mes: "Jun", valor: 45200, pico: true },
-  { mes: "Jul", valor: 52100, pico: true },
-  { mes: "Ago", valor: 48600 },
-];
-
-const CANAIS = [
-  { nome: "Delivery", valor: 30130, cls: "bg-primary" },
-  { nome: "PDV", valor: 18470, cls: "bg-secondary" },
-];
-
-const LOJAS = [
-  { nome: "Loja Centro", valor: 28190 },
-  { nome: "Loja Bairro", valor: 20410 },
-];
-
-const TOP = [
-  { nome: "Queijo Figueira", valor: 8400 },
-  { nome: "Gouda Pesto Verde", valor: 6200 },
-  { nome: "Queijo Morro Azul", valor: 5100 },
-  { nome: "Tábua de Frios", valor: 4800 },
-  { nome: "Mel de Florada", valor: 3200 },
-];
+const DIA_MS = 24 * 60 * 60 * 1000;
 
 export default function AdminRelatorios() {
-  const maxMes = Math.max(...MESES.map((m) => m.valor));
-  const totalCanal = CANAIS.reduce((s, c) => s + c.valor, 0);
-  const totalLoja = LOJAS.reduce((s, l) => s + l.valor, 0);
-  const maxTop = Math.max(...TOP.map((t) => t.valor));
+  const pedidos = usePedidosLive();
+
+  const receita = pedidos.reduce((s, p) => s + p.total, 0);
+  const nPedidos = pedidos.length;
+  const ticket = nPedidos ? receita / nPedidos : 0;
+
+  // Por canal (Delivery x PDV)
+  const canaisMap = { Delivery: 0, PDV: 0 };
+  for (const p of pedidos) canaisMap[p.canal] += p.total;
+  const CANAIS = [
+    { nome: "Delivery", valor: canaisMap.Delivery, cls: "bg-primary" },
+    { nome: "PDV", valor: canaisMap.PDV, cls: "bg-secondary" },
+  ];
+  const totalCanal = receita || 1;
+
+  // Últimos 7 dias
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const DIAS = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(hoje.getTime() - (6 - i) * DIA_MS);
+    const fim = d.getTime() + DIA_MS;
+    const valor = pedidos
+      .filter((p) => p.criadoEm >= d.getTime() && p.criadoEm < fim)
+      .reduce((s, p) => s + p.total, 0);
+    return {
+      rotulo: d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", ""),
+      valor,
+    };
+  });
+  const maxDia = Math.max(1, ...DIAS.map((d) => d.valor));
+
+  // Mais vendidos (agrega itens de todos os pedidos por nome)
+  const prodMap = new Map<string, number>();
+  for (const p of pedidos)
+    for (const it of p.itens)
+      prodMap.set(it.nome, (prodMap.get(it.nome) ?? 0) + it.preco);
+  const TOP = Array.from(prodMap.entries())
+    .map(([nome, valor]) => ({ nome, valor }))
+    .sort((a, b) => b.valor - a.valor)
+    .slice(0, 5);
+  const maxTop = Math.max(1, ...TOP.map((t) => t.valor));
+
+  const vazio = nPedidos === 0;
 
   return (
     <div className="space-y-lg">
@@ -40,50 +57,53 @@ export default function AdminRelatorios() {
           Relatórios
         </h1>
         <p className="mt-1 text-body-md text-on-surface-variant">
-          Visão de agosto/2026 — vendas por loja e canal, tendência e mais
-          vendidos.
+          Calculado das vendas reais (delivery + PDV).
         </p>
       </div>
+
+      {vazio && (
+        <div className="flex items-center gap-sm rounded-xl border border-outline-variant/40 bg-cream-surface p-md">
+          <span className="material-symbols-outlined text-secondary">info</span>
+          <p className="text-body-md text-on-surface-variant">
+            Ainda sem vendas registradas. Assim que entrarem pedidos (delivery)
+            e vendas (PDV), os números aparecem aqui.
+          </p>
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-md sm:grid-cols-3">
-        <Kpi rotulo="Receita do mês" valor={brl(48600)} delta="+7% vs. jul" positivo />
-        <Kpi rotulo="Ticket médio" valor={brl(72.15)} delta="+2% vs. jul" positivo />
-        <Kpi rotulo="Perda estimada" valor={brl(1240)} delta="2,5% da receita" />
+        <Kpi rotulo="Receita total" valor={brl(receita)} sub={`${nPedidos} pedido(s)`} />
+        <Kpi rotulo="Ticket médio" valor={brl(ticket)} sub="por pedido" />
+        <Kpi
+          rotulo="Delivery x PDV"
+          valor={`${Math.round((canaisMap.Delivery / totalCanal) * 100)}% / ${Math.round(
+            (canaisMap.PDV / totalCanal) * 100
+          )}%`}
+          sub="participação"
+        />
       </div>
 
-      {/* Tendência mensal */}
+      {/* Últimos 7 dias */}
       <section className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-lg shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-        <h2 className="mb-1 font-headline-md text-headline-md text-primary">
-          Vendas por mês
+        <h2 className="mb-md font-headline-md text-headline-md text-primary">
+          Vendas — últimos 7 dias
         </h2>
-        <p className="mb-md text-label-sm text-on-surface-variant">
-          Barras destacadas = pico de gorgonzola (festas de junho/julho).
-        </p>
         <div className="flex h-48 items-end gap-md">
-          {MESES.map((m) => (
-            <div key={m.mes} className="flex flex-1 flex-col items-center gap-1">
+          {DIAS.map((d, i) => (
+            <div key={i} className="flex flex-1 flex-col items-center gap-1">
               <span className="text-caption text-on-surface-variant">
-                {(m.valor / 1000).toFixed(0)}k
+                {d.valor > 0 ? `${(d.valor / 1000).toFixed(1)}k` : ""}
               </span>
               <div
-                className={`w-full rounded-t-md ${
-                  m.pico ? "bg-primary" : "bg-primary-container/30"
-                }`}
-                style={{ height: `${(m.valor / maxMes) * 140}px` }}
+                className="w-full rounded-t-md bg-primary-container/30"
+                style={{ height: `${(d.valor / maxDia) * 140}px` }}
               />
-              <span className="text-label-sm text-on-surface">{m.mes}</span>
+              <span className="text-label-sm capitalize text-on-surface">
+                {d.rotulo}
+              </span>
             </div>
           ))}
-        </div>
-        <div className="mt-md flex items-start gap-sm rounded-lg bg-cream-surface px-md py-2.5">
-          <span className="material-symbols-outlined text-secondary">
-            calendar_month
-          </span>
-          <p className="text-body-md text-on-surface-variant">
-            <strong className="text-on-surface">Sazonalidade:</strong> jun–jul
-            puxam o gorgonzola. Vale reforçar a compra nesses meses.
-          </p>
         </div>
       </section>
 
@@ -93,7 +113,7 @@ export default function AdminRelatorios() {
           <h2 className="mb-md font-headline-md text-headline-md text-primary">
             Vendas por canal
           </h2>
-          <div className="mb-md flex h-4 overflow-hidden rounded-full">
+          <div className="mb-md flex h-4 overflow-hidden rounded-full bg-surface-container">
             {CANAIS.map((c) => (
               <div
                 key={c.nome}
@@ -120,62 +140,40 @@ export default function AdminRelatorios() {
           </div>
         </section>
 
-        {/* Por loja */}
+        {/* Top produtos */}
         <section className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-lg shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
           <h2 className="mb-md font-headline-md text-headline-md text-primary">
-            Vendas por loja
+            Mais vendidos
           </h2>
-          <div className="space-y-md">
-            {LOJAS.map((l) => (
-              <div key={l.nome}>
-                <div className="mb-1 flex items-center justify-between text-body-md">
-                  <span className="text-on-surface">{l.nome}</span>
-                  <span className="text-on-surface-variant">{brl(l.valor)}</span>
+          {TOP.length === 0 ? (
+            <p className="text-body-md text-on-surface-variant">
+              Sem itens ainda.
+            </p>
+          ) : (
+            <div className="space-y-md">
+              {TOP.map((t, i) => (
+                <div key={t.nome} className="flex items-center gap-md">
+                  <span className="w-5 text-right font-display text-headline-md text-primary/40">
+                    {i + 1}
+                  </span>
+                  <div className="flex-grow">
+                    <div className="mb-1 flex items-center justify-between text-body-md">
+                      <span className="text-on-surface">{t.nome}</span>
+                      <span className="text-on-surface-variant">{brl(t.valor)}</span>
+                    </div>
+                    <div className="h-3 overflow-hidden rounded-full bg-surface-container">
+                      <div
+                        className="h-full rounded-full bg-secondary"
+                        style={{ width: `${(t.valor / maxTop) * 100}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="h-3 overflow-hidden rounded-full bg-surface-container">
-                  <div
-                    className="h-full rounded-full bg-primary"
-                    style={{ width: `${(l.valor / totalLoja) * 100}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
-
-      {/* Top produtos */}
-      <section className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-lg shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-        <h2 className="mb-md font-headline-md text-headline-md text-primary">
-          Mais vendidos (no mês)
-        </h2>
-        <div className="space-y-md">
-          {TOP.map((t, i) => (
-            <div key={t.nome} className="flex items-center gap-md">
-              <span className="w-5 text-right font-display text-headline-md text-primary/40">
-                {i + 1}
-              </span>
-              <div className="flex-grow">
-                <div className="mb-1 flex items-center justify-between text-body-md">
-                  <span className="text-on-surface">{t.nome}</span>
-                  <span className="text-on-surface-variant">{brl(t.valor)}</span>
-                </div>
-                <div className="h-3 overflow-hidden rounded-full bg-surface-container">
-                  <div
-                    className="h-full rounded-full bg-secondary"
-                    style={{ width: `${(t.valor / maxTop) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <p className="text-caption text-on-surface-variant">
-        * Dados de teste. Ao ligar o Supabase, tudo isto é calculado das vendas
-        reais (delivery + PDV), por loja e por período.
-      </p>
     </div>
   );
 }
@@ -183,13 +181,11 @@ export default function AdminRelatorios() {
 function Kpi({
   rotulo,
   valor,
-  delta,
-  positivo,
+  sub,
 }: {
   rotulo: string;
   valor: string;
-  delta: string;
-  positivo?: boolean;
+  sub: string;
 }) {
   return (
     <div className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-md shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
@@ -199,13 +195,7 @@ function Kpi({
       <p className="mt-1 font-display text-headline-lg text-on-surface">
         {valor}
       </p>
-      <p
-        className={`mt-1 text-label-sm ${
-          positivo ? "text-tertiary" : "text-on-surface-variant"
-        }`}
-      >
-        {delta}
-      </p>
+      <p className="mt-1 text-label-sm text-on-surface-variant">{sub}</p>
     </div>
   );
 }

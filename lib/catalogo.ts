@@ -27,6 +27,16 @@ export type Produto = Base &
 
 export const CATEGORIAS = ["Queijos", "Doces", "Mel", "Charcutaria"] as const;
 
+// Config extra por produto (vídeo/variantes), guardada junto do catálogo.
+export type Variante = {
+  id: string;
+  nome: string;
+  preco?: number; // só se aplica a produto por UNIDADE
+  descricao?: string;
+  fotoUrl?: string;
+};
+export type ProdutoCfg = { videoUrl?: string; variantes?: Variante[] };
+
 // Fotos hospedadas no CDN (dados de teste). Trocar por imagens próprias ao ligar
 // o Supabase / Storage. O componente ProdutoImagem cai no ícone se alguma falhar.
 const IMG = "https://lh3.googleusercontent.com/aida-public/";
@@ -159,7 +169,18 @@ export const CATALOGO: Produto[] = [
   },
 ];
 
-export const getProduto = (id: string) => CATALOGO.find((p) => p.id === id);
+// Lista "viva": começa com o catálogo semente e é substituída pelo que vem do
+// Supabase (via catalogo-store). Assim getProduto/precoBase seguem funcionando
+// em qualquer tela sem virar hook — e caem na semente se o banco falhar.
+let LIVE: Produto[] = CATALOGO;
+export function listaLive(): Produto[] {
+  return LIVE;
+}
+export function setLive(l: Produto[]) {
+  LIVE = l.length ? l : CATALOGO;
+}
+
+export const getProduto = (id: string) => LIVE.find((p) => p.id === id);
 
 // "Vai bem com": o produto que o lojista vinculou a este (sugerido no carrinho).
 export const getVinculado = (id: string) => {

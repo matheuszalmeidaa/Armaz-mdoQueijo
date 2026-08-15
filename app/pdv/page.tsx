@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
-  CATALOGO,
   CATEGORIAS,
   precoPorKg,
   precoBase,
@@ -13,6 +12,7 @@ import {
 } from "@/lib/catalogo";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
 import { registrarVendaPDV } from "@/lib/pedidos-store";
+import { useCatalogo } from "@/lib/catalogo-store";
 
 type ItemVenda = {
   key: string;
@@ -76,6 +76,7 @@ export default function PDV() {
   const [fecharAberto, setFecharAberto] = useState(false);
   const [cupom, setCupom] = useState<Cupom | null>(null);
 
+  const CATALOGO = useCatalogo();
   const lista = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return CATALOGO.filter((p) => {
@@ -83,7 +84,7 @@ export default function PDV() {
       const okBusca = !q || p.nome.toLowerCase().includes(q);
       return okCat && okBusca;
     });
-  }, [busca, cat]);
+  }, [busca, cat, CATALOGO]);
 
   const subtotal = itens.reduce((s, x) => s + x.precoLinha, 0);
   const qtdItens = itens.reduce((s, x) => s + x.qtd, 0);

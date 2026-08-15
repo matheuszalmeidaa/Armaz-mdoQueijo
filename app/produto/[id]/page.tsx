@@ -12,12 +12,15 @@ import {
 } from "@/lib/catalogo";
 import { useCart } from "@/lib/cart";
 import { useConfig } from "@/lib/config-store";
+import { useCatalogo } from "@/lib/catalogo-store";
 import { useProdutoCfg, type Variante } from "@/lib/produto-config-store";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
 import { badgesDe, BADGE_CLS } from "@/lib/badges";
 
 export default function ProdutoPage() {
   const { id } = useParams<{ id: string }>();
+  // Assina o catálogo vivo para re-renderizar quando carregar do Supabase.
+  useCatalogo();
   const produto = getProduto(id);
   const cfgP = useProdutoCfg(id);
   const variantes = cfgP.variantes ?? [];
