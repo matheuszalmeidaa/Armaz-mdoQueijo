@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useConfig, lerConfig, salvarConfig, lojaAbertaAgora } from "@/lib/config-store";
 
 const NAV = [
   { href: "/admin", icon: "dashboard", label: "Dashboard" },
@@ -21,7 +21,15 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [aberta, setAberta] = useState(true);
+  const cfg = useConfig();
+  // Mesmo status que o cliente vê (home/loja): horário + toggle mestre.
+  const status = lojaAbertaAgora(cfg);
+  // Clicar liga/desliga o "aceitar pedidos" (mestre) e salva — reflete em todo
+  // o app na hora.
+  const alternarLoja = () => {
+    const c = lerConfig();
+    salvarConfig({ ...c, aceitaPedidos: !c.aceitaPedidos });
+  };
 
   const ativo = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
@@ -79,19 +87,24 @@ export default function AdminLayout({
             />
           </div>
           <button
-            onClick={() => setAberta((v) => !v)}
+            onClick={alternarLoja}
+            title={
+              status.aberta
+                ? "Aceitando pedidos — clique para pausar"
+                : (status.motivo ?? "Fechada — clique para reabrir")
+            }
             className={`flex items-center gap-1 rounded-lg px-3 py-2 text-label-md ${
-              aberta
+              status.aberta
                 ? "bg-tertiary-container/40 text-tertiary"
                 : "bg-error-container text-on-error-container"
             }`}
           >
             <span
               className={`h-2 w-2 rounded-full ${
-                aberta ? "bg-tertiary" : "bg-error"
+                status.aberta ? "bg-tertiary" : "bg-error"
               }`}
             />
-            {aberta ? "Loja Aberta" : "Loja Fechada"}
+            {status.aberta ? "Loja Aberta" : "Loja Fechada"}
           </button>
           <form action="/api/sair" method="post">
             <button
