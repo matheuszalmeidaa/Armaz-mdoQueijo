@@ -9,6 +9,17 @@
 --  * Toda venda (PDV ou delivery) cai em `vendas`/`itens_venda`.
 --  * KPIs (mais vendido por época, cliente inativo, perda) são CONSULTAS,
 --    não tabelas — por isso a espinha vem primeiro.
+--
+-- POLÍTICA DE EXCLUSÃO (decisão do projeto): "nunca apaga, desativa".
+--  * Entidades de negócio (produtos, clientes, lojas) usam SOFT DELETE
+--    (coluna `ativo`/`ativa`). Somem da tela, mas o histórico fica intacto —
+--    e no dia a dia nada trava por constraint (você não deleta, desativa).
+--  * ON DELETE CASCADE só em FILHO PURO, que não existe sem o pai e é
+--    apagado junto (faixas_preco de um produto, itens de uma venda, variantes,
+--    config da loja).
+--  * Referências que guardam HISTÓRICO (lotes, movimentacoes, vendas,
+--    itens_venda -> produtos/lojas/clientes) usam ON DELETE RESTRICT: são o
+--    guarda-costas do histórico financeiro.
 -- ============================================================
 
 create extension if not exists "pgcrypto";
@@ -17,7 +28,9 @@ create extension if not exists "pgcrypto";
 create table lojas (
   id           uuid primary key default gen_random_uuid(),
   nome         text not null,
-  aberta       boolean not null default true,
+  aberta       boolean not null default true,   -- aberta AGORA (operacional)
+  ativa        boolean not null default true,    -- soft delete (loja arquivada)
+  arquivada_em timestamptz,
   criado_em    timestamptz not null default now()
 );
 
@@ -40,13 +53,30 @@ create table produtos (
   -- Presets em GRAMAS que o cliente toca (não digita peso livre)
   pesos_sugeridos integer[] not null default '{200,300,400,500}',
   foto_url       text,
-  ativo          boolean not null default true,
+  video_url      text,                       -- vídeo do produto (URL)
+  vinculado_id   uuid references produtos(id) on delete set null, -- "Vai bem com"
+  ativo          boolean not null default true, -- soft delete
+  arquivado_em   timestamptz,
   criado_em      timestamptz not null default now()
 );
 
+-- ---------- Variantes de produto (kit, tamanho, sabor) ----------
+-- Filho puro do produto: apaga junto (cascade). Preço só vale p/ 'unidade'.
+create table variantes (
+  id           uuid primary key default gen_random_uuid(),
+  produto_id   uuid not null references produtos(id) on delete cascade,
+  nome         text not null,
+  preco        numeric(10,2),
+  descricao    text,
+  foto_url     text,
+  ativo        boolean not null default true,
+  criado_em    timestamptz not null default now()
+);
+create index idx_variantes_produto on variantes (produto_id);
+
 -- ---------- Faixas de preço por volume (desconto que sobe o ticket) ----------
 -- Poucas faixas por produto. Ex.: 200g→410/kg, 500g→385/kg, 1000g→360/kg.
--- O preço/kg aplicado é o da maior faixa cujo peso_min_g <= peso escolhido.
+-- Filho puro do produto (cascade).
 create table faixas_preco (
   id           uuid primary key default gen_random_uuid(),
   produto_id   uuid not null references produtos(id) on delete cascade,
@@ -57,11 +87,11 @@ create table faixas_preco (
 create index idx_faixas_produto on faixas_preco (produto_id, peso_min_g);
 
 -- ---------- Lotes de estoque (por produto, por loja, com validade) ----------
--- O saldo de um produto numa loja é a soma dos saldos dos seus lotes ativos.
+-- Guarda histórico de estoque -> RESTRICT (não some por acidente).
 create table lotes (
   id           uuid primary key default gen_random_uuid(),
-  produto_id   uuid not null references produtos(id) on delete cascade,
-  loja_id      uuid not null references lojas(id) on delete cascade,
+  produto_id   uuid not null references produtos(id) on delete restrict,
+  loja_id      uuid not null references lojas(id) on delete restrict,
   quantidade   numeric(10,3) not null default 0, -- saldo atual do lote
   custo_unit   numeric(10,2),                     -- para margem e valor de perda
   validade     date,                              -- alerta de vencimento
@@ -75,9 +105,9 @@ create type tipo_movimentacao as enum ('entrada', 'venda', 'perda', 'ajuste', 't
 
 create table movimentacoes (
   id           uuid primary key default gen_random_uuid(),
-  produto_id   uuid not null references produtos(id),
-  loja_id      uuid not null references lojas(id),
-  lote_id      uuid references lotes(id),
+  produto_id   uuid not null references produtos(id) on delete restrict,
+  loja_id      uuid not null references lojas(id) on delete restrict,
+  lote_id      uuid references lotes(id) on delete restrict,
   tipo         tipo_movimentacao not null,
   quantidade   numeric(10,3) not null,   -- + entrada, - saída
   motivo       text,                     -- ex.: 'vencido', 'quebra', 'compra NF 123'
@@ -93,6 +123,8 @@ create table clientes (
   nome         text not null,
   telefone     text,
   endereco     text,
+  ativo        boolean not null default true, -- soft delete
+  arquivado_em timestamptz,
   criado_em    timestamptz not null default now()
 );
 create index idx_clientes_telefone on clientes (telefone);
@@ -106,12 +138,14 @@ create type status_venda as enum (
 
 create table vendas (
   id           uuid primary key default gen_random_uuid(),
-  loja_id      uuid not null references lojas(id),
-  cliente_id   uuid references clientes(id),
+  loja_id      uuid not null references lojas(id) on delete restrict,
+  cliente_id   uuid references clientes(id) on delete restrict,
   canal        canal_venda not null default 'pdv',
   status       status_venda not null default 'paga',
   pagamento    forma_pagamento,
   total        numeric(10,2) not null default 0,
+  agendado     boolean not null default false,  -- pedido feito com a loja fechada
+  agendado_para timestamptz,                    -- horário combinado (opcional)
   -- Suporte a offline: id gerado no dispositivo para deduplicar na sincronização
   id_local     text unique,
   criado_em    timestamptz not null default now()
@@ -122,7 +156,8 @@ create index idx_vendas_canal on vendas (canal);
 create table itens_venda (
   id             uuid primary key default gen_random_uuid(),
   venda_id       uuid not null references vendas(id) on delete cascade,
-  produto_id     uuid not null references produtos(id),
+  produto_id     uuid not null references produtos(id) on delete restrict,
+  variante_id    uuid references variantes(id) on delete set null,
   quantidade     numeric(10,3) not null default 1, -- itens por unidade
   -- Produtos por peso: cliente escolhe o preset (estimado); balança grava o real.
   peso_estimado_g integer,                  -- preset escolhido no pedido
@@ -132,6 +167,36 @@ create table itens_venda (
 );
 create index idx_itens_venda on itens_venda (venda_id);
 create index idx_itens_produto on itens_venda (produto_id);
+
+-- ---------- Configurações da loja (regras editáveis) ----------
+-- Uma linha por loja. Espelha o `lib/config-store.ts` do app; arrays/objetos
+-- (cupons, horários, exceções, redes) ficam em jsonb. Config é filho puro da
+-- loja (cascade).
+create table configuracoes_loja (
+  loja_id            uuid primary key references lojas(id) on delete cascade,
+  taxa_entrega       numeric(10,2) not null default 15,
+  desconto_pix       numeric(4,3) not null default 0.05,   -- fração 0..1
+  tempo_min          integer not null default 45,
+  tempo_max          integer not null default 60,
+  tolerancia_corte   integer not null default 10,          -- %
+  cashback_ativo     boolean not null default true,
+  cashback_percent   numeric(4,3) not null default 0.03,
+  pedido_minimo      numeric(10,2) not null default 0,
+  pix_chave          text default '',
+  whatsapp           text default '',
+  aceita_pedidos     boolean not null default true,
+  entrega_ativa      boolean not null default true,
+  retirada_ativa     boolean not null default true,
+  agendamento_ativo  boolean not null default false,
+  hero_img           text default '',
+  hero_tag           text default '',
+  hero_titulo        text default '',
+  redes              jsonb not null default '{}'::jsonb,     -- {instagram,facebook,whatsapp}
+  horarios           jsonb not null default '[]'::jsonb,     -- 7 dias {aberto,abre,fecha}
+  excecoes           jsonb not null default '[]'::jsonb,     -- dias personalizados
+  cupons             jsonb not null default '[]'::jsonb,     -- lista de cupons
+  atualizado_em      timestamptz not null default now()
+);
 
 -- ============================================================
 -- VISTAS DE APOIO (os "indicadores" nascem daqui)
@@ -159,3 +224,16 @@ where lt.quantidade > 0
   and lt.validade is not null
   and lt.validade <= current_date + interval '7 days'
 order by lt.validade asc;
+
+-- ============================================================
+-- SEGURANÇA (fase de Auth — NÃO habilitar ainda)
+-- ============================================================
+-- Quando entrar o login (Supabase Auth) + papéis dono×operador, habilitar RLS
+-- por loja. Esboço (deixado comentado de propósito):
+--
+--   alter table vendas enable row level security;
+--   create policy vendas_por_loja on vendas
+--     using (loja_id in (select loja_id from usuarios_loja where user_id = auth.uid()));
+--
+-- Repetir o padrão para produtos, lotes, movimentacoes, clientes, etc., a partir
+-- de uma tabela de vínculo usuario -> loja + papel.
