@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CATALOGO, CATEGORIAS, brl, precoBase, type Produto } from "@/lib/catalogo";
 import { useCart } from "@/lib/cart";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
-import { badgesDe, BADGE_CLS } from "@/lib/badges";
+import { badgesDe, BADGE_CLS, estaEsgotado } from "@/lib/badges";
 import { useConfig, lojaAbertaAgora, type Redes } from "@/lib/config-store";
+import { useProdutoCfg } from "@/lib/produto-config-store";
 
 // Monta os links de redes/whatsapp para o aviso de loja fechada.
 function linksRedes(redes: Redes, whatsapp: string) {
@@ -29,7 +31,7 @@ function linksRedes(redes: Redes, whatsapp: string) {
 
 export default function LojaHome() {
   const [cat, setCat] = useState<string>("Todos");
-  const { qtdItens } = useCart();
+  const { qtdItens, total } = useCart();
   const cfg = useConfig();
   const status = lojaAbertaAgora(cfg);
   const [avisoVisto, setAvisoVisto] = useState(false);
@@ -130,6 +132,32 @@ export default function LojaHome() {
         </section>
       </div>
 
+      {/* Mini-carrinho fixo */}
+      {qtdItens > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-50 px-md pb-md">
+          <Link
+            href="/carrinho"
+            className="mx-auto flex max-w-6xl items-center justify-between gap-md rounded-xl bg-primary px-lg py-3 text-on-primary shadow-lg active:scale-[0.99]"
+          >
+            <span className="flex items-center gap-2">
+              <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-on-primary/15">
+                <span className="material-symbols-outlined">shopping_basket</span>
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-warning-amber px-1 text-[11px] font-bold text-on-secondary-fixed">
+                  {qtdItens}
+                </span>
+              </span>
+              <span className="text-body-lg font-semibold">
+                {qtdItens} {qtdItens === 1 ? "item" : "itens"}
+              </span>
+            </span>
+            <span className="flex items-center gap-2 text-body-lg font-semibold">
+              {brl(total)}
+              <span className="material-symbols-outlined">arrow_forward</span>
+            </span>
+          </Link>
+        </div>
+      )}
+
       {/* Aviso de loja fechada — X fecha e deixa navegar o catálogo */}
       {!status.aberta && !avisoVisto && (
         <div
@@ -200,14 +228,42 @@ export default function LojaHome() {
 }
 
 function CardProduto({ produto }: { produto: Produto }) {
+  const router = useRouter();
+  const { add } = useCart();
+  const cfgP = useProdutoCfg(produto.id);
   const porPeso = produto.tipo === "peso";
   const badges = badgesDe(produto.id);
-  const esgotado = badges.some((b) => b.tipo === "esgotado");
+  const esgotado = estaEsgotado(produto.id);
+  const temVariantes = (cfgP.variantes?.length ?? 0) > 0;
+  const precisaEscolher = porPeso || temVariantes;
+
+  function clicarMais() {
+    if (esgotado) return;
+    if (precisaEscolher) {
+      router.push(`/produto/${produto.id}`);
+      return;
+    }
+    if (produto.tipo === "unidade") {
+      add({
+        key: produto.id,
+        produtoId: produto.id,
+        nome: produto.nome,
+        icone: produto.icone,
+        qtd: 1,
+        precoLinha: produto.preco,
+      });
+    }
+  }
+
   return (
-    <Link
-      href={`/produto/${produto.id}`}
-      className="group flex flex-col overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all active:scale-[0.98]"
-    >
+    <div className="group relative flex flex-col overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all active:scale-[0.98]">
+      {/* Área clicável (foto + textos) → página do produto */}
+      <Link
+        href={`/produto/${produto.id}`}
+        aria-label={produto.nome}
+        className="absolute inset-0 z-10"
+      />
+
       <div className="relative">
         <ProdutoImagem
           src={produto.img}
@@ -246,13 +302,22 @@ function CardProduto({ produto }: { produto: Produto }) {
               {brl(precoBase(produto))}
             </span>
           </div>
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-container text-white">
-            <span className="material-symbols-outlined text-[18px]">
-              {porPeso ? "scale" : "add"}
-            </span>
-          </span>
+          <button
+            onClick={clicarMais}
+            disabled={esgotado}
+            aria-label={
+              esgotado
+                ? "Esgotado"
+                : precisaEscolher
+                  ? `Ver ${produto.nome}`
+                  : `Adicionar ${produto.nome}`
+            }
+            className="relative z-20 flex h-8 w-8 items-center justify-center rounded-lg bg-primary-container text-white active:scale-90 disabled:opacity-40"
+          >
+            <span className="material-symbols-outlined text-[18px]">add</span>
+          </button>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
