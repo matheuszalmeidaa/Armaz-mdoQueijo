@@ -278,26 +278,13 @@ export default function Carrinho() {
                 Você informa o endereço no próximo passo.
               </p>
             ) : (
-              <div className="mt-sm">
-                <label className="block text-label-sm text-on-surface-variant">
-                  Retirar em
-                </label>
-                <select
-                  value={dados.lojaRetiradaId ?? ""}
-                  onChange={(e) => setDados({ lojaRetiradaId: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
-                >
-                  <option value="">Selecione a loja…</option>
-                  {LOJAS_RETIRADA.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.nome} — {l.endereco}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-label-sm text-tertiary">
-                  Retirada é grátis (sem taxa de entrega).
-                </p>
-              </div>
+              <p className="mt-sm flex items-center gap-sm rounded-lg bg-surface-container-low px-md py-2.5 text-body-md text-on-surface-variant">
+                <span className="material-symbols-outlined text-tertiary">
+                  storefront
+                </span>
+                Retirada no balcão — <strong className="text-tertiary">grátis</strong>
+                , sem taxa de entrega.
+              </p>
             )}
           </section>
 

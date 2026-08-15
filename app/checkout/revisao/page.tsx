@@ -59,7 +59,7 @@ export default function Revisao() {
       modo,
       entrega:
         modo === "retirada"
-          ? `Retirada — ${lojaRetirada?.nome ?? "loja"}`
+          ? "Retirada na loja"
           : formatarEndereco(dados) || "Endereço não informado",
       pagamento: PAG_LABEL[pagamento] ?? pagamento,
       itens: itensMsg,
@@ -124,9 +124,7 @@ export default function Revisao() {
             <div>
               <p className="text-body-lg text-on-surface">
                 {modo === "retirada"
-                  ? lojaRetirada
-                    ? `${lojaRetirada.nome} — ${lojaRetirada.endereco}`
-                    : "Loja não selecionada"
+                  ? "Retirada na loja — Armazém do Queijo"
                   : dados.endereco || "Endereço não informado"}
               </p>
               <p className="text-label-sm text-on-surface-variant">

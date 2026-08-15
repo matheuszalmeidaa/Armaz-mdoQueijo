@@ -12,6 +12,13 @@ const PAG_LABEL: Record<string, string> = {
   dinheiro: "Dinheiro",
 };
 
+function telFmt(t?: string) {
+  const d = (t ?? "").replace(/\D/g, "");
+  if (d.length < 10) return t ?? "";
+  const cel = d.length === 11;
+  return `(${d.slice(0, 2)}) ${d.slice(2, cel ? 7 : 6)}-${d.slice(cel ? 7 : 6)}`;
+}
+
 export function formatarEndereco(d: DadosCheckout): string {
   if (d.modo === "retirada") return "";
   const linha1 = [d.rua, d.numero].filter(Boolean).join(", ");
@@ -39,36 +46,57 @@ type Args = {
 
 export function mensagemPedido(a: Args): string {
   const d = a.dados;
+  const R = a.resumo;
+  const agora = new Date().toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   const L: string[] = [];
-  L.push(`*Novo pedido #${a.numero}* — Armazém do Queijo`);
-  if (a.agendado) L.push("*⏰ PEDIDO AGENDADO — combinar horário*");
+
+  L.push("🧀 *ARMAZÉM DO QUEIJO*");
+  L.push(`Pedido *#${a.numero}* · ${agora}`);
+  if (a.agendado) L.push("⏰ *AGENDADO — combinar horário*");
   L.push("");
-  L.push(`*Cliente:* ${d.nome ?? "-"}`);
-  if (d.telefone) L.push(`*WhatsApp:* ${d.telefone}`);
+
+  // Cliente
+  L.push(`👤 *${d.nome ?? "Cliente"}*`);
+  if (d.telefone) L.push(`📱 ${telFmt(d.telefone)}`);
+  L.push("");
+
+  // Itens
+  L.push("🛍️ *Itens*");
+  a.itens.forEach((it) => L.push(`• ${it.qtd} · ${it.nome} — ${brl(it.preco)}`));
+  L.push("");
+
+  // Entrega ou retirada
   if (d.modo === "retirada") {
-    L.push(`*Retirada:* ${a.lojaRetiradaNome ?? "na loja"}`);
+    L.push("🏬 *Retirada na loja*");
   } else {
-    L.push(`*Entrega:* ${formatarEndereco(d)}`);
-    if (d.geoLink) L.push(`*Mapa:* ${d.geoLink}`);
+    L.push("🛵 *Entrega*");
+    L.push(formatarEndereco(d));
+    if (d.geoLink) L.push(`🗺️ ${d.geoLink}`);
   }
   L.push("");
-  L.push("*Itens:*");
-  a.itens.forEach((it) => L.push(`• ${it.qtd} — ${it.nome} — ${brl(it.preco)}`));
-  L.push("");
-  L.push(`Subtotal: ${brl(a.resumo.subtotal)}`);
-  if (d.modo !== "retirada")
-    L.push(`Entrega: ${a.resumo.frete > 0 ? brl(a.resumo.frete) : "Grátis"}`);
-  if (a.resumo.descontoPix > 0) L.push(`Desconto Pix: -${brl(a.resumo.descontoPix)}`);
-  if (a.resumo.descontoCupom > 0)
-    L.push(`Cupom ${a.resumo.cupom?.codigo ?? ""}: -${brl(a.resumo.descontoCupom)}`);
-  L.push(`*Total: ${brl(a.resumo.total)}*`);
-  L.push("");
-  L.push(`*Pagamento:* ${PAG_LABEL[d.pagamento ?? "pix"]}`);
+
+  // Pagamento
+  L.push(`💳 *Pagamento:* ${PAG_LABEL[d.pagamento ?? "pix"]}`);
   if (d.pagamento === "dinheiro" && d.trocoPara && d.trocoPara > 0) {
-    const troco = Math.max(0, d.trocoPara - a.resumo.total);
-    L.push(`Troco para ${brl(d.trocoPara)} (levar ${brl(troco)})`);
+    L.push(`Troco para ${brl(d.trocoPara)} (levar ${brl(Math.max(0, d.trocoPara - R.total))})`);
   }
   if (d.pagamento === "pix" && a.pixChave) L.push(`Chave Pix: ${a.pixChave}`);
+  L.push("");
+
+  // Valores
+  L.push(`Subtotal: ${brl(R.subtotal)}`);
+  if (d.modo !== "retirada")
+    L.push(`Entrega: ${R.frete > 0 ? brl(R.frete) : "Grátis"}`);
+  if (R.descontoPix > 0) L.push(`Desconto Pix: -${brl(R.descontoPix)}`);
+  if (R.descontoCupom > 0)
+    L.push(`Cupom ${R.cupom?.codigo ?? ""}: -${brl(R.descontoCupom)}`);
+  L.push(`*Total: ${brl(R.total)}*`);
+
   return L.join("\n");
 }
 

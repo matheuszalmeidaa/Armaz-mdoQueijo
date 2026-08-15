@@ -2,19 +2,43 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cart";
+import { useClientes } from "@/lib/pedidos-store";
+
+// Máscara de telefone BR, limitada a 11 dígitos (DDD + número).
+function mascararTelefone(v: string) {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
 
 export default function Identificacao() {
   const router = useRouter();
   const { dados, setDados } = useCart();
-  const [nome, setNome] = useState(dados.nome ?? "");
+  const clientes = useClientes();
   const [telefone, setTelefone] = useState(dados.telefone ?? "");
+  const [nome, setNome] = useState(dados.nome ?? "");
 
-  const valido = nome.trim().length > 2 && telefone.replace(/\D/g, "").length >= 10;
+  const digitos = telefone.replace(/\D/g, "");
+  // Número é o ID do cliente: se já existe (neste aparelho), reconhece.
+  const existente =
+    digitos.length >= 10 ? clientes.find((c) => c.chave === digitos) : undefined;
+
+  // Reconhecido: preenche o nome cadastrado quando o campo ainda está vazio.
+  useEffect(() => {
+    if (existente && !nome.trim()) setNome(existente.nome);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existente?.chave]);
+
+  const valido = nome.trim().length > 2 && digitos.length >= 10;
 
   function continuar() {
-    setDados({ nome: nome.trim(), telefone });
+    // Sempre mantemos o primeiro nome cadastrado para este número (para nós).
+    const nomeCanonico = existente?.nome ?? nome.trim();
+    setDados({ nome: nomeCanonico, telefone });
     // Retirada na loja não precisa de endereço.
     router.push(
       dados.modo === "retirada" ? "/checkout/revisao" : "/checkout/endereco"
@@ -49,23 +73,7 @@ export default function Identificacao() {
           melhor.
         </p>
 
-        {/* Nome */}
-        <label className="mt-lg block text-label-md text-on-surface">
-          Nome Completo
-        </label>
-        <div className="mt-sm flex items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-3 focus-within:border-primary">
-          <span className="material-symbols-outlined text-on-surface-variant">
-            person
-          </span>
-          <input
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Ex: João da Silva"
-            className="w-full bg-transparent text-body-lg outline-none placeholder:text-on-surface-variant/60"
-          />
-        </div>
-
-        {/* Telefone */}
+        {/* Telefone (é o identificador do cliente) */}
         <label className="mt-lg block text-label-md text-on-surface">
           Telefone / WhatsApp
         </label>
@@ -80,12 +88,38 @@ export default function Identificacao() {
             </span>
             <input
               value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
-              inputMode="tel"
+              onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
+              inputMode="numeric"
+              maxLength={16}
               placeholder="(11) 99999-9999"
               className="w-full bg-transparent text-body-lg outline-none placeholder:text-on-surface-variant/60"
             />
           </div>
+        </div>
+
+        {existente && (
+          <p className="mt-sm flex items-center gap-1 text-label-md text-tertiary">
+            <span className="material-symbols-outlined text-[18px]">
+              waving_hand
+            </span>
+            Que bom te ver de novo, {existente.nome.split(" ")[0]}!
+          </p>
+        )}
+
+        {/* Nome */}
+        <label className="mt-lg block text-label-md text-on-surface">
+          Nome
+        </label>
+        <div className="mt-sm flex items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-3 focus-within:border-primary">
+          <span className="material-symbols-outlined text-on-surface-variant">
+            person
+          </span>
+          <input
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Ex: João da Silva"
+            className="w-full bg-transparent text-body-lg outline-none placeholder:text-on-surface-variant/60"
+          />
         </div>
 
         {/* Nota de segurança */}
