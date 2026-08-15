@@ -198,6 +198,31 @@ create table configuracoes_loja (
   atualizado_em      timestamptz not null default now()
 );
 
+-- ---------- Pedidos ao vivo (board delivery/PDV, denormalizado) ----------
+-- Tabela pragmática para o fluxo ao vivo (recebimento/acompanhamento). Itens
+-- ficam em jsonb (não precisa seedar o catálogo normalizado ainda). O relatório
+-- financeiro/estoque usa vendas/itens_venda quando ligarmos a baixa de estoque.
+-- RLS LIGADO e SEM policies para anon: todo acesso passa pelas rotas do servidor
+-- (service_role). Assim nenhum dado de cliente fica exposto pela chave pública.
+create table pedidos (
+  id          uuid primary key default gen_random_uuid(),
+  numero      text not null,
+  cliente     text not null,
+  telefone    text,
+  canal       text not null default 'Delivery',   -- Delivery | PDV
+  modo        text not null default 'entrega',     -- entrega | retirada
+  entrega     text,
+  pagamento   text,
+  itens       jsonb not null default '[]'::jsonb,  -- [{nome,qtd,preco}]
+  total       numeric(10,2) not null default 0,
+  status      text not null default 'Novo',        -- Novo|Preparando|Em rota|Entregue
+  agendado    boolean not null default false,
+  criado_em   timestamptz not null default now()
+);
+create index idx_pedidos_criado on pedidos (criado_em desc);
+alter table pedidos enable row level security;
+-- (sem create policy: apenas a service_role, que ignora RLS, acessa)
+
 -- ============================================================
 -- VISTAS DE APOIO (os "indicadores" nascem daqui)
 -- ============================================================

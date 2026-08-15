@@ -17,6 +17,19 @@ type Resultado = { tabela: string; ok: boolean; detalhe: string };
 export default function Conexao() {
   const [resultados, setResultados] = useState<Resultado[]>([]);
   const [testando, setTestando] = useState(false);
+  const [servidor, setServidor] = useState<string>("verificando...");
+
+  useEffect(() => {
+    fetch("/api/pedidos")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.semBanco)
+          setServidor("service_role NÃO configurada (defina SUPABASE_SERVICE_ROLE_KEY)");
+        else if (j.error) setServidor(`erro: ${j.error}`);
+        else setServidor(`OK — ${(j.pedidos ?? []).length} pedido(s) no banco`);
+      })
+      .catch((e) => setServidor(`falha: ${String(e)}`));
+  }, []);
 
   async function testar() {
     if (!supabase) return;
@@ -73,6 +86,16 @@ export default function Conexao() {
               ? "As variáveis NEXT_PUBLIC_SUPABASE_URL e ANON_KEY estão presentes."
               : "Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel e faça o redeploy."}
           </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-sm rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-md">
+        <span className="material-symbols-outlined text-secondary">dns</span>
+        <div>
+          <p className="text-body-lg text-on-surface">
+            Rotas do servidor (service_role)
+          </p>
+          <p className="text-label-sm text-on-surface-variant">{servidor}</p>
         </div>
       </div>
 
