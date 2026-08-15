@@ -1,42 +1,32 @@
-// Estoque de EXEMPLO (maquete). Vem da espinha (lotes por loja) ao ligar o
-// Supabase. Inventário SEPARADO por loja, com saldo, mínimo e validade do lote
-// mais próximo. Dados montados pra mostrar todos os estados: ok, baixo, esgotado
-// e vencendo.
+// Estoque de loja única (saldo, mínimo e validade por produto). Os dados vivem no
+// Supabase (estoque-store) e são injetados aqui via setEstoqueLive, para os
+// helpers (badges, alertas) funcionarem sem virar hook. Sem dados, tudo é
+// tratado como "sem controle" (não bloqueia venda).
 
-import { getProduto } from "./catalogo";
+import { getProduto, listaLive } from "./catalogo";
 
-export const LOJAS_ESTOQUE = [
-  { id: "centro", nome: "Loja Centro" },
-  { id: "bairro", nome: "Loja Bairro" },
-] as const;
-
-export type SaldoLoja = { saldo: number; min: number };
-export type EstoqueItem = {
-  produtoId: string;
+export type SaldoProduto = {
+  saldo: number;
+  min: number;
   validade?: string; // YYYY-MM-DD do lote mais próximo do vencimento
-  centro: SaldoLoja;
-  bairro: SaldoLoja;
 };
 
-// "Hoje" fixo pra maquete (bate com a data do projeto).
-export const HOJE = new Date("2026-08-09T00:00:00");
+export type EstoqueMapa = Record<string, SaldoProduto>;
 
-export const ESTOQUE: EstoqueItem[] = [
-  { produtoId: "figueira", validade: "2026-08-14", centro: { saldo: 4.2, min: 2 }, bairro: { saldo: 0.8, min: 1.5 } },
-  { produtoId: "gouda-pesto", validade: "2026-09-20", centro: { saldo: 2.5, min: 1 }, bairro: { saldo: 3.1, min: 1 } },
-  { produtoId: "morro-azul", validade: "2026-08-12", centro: { saldo: 0, min: 0.5 }, bairro: { saldo: 1.2, min: 0.5 } },
-  { produtoId: "borbinha", validade: "2026-10-01", centro: { saldo: 5, min: 2 }, bairro: { saldo: 4, min: 2 } },
-  { produtoId: "geleia-amora", validade: "2027-01-10", centro: { saldo: 12, min: 6 }, bairro: { saldo: 3, min: 6 } },
-  { produtoId: "mel-silvestre", validade: "2027-06-01", centro: { saldo: 8, min: 4 }, bairro: { saldo: 9, min: 4 } },
-  { produtoId: "tabua-frios", validade: "2026-08-13", centro: { saldo: 2, min: 1 }, bairro: { saldo: 0, min: 1 } },
-  { produtoId: "mix-defumados", validade: "2026-08-30", centro: { saldo: 6, min: 2 }, bairro: { saldo: 5, min: 2 } },
-];
+// Mapa vivo (produtoId -> saldo), preenchido pelo estoque-store a partir do banco.
+let LIVE_ESTOQUE: EstoqueMapa = {};
+export function setEstoqueLive(m: EstoqueMapa) {
+  LIVE_ESTOQUE = m || {};
+}
+export function saldoDe(produtoId: string): SaldoProduto | null {
+  return LIVE_ESTOQUE[produtoId] ?? null;
+}
 
 export type Status = "esgotado" | "baixo" | "ok";
 
-export function statusSaldo(s: SaldoLoja): Status {
+export function statusSaldo(s: SaldoProduto): Status {
   if (s.saldo <= 0) return "esgotado";
-  if (s.saldo < s.min) return "baixo";
+  if (s.min > 0 && s.saldo < s.min) return "baixo";
   return "ok";
 }
 
@@ -60,37 +50,42 @@ export function fmtQtd(n: number, unidade: "kg" | "un"): string {
 
 export function diasParaVencer(validade?: string): number | null {
   if (!validade) return null;
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
   const d = new Date(validade + "T00:00:00");
-  return Math.round((d.getTime() - HOJE.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.round((d.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// Lista de itens de estoque, um por produto do catálogo (mesmo sem saldo lançado).
+export type LinhaEstoque = SaldoProduto & { produtoId: string };
+
+export function linhasEstoque(mapa: EstoqueMapa = LIVE_ESTOQUE): LinhaEstoque[] {
+  return listaLive().map((p) => ({
+    produtoId: p.id,
+    saldo: mapa[p.id]?.saldo ?? 0,
+    min: mapa[p.id]?.min ?? 0,
+    validade: mapa[p.id]?.validade,
+  }));
 }
 
 // --- Resumos para os alertas ---
-export function contarAlertas() {
+export function contarAlertas(mapa: EstoqueMapa = LIVE_ESTOQUE) {
   let vencendo = 0;
   let baixo = 0;
   let esgotado = 0;
-  for (const e of ESTOQUE) {
+  for (const e of linhasEstoque(mapa)) {
     const d = diasParaVencer(e.validade);
-    if (d !== null && d <= 7) vencendo++;
-    for (const loja of ["centro", "bairro"] as const) {
-      const st = statusSaldo(e[loja]);
-      if (st === "esgotado") esgotado++;
-      else if (st === "baixo") baixo++;
-    }
+    if (d !== null && d <= 7 && e.saldo > 0) vencendo++;
+    const st = statusSaldo(e);
+    if (st === "esgotado") esgotado++;
+    else if (st === "baixo") baixo++;
   }
   return { vencendo, baixo, esgotado };
 }
 
-export function vencendoEmBreve(dias = 7) {
-  return ESTOQUE.map((e) => ({ ...e, dias: diasParaVencer(e.validade) }))
-    .filter((e) => e.dias !== null && e.dias <= dias)
-    .sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0));
-}
-
-// Conferência: produtos que vencem em ~1 mês (8 a 35 dias) — gera a "demanda"
-// de conferir se o estoque foi vendido antes de virar urgente (FEFO).
-export function paraConferir(minDias = 8, maxDias = 35) {
-  return ESTOQUE.map((e) => ({ ...e, dias: diasParaVencer(e.validade) }))
-    .filter((e) => e.dias !== null && e.dias >= minDias && e.dias <= maxDias)
+export function vencendoEmBreve(dias = 7, mapa: EstoqueMapa = LIVE_ESTOQUE) {
+  return linhasEstoque(mapa)
+    .map((e) => ({ ...e, dias: diasParaVencer(e.validade) }))
+    .filter((e) => e.dias !== null && e.dias <= dias && e.saldo > 0)
     .sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0));
 }

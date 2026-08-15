@@ -126,6 +126,17 @@ export default function LojaHome() {
 
         {/* Grade de produtos agrupada por categoria */}
         <section className="mt-lg px-md">
+          {lista.length === 0 && (
+            <div className="mx-auto max-w-[28rem] rounded-xl border border-outline-variant/40 bg-cream-surface p-lg text-center">
+              <span className="material-symbols-outlined text-[40px] text-primary/40">
+                storefront
+              </span>
+              <p className="mt-sm text-body-md text-on-surface-variant">
+                Nossa vitrine está sendo preparada. Volte em instantes — em breve
+                os produtos aparecem aqui.
+              </p>
+            </div>
+          )}
           {CATEGORIAS.filter((c) => lista.some((p) => p.categoria === c)).map(
             (c) => (
               <div key={c} className="mb-lg">

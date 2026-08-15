@@ -7,7 +7,7 @@
 // arquivo — evita ciclo).
 
 import { useEffect, useState } from "react";
-import { REGRAS, CUPONS } from "./regras";
+import { REGRAS } from "./regras";
 
 // Cupom configurável pelo lojista. `minimo` = "válido a partir de R$ X".
 export type CupomCfg = {
@@ -60,18 +60,11 @@ export const CONFIG_PADRAO: ConfigLoja = {
   tempoEntregaMin: REGRAS.tempoEntregaMin,
   tempoEntregaMax: REGRAS.tempoEntregaMax,
   toleranciaCorte: 10,
-  whatsapp: "(73) 99811-2345",
+  whatsapp: "",
   somPedido: true,
   cashbackAtivo: REGRAS.cashback.ativo,
   cashbackPercent: REGRAS.cashback.percent,
-  cupons: CUPONS.map((c) => ({
-    codigo: c.codigo,
-    tipo: c.tipo,
-    valor: c.valor,
-    minimo: 0,
-    descricao: c.descricao,
-    ativo: true,
-  })),
+  cupons: [], // sem cupons de exemplo — o lojista cria os seus em Configurações
   aceitaPedidos: true,
   horarios: Array.from({ length: 7 }, () => ({
     aberto: true,
@@ -81,8 +74,8 @@ export const CONFIG_PADRAO: ConfigLoja = {
   excecoes: [],
   redes: { instagram: "", facebook: "", whatsapp: "" },
   heroImg: "",
-  heroTag: "SUGESTÃO DO DIA",
-  heroTitulo: "Queijo Canastra com Mel de Laranjeira",
+  heroTag: "",
+  heroTitulo: "",
   pixChave: "",
   pedidoMinimo: 0,
   entregaAtiva: true,

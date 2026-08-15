@@ -1,35 +1,35 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CATALOGO } from "@/lib/catalogo";
-import { LOJAS_ESTOQUE, unidadeDe, fmtQtd } from "@/lib/estoque";
+import { useCatalogo } from "@/lib/catalogo-store";
+import { darEntrada, lerSaldo } from "@/lib/estoque-store";
+import { unidadeDe } from "@/lib/estoque";
 
-export default function EntradaMercadoria() {
-  const [produtoId, setProdutoId] = useState(CATALOGO[0].id);
+const num = (v: string) => Number(String(v).replace(",", ".")) || 0;
+
+export default function EntradaEstoque() {
+  const router = useRouter();
+  const catalogo = useCatalogo();
+  const [produtoId, setProdutoId] = useState("");
+  const [qtd, setQtd] = useState("");
   const [validade, setValidade] = useState("");
-  const [custo, setCusto] = useState("");
-  const [centro, setCentro] = useState("");
-  const [bairro, setBairro] = useState("");
   const [salvo, setSalvo] = useState(false);
 
-  const un = unidadeDe(produtoId);
-  const qCentro = Number(centro.replace(",", ".")) || 0;
-  const qBairro = Number(bairro.replace(",", ".")) || 0;
-  const totalDistribuido = qCentro + qBairro;
+  const un = produtoId ? unidadeDe(produtoId) : "un";
+  const saldoAtual = produtoId ? lerSaldo(produtoId).saldo : 0;
+  const pode = produtoId && num(qtd) > 0;
 
   function registrar() {
-    if (totalDistribuido <= 0) return;
+    if (!pode) return;
+    darEntrada(produtoId, num(qtd), validade || undefined);
     setSalvo(true);
-    setTimeout(() => setSalvo(false), 2200);
-    setCentro("");
-    setBairro("");
-    setValidade("");
-    setCusto("");
+    setTimeout(() => router.push("/admin/estoque"), 800);
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-lg">
+    <div className="mx-auto max-w-[40rem] space-y-lg">
       <div className="flex items-center gap-sm">
         <Link
           href="/admin/estoque"
@@ -38,29 +38,59 @@ export default function EntradaMercadoria() {
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
         <h1 className="font-headline-lg text-headline-lg text-primary">
-          Entrada de mercadoria
+          Dar entrada no estoque
         </h1>
       </div>
 
-      {/* Produto + lote */}
-      <section className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-lg shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-        <label className="block text-label-md text-on-surface">Produto</label>
-        <select
-          value={produtoId}
-          onChange={(e) => setProdutoId(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
-        >
-          {CATALOGO.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nome}
-            </option>
-          ))}
-        </select>
+      {catalogo.length === 0 ? (
+        <div className="rounded-xl border border-outline-variant/40 bg-cream-surface p-lg text-center">
+          <p className="text-body-md text-on-surface-variant">
+            Cadastre um produto primeiro em{" "}
+            <Link href="/admin/produtos/novo" className="text-primary underline">
+              Produtos → Novo produto
+            </Link>
+            .
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-md rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-lg shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+          <div>
+            <label className="block text-label-md text-on-surface">Produto</label>
+            <select
+              value={produtoId}
+              onChange={(e) => setProdutoId(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
+            >
+              <option value="">Escolha um produto</option>
+              {catalogo.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                </option>
+              ))}
+            </select>
+            {produtoId && (
+              <p className="mt-1 text-label-sm text-on-surface-variant">
+                Saldo atual: {saldoAtual} {un}
+              </p>
+            )}
+          </div>
 
-        <div className="mt-md grid gap-md sm:grid-cols-2">
           <div>
             <label className="block text-label-md text-on-surface">
-              Validade do lote
+              Quantidade a adicionar ({un})
+            </label>
+            <input
+              value={qtd}
+              onChange={(e) => setQtd(e.target.value)}
+              inputMode="decimal"
+              placeholder="0"
+              className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-label-md text-on-surface">
+              Validade do lote (opcional)
             </label>
             <input
               type="date"
@@ -69,91 +99,16 @@ export default function EntradaMercadoria() {
               className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
             />
           </div>
-          <div>
-            <label className="block text-label-md text-on-surface">
-              Custo por {un === "kg" ? "kg" : "unidade"}
-            </label>
-            <div className="mt-1 flex items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 focus-within:border-primary">
-              <span className="text-body-md text-on-surface-variant">R$</span>
-              <input
-                value={custo}
-                onChange={(e) => setCusto(e.target.value)}
-                inputMode="decimal"
-                placeholder="0,00"
-                className="w-full bg-transparent text-body-lg outline-none"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Destino por loja */}
-      <section className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-lg shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-        <h2 className="font-headline-md text-headline-md text-on-surface">
-          Destino por loja
-        </h2>
-        <p className="mb-md text-body-md text-on-surface-variant">
-          Quanto desta entrada vai para cada loja ({un === "kg" ? "em kg" : "em unidades"}).
-        </p>
-        <div className="space-y-sm">
-          {LOJAS_ESTOQUE.map((l) => (
-            <div
-              key={l.id}
-              className="flex items-center justify-between gap-md rounded-lg bg-surface-container-low px-md py-2.5"
-            >
-              <span className="flex items-center gap-sm text-body-lg text-on-surface">
-                <span className="material-symbols-outlined text-secondary">
-                  storefront
-                </span>
-                {l.nome}
-              </span>
-              <div className="flex w-32 items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2">
-                <input
-                  value={l.id === "centro" ? centro : bairro}
-                  onChange={(e) =>
-                    l.id === "centro"
-                      ? setCentro(e.target.value)
-                      : setBairro(e.target.value)
-                  }
-                  inputMode="decimal"
-                  placeholder="0"
-                  className="w-full bg-transparent text-right text-body-lg outline-none"
-                />
-                <span className="text-label-sm text-on-surface-variant">{un}</span>
-              </div>
-            </div>
-          ))}
+          <button
+            onClick={registrar}
+            disabled={!pode}
+            className="w-full rounded-lg bg-primary px-lg py-3 text-body-lg font-semibold text-on-primary shadow-lg active:scale-[0.98] disabled:opacity-40"
+          >
+            {salvo ? "Entrada registrada!" : "Registrar entrada"}
+          </button>
         </div>
-
-        <div className="mt-md flex items-center justify-between border-t border-dashed border-outline/20 pt-sm">
-          <span className="text-body-lg text-on-surface-variant">
-            Total da entrada
-          </span>
-          <span className="font-headline-md text-headline-md text-primary">
-            {fmtQtd(totalDistribuido, un)}
-          </span>
-        </div>
-      </section>
-
-      <div className="flex items-center gap-md">
-        <button
-          onClick={registrar}
-          disabled={totalDistribuido <= 0}
-          className="rounded-lg bg-primary px-lg py-3 text-body-lg font-semibold text-on-primary shadow-lg active:scale-[0.98] disabled:opacity-40"
-        >
-          Registrar entrada
-        </button>
-        {salvo && (
-          <span className="flex items-center gap-1 text-label-md text-tertiary">
-            <span className="material-symbols-outlined">check_circle</span>
-            Entrada registrada!
-          </span>
-        )}
-      </div>
-      <p className="text-caption text-on-surface-variant">
-        * Maquete — ao ligar o Supabase, isto cria um lote por loja e soma ao
-        saldo (com a validade para o controle FEFO).
-      </p>
+      )}
     </div>
   );
 }

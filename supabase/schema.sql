@@ -223,6 +223,16 @@ create table catalogo_app (
 );
 alter table catalogo_app enable row level security;
 
+-- ---------- Estoque do app (uma linha, JSON) ----------
+-- Saldo por produto (loja única): produtoId -> {saldo,min,validade}. RLS ligado,
+-- sem policies anon: só as rotas de servidor acessam.
+create table estoque_app (
+  id            text primary key default 'principal',
+  saldos        jsonb not null default '{}'::jsonb,
+  atualizado_em timestamptz not null default now()
+);
+alter table estoque_app enable row level security;
+
 -- ---------- Pedidos ao vivo (board delivery/PDV, denormalizado) ----------
 -- Tabela pragmática para o fluxo ao vivo (recebimento/acompanhamento). Itens
 -- ficam em jsonb (não precisa seedar o catálogo normalizado ainda). O relatório

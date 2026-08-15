@@ -3,7 +3,7 @@
 // quando o Supabase ligar); "Novidade" e "Promoção" são tags do produto.
 
 import { getProduto } from "./catalogo";
-import { ESTOQUE, unidadeDe } from "./estoque";
+import { saldoDe, unidadeDe } from "./estoque";
 
 export type Badge = {
   label: string;
@@ -18,8 +18,8 @@ export const BADGE_CLS: Record<Badge["tipo"], string> = {
 };
 
 function saldoTotal(produtoId: string): number | null {
-  const e = ESTOQUE.find((x) => x.produtoId === produtoId);
-  return e ? e.centro.saldo + e.bairro.saldo : null;
+  const e = saldoDe(produtoId);
+  return e ? e.saldo : null;
 }
 
 export function estaEsgotado(produtoId: string): boolean {
