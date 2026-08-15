@@ -130,7 +130,7 @@ export default function Revisao() {
               <p className="text-label-sm text-on-surface-variant">
                 {modo === "retirada"
                   ? "Retire no balcão quando estiver pronto"
-                  : `Tempo estimado: ${prazoDe(dados, cfg)}`}
+                  : "Entregamos assim que o pedido estiver pronto"}
               </p>
             </div>
           </div>

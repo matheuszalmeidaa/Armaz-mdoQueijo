@@ -84,15 +84,11 @@ export default function Endereco() {
         <div className="mt-sm rounded-xl bg-surface-container-lowest p-md shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
           <div className="flex items-start justify-between">
             <div className="flex flex-col gap-md">
-              <InfoLinha
-                icone="person"
-                rotulo="Nome"
-                valor={mascarar(dados.nome ?? "", 4)}
-              />
+              <InfoLinha icone="person" rotulo="Nome" valor={dados.nome ?? "—"} />
               <InfoLinha
                 icone="call"
                 rotulo="Telefone"
-                valor={mascarar((dados.telefone ?? "").replace(/\D/g, ""), 8)}
+                valor={dados.telefone ?? "—"}
               />
             </div>
             <Link
@@ -102,14 +98,6 @@ export default function Endereco() {
               <span className="material-symbols-outlined text-[18px]">edit</span>
               Mudar
             </Link>
-          </div>
-          <div className="mt-md flex items-center gap-sm border-t border-outline-variant/20 pt-sm">
-            <span className="material-symbols-outlined text-[18px] text-outline">
-              lock
-            </span>
-            <p className="text-body-md italic text-on-surface-variant">
-              Por motivos de segurança, ocultamos alguns de seus dados
-            </p>
           </div>
         </div>
 

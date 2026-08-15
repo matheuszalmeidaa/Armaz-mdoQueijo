@@ -5,51 +5,56 @@ import { useUltimoPedido, type StatusLive } from "@/lib/pedidos-store";
 import { useConfig } from "@/lib/config-store";
 import { linkWhatsApp } from "@/lib/pedido-msg";
 
-// As etapas espelham o status_venda da espinha (schema.sql).
-const ETAPAS = [
-  { icone: "receipt_long", titulo: "Aguardando aceitação", sub: "Pedido recebido" },
-  { icone: "check", titulo: "Pedido aceito", sub: "O artesão aceitou seu pedido" },
-  { icone: "restaurant", titulo: "Preparando", sub: "Sua cesta está sendo montada agora" },
-  { icone: "person", titulo: "Aguardando entregador", sub: "" },
-  { icone: "local_shipping", titulo: "Saiu para entrega", sub: "" },
-  { icone: "home", titulo: "Entregue", sub: "" },
+type Etapa = { icone: string; titulo: string; sub: string };
+
+// Etapas de ENTREGA
+const ETAPAS_ENTREGA: Etapa[] = [
+  { icone: "receipt_long", titulo: "Pedido recebido", sub: "Aguardando a loja aceitar" },
+  { icone: "inventory_2", titulo: "Pedido separado", sub: "Montando sua cesta com carinho" },
+  { icone: "local_shipping", titulo: "Saiu para entrega", sub: "A caminho do seu endereço" },
+  { icone: "home", titulo: "Entregue", sub: "Bom apetite!" },
 ];
-
-// StatusLive -> índice na timeline
-const PASSO: Record<StatusLive, number> = {
+const PASSO_ENTREGA: Record<StatusLive, number> = {
   Novo: 0,
-  Preparando: 2,
-  "Em rota": 4,
-  Entregue: 5,
+  Preparando: 1,
+  "Em rota": 2,
+  Entregue: 3,
 };
-
-const HERO: Record<StatusLive, { titulo: string; sub: string; icone: string }> = {
+const HERO_ENTREGA: Record<StatusLive, Etapa> = {
   Novo: { titulo: "Pedido recebido!", sub: "Estamos confirmando com a loja.", icone: "receipt_long" },
-  Preparando: { titulo: "Preparando seu queijo...", sub: "O produtor está selecionando e embalando com carinho.", icone: "restaurant" },
+  Preparando: { titulo: "Separando seu pedido...", sub: "O produtor está selecionando e embalando.", icone: "inventory_2" },
   "Em rota": { titulo: "Saiu para entrega!", sub: "Seu pedido está a caminho.", icone: "local_shipping" },
   Entregue: { titulo: "Pedido entregue 🎉", sub: "Bom apetite! Obrigado pela preferência.", icone: "home" },
+};
+
+// Etapas de RETIRADA (sem "saiu para entrega")
+const ETAPAS_RETIRADA: Etapa[] = [
+  { icone: "receipt_long", titulo: "Pedido recebido", sub: "Aguardando a loja aceitar" },
+  { icone: "inventory_2", titulo: "Pedido separado", sub: "Pronto para retirar no balcão" },
+  { icone: "storefront", titulo: "Retirado", sub: "Obrigado pela preferência!" },
+];
+const PASSO_RETIRADA: Record<StatusLive, number> = {
+  Novo: 0,
+  Preparando: 1,
+  "Em rota": 2,
+  Entregue: 2,
+};
+const HERO_RETIRADA: Record<StatusLive, Etapa> = {
+  Novo: { titulo: "Pedido recebido!", sub: "Estamos confirmando com a loja.", icone: "receipt_long" },
+  Preparando: { titulo: "Separando seu pedido...", sub: "Já avisamos quando estiver pronto.", icone: "inventory_2" },
+  "Em rota": { titulo: "Pronto para retirar! 🎉", sub: "Pode vir buscar no balcão.", icone: "storefront" },
+  Entregue: { titulo: "Pedido retirado 🎉", sub: "Obrigado pela preferência!", icone: "storefront" },
 };
 
 export default function AcompanhamentoPedido() {
   const pedido = useUltimoPedido();
   const cfg = useConfig();
-  const status: StatusLive = pedido?.status ?? "Preparando";
-  const passoAtual = PASSO[status];
-  const hero = HERO[status];
+  const status: StatusLive = pedido?.status ?? "Novo";
+  const retirada = pedido?.modo === "retirada";
+  const ETAPAS = retirada ? ETAPAS_RETIRADA : ETAPAS_ENTREGA;
+  const passoAtual = (retirada ? PASSO_RETIRADA : PASSO_ENTREGA)[status];
+  const hero = (retirada ? HERO_RETIRADA : HERO_ENTREGA)[status];
   const numero = pedido?.numero ?? "----";
-
-  // Previsão calculada: criação + tempo de preparo/entrega da config.
-  const previsao = (() => {
-    if (!pedido) return null;
-    const f = (ms: number) =>
-      new Date(ms).toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    return `${f(pedido.criadoEm + cfg.tempoEntregaMin * 60000)} - ${f(
-      pedido.criadoEm + cfg.tempoEntregaMax * 60000
-    )}`;
-  })();
 
   const ajudaHref =
     linkWhatsApp(
@@ -77,15 +82,6 @@ export default function AcompanhamentoPedido() {
             {hero.titulo}
           </h1>
           <p className="mt-xs text-body-md text-on-surface-variant">{hero.sub}</p>
-          {status !== "Entregue" && previsao && (
-            <div className="mt-md flex items-center gap-sm rounded-lg border-l-4 border-primary bg-surface-container px-md py-2">
-              <span className="material-symbols-outlined text-primary">schedule</span>
-              <span className="text-body-md text-on-surface">
-                {pedido?.modo === "retirada" ? "Pronto para retirada" : "Previsão de entrega"}{" "}
-                <strong className="text-primary">{previsao}</strong>
-              </span>
-            </div>
-          )}
         </div>
       </section>
 

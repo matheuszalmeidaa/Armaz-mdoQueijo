@@ -312,9 +312,25 @@ function CardProduto({ produto }: { produto: Produto }) {
                 a partir de
               </span>
             )}
-            <span className="font-headline-md text-headline-md text-primary">
-              {brl(precoBase(produto))}
-            </span>
+            {produto.tipo === "unidade" && produto.precoAntigo ? (
+              <>
+                <div className="flex items-center gap-1">
+                  <span className="text-caption text-on-surface-variant line-through">
+                    {brl(produto.precoAntigo)}
+                  </span>
+                  <span className="rounded bg-primary px-1 py-0.5 text-[10px] font-bold text-on-primary">
+                    -{Math.round((1 - produto.preco / produto.precoAntigo) * 100)}%
+                  </span>
+                </div>
+                <span className="font-headline-md text-headline-md text-primary">
+                  {brl(produto.preco)}
+                </span>
+              </>
+            ) : (
+              <span className="font-headline-md text-headline-md text-primary">
+                {brl(precoBase(produto))}
+              </span>
+            )}
           </div>
           <button
             onClick={clicarMais}

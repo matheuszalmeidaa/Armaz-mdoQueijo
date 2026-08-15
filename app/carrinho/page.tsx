@@ -282,8 +282,7 @@ export default function Carrinho() {
                 <span className="material-symbols-outlined text-tertiary">
                   storefront
                 </span>
-                Retirada no balcão — <strong className="text-tertiary">grátis</strong>
-                , sem taxa de entrega.
+                Retirada no balcão — <strong className="text-tertiary">grátis</strong>.
               </p>
             )}
           </section>
