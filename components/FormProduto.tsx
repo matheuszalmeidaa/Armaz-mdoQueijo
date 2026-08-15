@@ -1,8 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CATALOGO, CATEGORIAS, brl, type Produto } from "@/lib/catalogo";
+import {
+  lerProdutoCfg,
+  salvarProdutoCfg,
+  type Variante,
+} from "@/lib/produto-config-store";
 
 type Faixa = { min: string; kg: string };
 
@@ -44,7 +49,17 @@ export function FormProduto({
   const [vinculadoId, setVinculadoId] = useState(inicial?.vinculadoId ?? "");
   const [custo, setCusto] = useState("");
   const [codigoBarras, setCodigoBarras] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [variantes, setVariantes] = useState<Variante[]>([]);
   const [salvo, setSalvo] = useState(false);
+
+  // Carrega vídeo/variantes salvos deste produto (só produtos existentes).
+  useEffect(() => {
+    if (!inicial?.id) return;
+    const c = lerProdutoCfg(inicial.id);
+    setVideoUrl(c.videoUrl ?? "");
+    setVariantes(c.variantes ?? []);
+  }, [inicial?.id]);
 
   function addPeso() {
     const g = parseInt(novoPeso);
@@ -52,7 +67,29 @@ export function FormProduto({
     setNovoPeso("");
   }
 
+  function addVariante() {
+    setVariantes([
+      ...variantes,
+      { id: crypto.randomUUID(), nome: "", descricao: "", fotoUrl: "" },
+    ]);
+  }
+  function updVariante(i: number, patch: Partial<Variante>) {
+    setVariantes(variantes.map((v, j) => (j === i ? { ...v, ...patch } : v)));
+  }
+  function delVariante(i: number) {
+    setVariantes(variantes.filter((_, j) => j !== i));
+  }
+
   function acao() {
+    // Vídeo e variantes valem de verdade para produtos existentes (localStorage).
+    if (inicial?.id) {
+      salvarProdutoCfg(inicial.id, {
+        videoUrl: videoUrl.trim() || undefined,
+        variantes: variantes
+          .map((v) => ({ ...v, nome: v.nome.trim() }))
+          .filter((v) => v.nome),
+      });
+    }
     setSalvo(true);
     setTimeout(() => setSalvo(false), 2200);
   }
@@ -312,6 +349,95 @@ export function FormProduto({
               </option>
             ))}
           </select>
+        </div>
+      </Secao>
+
+      {/* Mídia — vídeo do produto */}
+      <Secao titulo="Mídia (vídeo do produto)">
+        <p className="text-label-sm text-on-surface-variant">
+          Cole a URL de um vídeo (.mp4). O cliente vê um botão de play na foto do
+          produto. Upload de arquivo entra com o Supabase.
+        </p>
+        <Campo rotulo="Vídeo (URL .mp4)">
+          <input
+            value={videoUrl}
+            onChange={(e) => setVideoUrl(e.target.value)}
+            placeholder="https://.../video.mp4"
+            className="w-full bg-transparent text-body-lg outline-none placeholder:text-on-surface-variant/60"
+          />
+        </Campo>
+        {!inicial?.id && (
+          <p className="text-label-sm text-danger-red">
+            * Vídeo e variantes só salvam ao editar um produto já existente (sem
+            backend ainda).
+          </p>
+        )}
+      </Secao>
+
+      {/* Variantes */}
+      <Secao titulo="Variantes (ex.: kit, tamanho, sabor)">
+        <p className="text-label-sm text-on-surface-variant">
+          Cada variante pode ter nome, descrição e foto próprios
+          {tipo === "unidade" ? " e preço." : " (o preço segue o peso)."}
+        </p>
+        <div className="space-y-md">
+          {variantes.map((v, i) => (
+            <div
+              key={v.id}
+              className="rounded-lg border border-outline-variant/60 bg-surface-container-low p-md"
+            >
+              <div className="flex items-center gap-sm">
+                <input
+                  value={v.nome}
+                  onChange={(e) => updVariante(i, { nome: e.target.value })}
+                  placeholder="Nome da variante (ex.: Kit 3 peças)"
+                  className="w-full flex-grow rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 text-body-lg outline-none focus:border-primary"
+                />
+                {tipo === "unidade" && (
+                  <div className="flex w-28 items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2">
+                    <span className="text-label-sm text-on-surface-variant">R$</span>
+                    <input
+                      value={v.preco != null ? String(v.preco) : ""}
+                      onChange={(e) =>
+                        updVariante(i, {
+                          preco: Number(e.target.value.replace(",", ".")) || undefined,
+                        })
+                      }
+                      inputMode="decimal"
+                      placeholder="preço"
+                      className="w-full bg-transparent text-body-md outline-none"
+                    />
+                  </div>
+                )}
+                <button
+                  onClick={() => delVariante(i)}
+                  className="material-symbols-outlined text-danger-red"
+                  title="Excluir variante"
+                >
+                  delete
+                </button>
+              </div>
+              <input
+                value={v.descricao ?? ""}
+                onChange={(e) => updVariante(i, { descricao: e.target.value })}
+                placeholder="Descrição da variante (opcional)"
+                className="mt-sm w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 text-body-md outline-none focus:border-primary"
+              />
+              <input
+                value={v.fotoUrl ?? ""}
+                onChange={(e) => updVariante(i, { fotoUrl: e.target.value })}
+                placeholder="Foto da variante (URL) — opcional"
+                className="mt-sm w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 text-body-md outline-none focus:border-primary"
+              />
+            </div>
+          ))}
+          <button
+            onClick={addVariante}
+            className="flex items-center gap-1 text-label-md text-secondary"
+          >
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            Adicionar variante
+          </button>
         </div>
       </Secao>
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getProduto,
   precoPorKg,
@@ -12,12 +12,22 @@ import {
 } from "@/lib/catalogo";
 import { useCart } from "@/lib/cart";
 import { useConfig } from "@/lib/config-store";
+import { useProdutoCfg, type Variante } from "@/lib/produto-config-store";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
 import { badgesDe, BADGE_CLS } from "@/lib/badges";
 
 export default function ProdutoPage() {
   const { id } = useParams<{ id: string }>();
   const produto = getProduto(id);
+  const cfgP = useProdutoCfg(id);
+  const variantes = cfgP.variantes ?? [];
+  const [varId, setVarId] = useState<string | null>(null);
+  const [mostrarVideo, setMostrarVideo] = useState(false);
+
+  // Seleciona a primeira variante automaticamente quando existirem.
+  useEffect(() => {
+    if (variantes.length && varId === null) setVarId(variantes[0].id);
+  }, [cfgP, variantes, varId]);
 
   if (!produto) {
     return (
@@ -32,35 +42,61 @@ export default function ProdutoPage() {
     );
   }
 
+  const variante = variantes.find((v) => v.id === varId);
+  const imgSrc = variante?.fotoUrl || produto.img;
+
   return (
     <main className="min-h-full pb-32 lg:pb-lg">
       <Header nome={produto.produtor ?? "Armazém do Queijo"} />
 
       <div className="mx-auto max-w-5xl lg:grid lg:grid-cols-2 lg:items-start lg:gap-xl lg:px-md lg:pt-lg">
-        {/* Imagem */}
+        {/* Imagem / vídeo */}
         <div className="relative m-md overflow-hidden rounded-xl lg:m-0 lg:sticky lg:top-24">
-          <ProdutoImagem
-            src={produto.img}
-            alt={produto.nome}
-            icone={produto.icone}
-            className="aspect-square w-full"
-            iconSize={96}
-          />
-          {produto.tipo === "peso" && (
+          {mostrarVideo && cfgP.videoUrl ? (
+            <video
+              src={cfgP.videoUrl}
+              controls
+              autoPlay
+              playsInline
+              className="aspect-square w-full bg-black object-cover"
+            />
+          ) : (
+            <ProdutoImagem
+              src={imgSrc}
+              alt={produto.nome}
+              icone={produto.icone}
+              className="aspect-square w-full"
+              iconSize={96}
+            />
+          )}
+          {cfgP.videoUrl && (
+            <button
+              onClick={() => setMostrarVideo((v) => !v)}
+              className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-black/60 px-3 py-1.5 text-label-md text-white backdrop-blur active:scale-95"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {mostrarVideo ? "image" : "play_circle"}
+              </span>
+              {mostrarVideo ? "Ver foto" : "Ver vídeo"}
+            </button>
+          )}
+          {!mostrarVideo && produto.tipo === "peso" && (
             <span className="absolute left-3 top-3 rounded-full bg-warning-amber px-3 py-1 text-label-sm font-semibold text-on-secondary-fixed shadow-sm">
               Corte na hora
             </span>
           )}
-          <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
-            {badgesDe(produto.id).map((b) => (
-              <span
-                key={b.label}
-                className={`rounded-full px-2.5 py-1 text-label-sm font-semibold shadow-sm ${BADGE_CLS[b.tipo]}`}
-              >
-                {b.label}
-              </span>
-            ))}
-          </div>
+          {!mostrarVideo && (
+            <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
+              {badgesDe(produto.id).map((b) => (
+                <span
+                  key={b.label}
+                  className={`rounded-full px-2.5 py-1 text-label-sm font-semibold shadow-sm ${BADGE_CLS[b.tipo]}`}
+                >
+                  {b.label}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="px-md lg:px-0">
@@ -71,20 +107,53 @@ export default function ProdutoPage() {
             {produto.nome}
           </h1>
 
-          {produto.tipo === "peso" ? (
-            <SeletorPeso produto={produto} />
-          ) : (
-            <SeletorUnidade produto={produto} />
+          {variantes.length > 0 && (
+            <div className="mt-md">
+              <h3 className="mb-sm text-label-sm uppercase tracking-wide text-on-surface-variant">
+                Escolha a opção
+              </h3>
+              <div className="flex flex-wrap gap-sm">
+                {variantes.map((v) => (
+                  <button
+                    key={v.id}
+                    onClick={() => setVarId(v.id)}
+                    className={`rounded-full border px-4 py-1.5 text-label-md transition-all active:scale-95 ${
+                      varId === v.id
+                        ? "border-primary bg-primary text-on-primary"
+                        : "border-outline-variant bg-surface-container-lowest text-on-surface"
+                    }`}
+                  >
+                    {v.nome}
+                    {produto.tipo === "unidade" && v.preco != null
+                      ? ` · ${brl(v.preco)}`
+                      : ""}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
-          <Detalhes produto={produto} />
+          {produto.tipo === "peso" ? (
+            <SeletorPeso produto={produto} variante={variante} />
+          ) : (
+            <SeletorUnidade produto={produto} variante={variante} />
+          )}
+
+          <Detalhes produto={produto} descricao={variante?.descricao} />
         </div>
       </div>
     </main>
   );
 }
 
-function Detalhes({ produto }: { produto: Produto }) {
+function Detalhes({
+  produto,
+  descricao,
+}: {
+  produto: Produto;
+  descricao?: string;
+}) {
+  const texto = descricao || produto.descricao;
   return (
     <section className="mt-lg">
       {produto.nota && (
@@ -95,13 +164,13 @@ function Detalhes({ produto }: { produto: Produto }) {
         </div>
       )}
 
-      {produto.descricao && (
+      {texto && (
         <>
           <h2 className="font-headline-md text-headline-md text-primary">
             Sobre este produto
           </h2>
           <p className="mt-sm text-body-md leading-relaxed text-on-surface-variant">
-            {produto.descricao}
+            {texto}
           </p>
         </>
       )}
@@ -184,8 +253,10 @@ function Header({ nome }: { nome: string }) {
 // ---------- Produto por PESO ----------
 function SeletorPeso({
   produto,
+  variante,
 }: {
   produto: Extract<Produto, { tipo: "peso" }>;
+  variante?: Variante;
 }) {
   const { add } = useCart();
   const router = useRouter();
@@ -207,9 +278,9 @@ function SeletorPeso({
 
   function adicionar() {
     add({
-      key: `${produto.id}-${peso}`,
+      key: `${produto.id}-${peso}${variante ? `-${variante.id}` : ""}`,
       produtoId: produto.id,
-      nome: produto.nome,
+      nome: variante ? `${produto.nome} — ${variante.nome}` : produto.nome,
       icone: produto.icone,
       pesoG: peso,
       qtd: 1,
@@ -309,20 +380,23 @@ function SeletorPeso({
 // ---------- Produto por UNIDADE ----------
 function SeletorUnidade({
   produto,
+  variante,
 }: {
   produto: Extract<Produto, { tipo: "unidade" }>;
+  variante?: Variante;
 }) {
   const { add } = useCart();
   const router = useRouter();
   const cfg = useConfig();
   const [qtd, setQtd] = useState(1);
-  const total = produto.preco * qtd;
+  const precoUnit = variante?.preco ?? produto.preco;
+  const total = precoUnit * qtd;
 
   function adicionar() {
     add({
-      key: produto.id,
+      key: variante ? `${produto.id}-${variante.id}` : produto.id,
       produtoId: produto.id,
-      nome: produto.nome,
+      nome: variante ? `${produto.nome} — ${variante.nome}` : produto.nome,
       icone: produto.icone,
       qtd,
       precoLinha: total,
@@ -333,12 +407,12 @@ function SeletorUnidade({
   return (
     <>
       <p className="mt-sm font-headline-md text-headline-md text-primary">
-        {produto.precoAntigo && (
+        {produto.precoAntigo && !variante?.preco && (
           <span className="mr-2 text-body-md font-normal text-on-surface-variant line-through">
             {brl(produto.precoAntigo)}
           </span>
         )}
-        {brl(produto.preco)}
+        {brl(precoUnit)}
         <span className="ml-1 text-body-md text-on-surface-variant">/un</span>
       </p>
       <p className="mt-1 flex items-center gap-1 text-label-md text-tertiary">
