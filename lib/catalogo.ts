@@ -92,3 +92,19 @@ export function precoBase(p: Produto) {
   const menor = Math.min(...p.pesos);
   return (precoPorKg(p, menor) * menor) / 1000;
 }
+
+// --- Atacado ---
+// Preço por kg/peça para uma quantidade: usa a maior faixa cujo mínimo cabe na
+// quantidade (abaixo da menor faixa, usa o preço de entrada).
+export function precoAtacado(a: Atacado, qtd: number): number {
+  const ordenadas = [...a.faixas].sort((x, y) => x.min - y.min);
+  let preco = ordenadas[0]?.preco ?? 0;
+  for (const f of ordenadas) if (qtd >= f.min) preco = f.preco;
+  return preco;
+}
+
+// Quantidade mínima do pedido de atacado: o que o lojista definiu, ou 1 (o
+// cliente pode levar 1 kg/peça se não houver mínimo definido).
+export function minimoAtacado(a: Atacado): number {
+  return a.minimo && a.minimo > 0 ? a.minimo : 1;
+}
