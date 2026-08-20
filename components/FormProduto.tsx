@@ -68,6 +68,7 @@ export function FormProduto({
     inicial?.tipo === "unidade" ? String(inicial.preco) : ""
   );
 
+  const [fotoUrl, setFotoUrl] = useState(inicial?.img ?? "");
   const [descricao, setDescricao] = useState(inicial?.descricao ?? "");
   const [vinculadoId, setVinculadoId] = useState(inicial?.vinculadoId ?? "");
   const [custo, setCusto] = useState("");
@@ -135,7 +136,7 @@ export function FormProduto({
       produtor: inicial?.produtor,
       categoria,
       icone: inicial?.icone ?? ICONE_CATEGORIA[categoria] ?? "nutrition",
-      img: inicial?.img ?? "",
+      img: fotoUrl.trim(),
       descricao: descricao.trim() || undefined,
       nota: inicial?.nota,
       origem: inicial?.origem,
@@ -229,10 +230,32 @@ export function FormProduto({
       <Secao titulo="Informações básicas">
         <div>
           <label className="block text-label-md text-on-surface">Foto</label>
-          <button className="mt-1 flex aspect-video w-full max-w-[20rem] flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-outline/40 bg-surface-container-low text-on-surface-variant hover:border-primary/40">
-            <span className="material-symbols-outlined text-[32px]">add_photo_alternate</span>
-            <span className="text-label-sm">Adicionar foto</span>
-          </button>
+          <p className="mb-1 text-label-sm text-on-surface-variant">
+            Cole o link (URL) de uma imagem do produto. Aparece na loja, na página
+            do produto e no PDV.
+          </p>
+          <div className="flex items-start gap-md">
+            <div className="flex aspect-square w-28 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-outline-variant bg-surface-container-low">
+              {fotoUrl.trim() ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={fotoUrl.trim()}
+                  alt="Prévia"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="material-symbols-outlined text-[32px] text-on-surface-variant/50">
+                  add_photo_alternate
+                </span>
+              )}
+            </div>
+            <input
+              value={fotoUrl}
+              onChange={(e) => setFotoUrl(e.target.value)}
+              placeholder="https://.../foto.jpg"
+              className="mt-2 w-full flex-grow rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-md outline-none placeholder:text-on-surface-variant/60 focus:border-primary"
+            />
+          </div>
         </div>
         <Campo rotulo="Nome do produto">
           <input

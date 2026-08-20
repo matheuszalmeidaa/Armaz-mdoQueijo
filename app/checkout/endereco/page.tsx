@@ -32,11 +32,34 @@ export default function Endereco() {
     }
     setGeoStatus("carregando");
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const { latitude, longitude } = pos.coords;
         setDados({
           geoLink: `https://www.google.com/maps?q=${latitude},${longitude}`,
         });
+        // Converte as coordenadas em endereço (rua/bairro) e preenche os campos,
+        // deixando a pessoa revisar. O número continua manual (obrigatório).
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&accept-language=pt-BR&lat=${latitude}&lon=${longitude}`
+          );
+          const data = await res.json();
+          const a = data?.address ?? {};
+          const ruaGeo =
+            a.road || a.pedestrian || a.footway || a.residential || a.path || "";
+          const bairroGeo =
+            a.suburb ||
+            a.neighbourhood ||
+            a.city_district ||
+            a.quarter ||
+            a.village ||
+            a.town ||
+            "";
+          if (ruaGeo) setRua(ruaGeo);
+          if (bairroGeo) setBairro(bairroGeo);
+        } catch {
+          // Sem internet/serviço: mantém só o link do mapa; a pessoa digita.
+        }
         setGeoStatus("ok");
       },
       () => setGeoStatus("erro"),
@@ -126,7 +149,8 @@ export default function Endereco() {
         )}
         {geoStatus === "ok" && (
           <p className="mt-1 text-label-sm text-on-surface-variant">
-            Ainda assim, confirme rua, número e bairro abaixo (número obrigatório).
+            Preenchemos a rua e o bairro pela sua localização — confira e
+            complete o <strong>número</strong> (obrigatório).
           </p>
         )}
 

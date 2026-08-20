@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useConfig } from "@/lib/config-store";
 import { useCatalogo, useCfgMapa } from "@/lib/catalogo-store";
 import { brl, type Atacado } from "@/lib/catalogo";
+import { ProdutoImagem } from "@/components/ProdutoImagem";
 
 export default function Atacado() {
   const cfg = useConfig();
@@ -69,7 +70,14 @@ export default function Atacado() {
               key={produto.id}
               className="rounded-2xl border border-outline-variant/10 bg-surface-container-lowest p-md shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
             >
-              <div className="flex items-center justify-between gap-sm">
+              <div className="flex items-center gap-md">
+                <ProdutoImagem
+                  src={produto.img}
+                  alt={produto.nome}
+                  icone={produto.icone}
+                  className="h-16 w-16 flex-shrink-0 rounded-lg"
+                  iconSize={28}
+                />
                 <div>
                   <p className="font-headline-md text-headline-md text-on-surface">
                     {produto.nome}
