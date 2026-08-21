@@ -21,7 +21,7 @@ export type PedidoLive = {
   criadoEm: number;
   cliente: string;
   telefone?: string;
-  canal: "Delivery" | "PDV";
+  canal: "Delivery" | "PDV" | "Atacado";
   modo: "entrega" | "retirada";
   entrega: string;
   pagamento: string;
@@ -57,7 +57,7 @@ type Row = {
   numero: string;
   cliente: string;
   telefone: string | null;
-  canal: "Delivery" | "PDV";
+  canal: "Delivery" | "PDV" | "Atacado";
   modo: "entrega" | "retirada";
   entrega: string | null;
   pagamento: string | null;
@@ -210,6 +210,17 @@ export function registrarVendaPDV(
   );
 }
 
+// Pedido de ATACADO: entra como "Novo" (vira comanda na gestão/recebimento) e
+// segue também para o WhatsApp. Não é o pedido acompanhado pelo cliente.
+export function registrarPedidoAtacado(
+  p: Omit<NovoPedido, "canal" | "modo" | "entrega">
+) {
+  return inserir(
+    { ...p, canal: "Atacado", modo: "retirada", entrega: "Atacado — combinar" },
+    { status: "Novo", marcarUltimo: false }
+  );
+}
+
 function atualizarStatusLocal(id: string, status: StatusLive) {
   salvarLocal(ler().map((p) => (p.id === id ? { ...p, status } : p)));
   cacheLista = cacheLista.map((p) => (p.id === id ? { ...p, status } : p));
@@ -276,7 +287,7 @@ export type ClienteAgg = {
   totalGasto: number;
   ultimoPedidoEm: number;
   inativoDias: number;
-  canais: Array<"Delivery" | "PDV">;
+  canais: Array<"Delivery" | "PDV" | "Atacado">;
 };
 
 // Chave de identidade do cliente: telefone (só dígitos) ou, sem telefone, o nome.

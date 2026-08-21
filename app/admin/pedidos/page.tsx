@@ -16,7 +16,7 @@ const STATUS_CHIP: Record<StatusLive, string> = {
   Entregue: "bg-tertiary-container/40 text-tertiary",
 };
 
-const CANAIS = ["Todos", "Delivery", "PDV"] as const;
+const CANAIS = ["Todos", "Delivery", "PDV", "Atacado"] as const;
 
 const hora = (ms: number) =>
   new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });

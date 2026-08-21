@@ -12,12 +12,13 @@ export default function AdminRelatorios() {
   const nPedidos = pedidos.length;
   const ticket = nPedidos ? receita / nPedidos : 0;
 
-  // Por canal (Delivery x PDV)
-  const canaisMap = { Delivery: 0, PDV: 0 };
+  // Por canal (Delivery x PDV x Atacado)
+  const canaisMap = { Delivery: 0, PDV: 0, Atacado: 0 };
   for (const p of pedidos) canaisMap[p.canal] += p.total;
   const CANAIS = [
     { nome: "Delivery", valor: canaisMap.Delivery, cls: "bg-primary" },
     { nome: "PDV", valor: canaisMap.PDV, cls: "bg-secondary" },
+    { nome: "Atacado", valor: canaisMap.Atacado, cls: "bg-tertiary" },
   ];
   const totalCanal = receita || 1;
 
