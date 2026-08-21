@@ -38,7 +38,7 @@ type Cupom = {
   pagamento: string;
 };
 
-const LOJAS = ["Loja Centro", "Loja Bairro"];
+const LOJA_NOME = "Armazém do Queijo";
 const PAGAMENTOS = [
   { id: "dinheiro", label: "Dinheiro", icon: "payments" },
   { id: "pix", label: "Pix", icon: "qr_code_2" },
@@ -59,7 +59,7 @@ const caixaZero = (): Record<string, CaixaMetodo> => ({
 });
 
 export default function PDV() {
-  const [loja, setLoja] = useState(LOJAS[0]);
+  const loja = LOJA_NOME;
   const [aberta, setAberta] = useState(true);
   const [busca, setBusca] = useState("");
   const [cat, setCat] = useState("Todos");
@@ -218,17 +218,9 @@ export default function PDV() {
         </div>
 
         <div className="flex items-center gap-sm">
-          <select
-            value={loja}
-            onChange={(e) => setLoja(e.target.value)}
-            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-label-md text-on-surface outline-none"
-          >
-            {LOJAS.map((l) => (
-              <option key={l} value={l}>
-                {l}
-              </option>
-            ))}
-          </select>
+          <span className="hidden rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-label-md text-on-surface sm:inline">
+            {loja}
+          </span>
           <button
             onClick={() => setFecharAberto(true)}
             className="hidden items-center gap-1 rounded-lg border border-outline-variant px-3 py-2 text-label-md text-primary sm:flex"

@@ -93,12 +93,14 @@ export default function Atacado() {
       `🛒 *Itens:*\n${linhas.join("\n")}\n\n` +
       `*Total: ${brl(total)}*`;
     const link = linkWhatsApp(cfg.whatsapp, texto);
-    if (link) window.open(link, "_blank");
+    if (!link) return; // sem WhatsApp configurado não marca como enviado
+    window.open(link, "_blank");
     setEnviado(true);
   }
 
   const telValido = telefone.replace(/\D/g, "").length >= 10;
-  const podeEnviar = nome.trim().length > 1 && telValido && nItens > 0;
+  const podeEnviar =
+    nome.trim().length > 1 && telValido && nItens > 0 && Boolean(zap);
 
   return (
     <main className="mx-auto min-h-dvh max-w-[32rem] pb-28">

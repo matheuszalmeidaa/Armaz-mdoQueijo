@@ -16,9 +16,13 @@ const META_DIA = 3200;
 export default function AdminDashboard() {
   const pedidos = usePedidosLive();
 
-  const vendas = pedidos.reduce((s, p) => s + p.total, 0);
+  const inicioHoje = new Date();
+  inicioHoje.setHours(0, 0, 0, 0);
+  const pedidosHoje = pedidos.filter((p) => p.criadoEm >= inicioHoje.getTime());
+
+  const vendas = pedidosHoje.reduce((s, p) => s + p.total, 0);
   const novos = pedidos.filter((p) => p.status === "Novo").length;
-  const ticket = pedidos.length ? vendas / pedidos.length : 0;
+  const ticket = pedidosHoje.length ? vendas / pedidosHoje.length : 0;
   const ativas = pedidos.filter(
     (p) => p.status === "Preparando" || p.status === "Em rota"
   ).length;
@@ -26,7 +30,7 @@ export default function AdminDashboard() {
   const metaPct = Math.min(100, Math.round((vendas / META_DIA) * 100));
 
   const kpis = [
-    { icone: "payments", rotulo: "Vendas", valor: brl(vendas), delta: `${pedidos.length} pedidos`, positivo: true },
+    { icone: "payments", rotulo: "Vendas de hoje", valor: brl(vendas), delta: `${pedidosHoje.length} pedidos hoje`, positivo: true },
     { icone: "receipt_long", rotulo: "Novos pedidos", valor: String(novos), delta: novos ? "aguardando" : "tudo em dia", positivo: true },
     { icone: "shopping_cart", rotulo: "Ticket médio", valor: brl(ticket), delta: "por pedido", positivo: true },
     { icone: "local_shipping", rotulo: "Entregas ativas", valor: String(ativas), delta: `${concluidas} concluídas`, positivo: true },

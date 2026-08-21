@@ -5,7 +5,6 @@ import { brl } from "@/lib/catalogo";
 import {
   usePedidosLive,
   avancarStatus,
-  adicionarPedido,
   FLUXO,
   type StatusLive,
   type PedidoLive,
@@ -59,12 +58,6 @@ function beep() {
   } catch {}
 }
 
-const AMOSTRAS = [
-  { cliente: "Beatriz Souza", modo: "entrega" as const, entrega: "Rua do Sol, 88 — Centro", pagamento: "Maquineta (cartão)", itens: [{ nome: "Gouda Pesto Verde", qtd: "200g", preco: 82 }], total: 90 },
-  { cliente: "Diego Martins", modo: "retirada" as const, entrega: "Retirada — Loja Bairro", pagamento: "Pix", itens: [{ nome: "Tábua de Frios Premium", qtd: "1 un", preco: 124.9 }], total: 124.9 },
-  { cliente: "Paula Andrade", modo: "entrega" as const, entrega: "Av. Central, 1500 — Jardim", pagamento: "Maquineta (débito)", itens: [{ nome: "Queijo Morro Azul", qtd: "120g", preco: 64.8 }, { nome: "Geleia de Amora", qtd: "1 un", preco: 28.5 }], total: 105.3 },
-];
-
 export default function Recebimento() {
   const pedidos = usePedidosLive();
   const [somOn, setSomOn] = useState(true);
@@ -82,11 +75,6 @@ export default function Recebimento() {
 
   const novos = pedidos.filter((p) => p.status === "Novo").length;
   const ativos = pedidos.filter((p) => p.status !== "Entregue");
-
-  function simular() {
-    const a = AMOSTRAS[Math.floor(Math.random() * AMOSTRAS.length)];
-    adicionarPedido({ ...a, canal: "Delivery" });
-  }
 
   return (
     <div className="space-y-lg">
@@ -118,13 +106,6 @@ export default function Recebimento() {
             </span>
             Som {somOn ? "ligado" : "desligado"}
           </button>
-          <button
-            onClick={simular}
-            className="flex items-center gap-1 rounded-lg bg-primary px-md py-2 text-label-md text-on-primary active:scale-[0.98]"
-          >
-            <span className="material-symbols-outlined text-[20px]">add_alert</span>
-            Simular pedido
-          </button>
         </div>
       </div>
 
@@ -133,7 +114,7 @@ export default function Recebimento() {
           <span className="material-symbols-outlined mb-sm text-[56px] text-outline">
             inbox
           </span>
-          <p className="text-body-md">Nenhum pedido ativo. Faça um pedido no delivery ou use "Simular pedido".</p>
+          <p className="text-body-md">Nenhum pedido ativo. Os pedidos do delivery aparecem aqui automaticamente.</p>
         </div>
       ) : (
         <div className="flex gap-md overflow-x-auto pb-2">
