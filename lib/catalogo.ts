@@ -47,10 +47,12 @@ export type Atacado = {
 // Forma de venda de um canal: por peça, por quilo, ou ambas.
 export type FormaVenda = { peca: boolean; kg: boolean };
 
+export type Foto = { url: string; path?: string };
 export type ProdutoCfg = {
   videoUrl?: string;
   variantes?: Variante[];
   atacado?: Atacado;
+  fotos?: Foto[]; // galeria (a 1ª é a principal, usada nos cards)
   // NOVO — regras por canal (todas opcionais; ausência = comportamento atual):
   pesoMedioG?: number; // peso médio por peça (g); referência p/ estoque peça↔kg
   vendaPdv?: FormaVenda; // como vende no PDV

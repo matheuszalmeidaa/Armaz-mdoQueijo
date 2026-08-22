@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CATEGORIAS, brl, type Produto, type FaixaAtacado } from "@/lib/catalogo";
+import { useConfig, lerConfig, salvarConfig } from "@/lib/config-store";
 import {
   useCatalogo,
   salvarProduto,
@@ -68,7 +69,10 @@ export function FormProduto({
     inicial?.tipo === "unidade" ? String(inicial.preco) : ""
   );
 
-  const [fotoUrl, setFotoUrl] = useState(inicial?.img ?? "");
+  const [fotos, setFotos] = useState<{ url: string; path?: string }[]>(
+    inicial?.img ? [{ url: inicial.img }] : []
+  );
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
   const [descricao, setDescricao] = useState(inicial?.descricao ?? "");
   const [vinculadoId, setVinculadoId] = useState(inicial?.vinculadoId ?? "");
   const [custo, setCusto] = useState("");
@@ -91,6 +95,17 @@ export function FormProduto({
   const [salvo, setSalvo] = useState(false);
   const router = useRouter();
   const catalogo = useCatalogo();
+  const cfg = useConfig();
+  const cats = cfg.categorias?.length ? cfg.categorias : CATEGORIAS;
+
+  function novaCategoria() {
+    const nome = window.prompt("Nome da nova categoria:")?.trim();
+    if (!nome) return;
+    const c = lerConfig();
+    if (!c.categorias.includes(nome))
+      salvarConfig({ ...c, categorias: [...c.categorias, nome] });
+    setCategoria(nome);
+  }
 
   // Carrega vídeo/variantes/atacado salvos deste produto uma vez (não a cada
   // polling, senão resetaria os campos enquanto o lojista edita).
@@ -112,6 +127,7 @@ export function FormProduto({
           : [{ min: "", preco: "" }]
       );
     }
+    if (c.fotos && c.fotos.length) setFotos(c.fotos);
     if (c.pesoMedioG) setPesoMedio(String(c.pesoMedioG));
     if (c.vendaPdv) {
       setPdvPeca(c.vendaPdv.peca);
@@ -123,6 +139,50 @@ export function FormProduto({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inicial?.id]);
+
+  async function enviarFotos(files: FileList | null) {
+    if (!files || !files.length) return;
+    setEnviandoFoto(true);
+    const novas: { url: string; path?: string }[] = [];
+    for (const file of Array.from(files)) {
+      const fd = new FormData();
+      fd.append("file", file);
+      try {
+        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        const j = await res.json();
+        if (j.url) novas.push({ url: j.url, path: j.path });
+      } catch {
+        // ignora falha de um arquivo
+      }
+    }
+    setFotos((f) => [...f, ...novas]);
+    setEnviandoFoto(false);
+  }
+  function removerFoto(i: number) {
+    const f = fotos[i];
+    if (f?.path) {
+      fetch("/api/upload", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: f.path }),
+      }).catch(() => {});
+    }
+    setFotos(fotos.filter((_, j) => j !== i));
+  }
+  function moverFoto(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= fotos.length) return;
+    const arr = [...fotos];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    setFotos(arr);
+  }
+  function definirPrincipal(i: number) {
+    if (i === 0) return;
+    const arr = [...fotos];
+    const [f] = arr.splice(i, 1);
+    arr.unshift(f);
+    setFotos(arr);
+  }
 
   function addPeso() {
     const g = parseInt(novoPeso);
@@ -151,7 +211,7 @@ export function FormProduto({
       produtor: inicial?.produtor,
       categoria,
       icone: inicial?.icone ?? ICONE_CATEGORIA[categoria] ?? "nutrition",
-      img: fotoUrl.trim(),
+      img: fotos[0]?.url ?? "",
       descricao: descricao.trim() || undefined,
       nota: inicial?.nota,
       origem: inicial?.origem,
@@ -194,6 +254,7 @@ export function FormProduto({
     salvarProduto(produto);
     salvarCfg(id, {
       videoUrl: videoUrl.trim() || undefined,
+      fotos: fotos.length ? fotos : undefined,
       pesoMedioG: num(pesoMedio) || undefined,
       vendaPdv: { peca: pdvPeca, kg: pdvKg },
       vendaDelivery: { peca: delPeca, kg: delKg },
@@ -247,32 +308,75 @@ export function FormProduto({
       {/* Básico */}
       <Secao titulo="Informações básicas">
         <div>
-          <label className="block text-label-md text-on-surface">Foto</label>
-          <p className="mb-1 text-label-sm text-on-surface-variant">
-            Cole o link (URL) de uma imagem do produto. Aparece na loja, na página
-            do produto e no PDV.
+          <label className="block text-label-md text-on-surface">Fotos</label>
+          <p className="mb-sm text-label-sm text-on-surface-variant">
+            Envie uma ou várias fotos do computador/celular. A 1ª é a principal
+            (usada nos cards). Toque numa foto para torná-la principal.
           </p>
-          <div className="flex items-start gap-md">
-            <div className="flex aspect-square w-28 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-outline-variant bg-surface-container-low">
-              {fotoUrl.trim() ? (
-                // eslint-disable-next-line @next/next/no-img-element
+          <div className="flex flex-wrap gap-sm">
+            {fotos.map((f, i) => (
+              <div
+                key={f.url}
+                className={`group relative h-24 w-24 overflow-hidden rounded-lg border-2 ${
+                  i === 0 ? "border-primary" : "border-outline-variant/40"
+                }`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={fotoUrl.trim()}
-                  alt="Prévia"
-                  className="h-full w-full object-cover"
+                  src={f.url}
+                  alt={`Foto ${i + 1}`}
+                  onClick={() => definirPrincipal(i)}
+                  className="h-full w-full cursor-pointer object-cover"
                 />
-              ) : (
-                <span className="material-symbols-outlined text-[32px] text-on-surface-variant/50">
-                  add_photo_alternate
-                </span>
-              )}
-            </div>
-            <input
-              value={fotoUrl}
-              onChange={(e) => setFotoUrl(e.target.value)}
-              placeholder="https://.../foto.jpg"
-              className="mt-2 w-full flex-grow rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-md outline-none placeholder:text-on-surface-variant/60 focus:border-primary"
-            />
+                {i === 0 && (
+                  <span className="absolute left-0 top-0 bg-primary px-1 text-[9px] font-bold text-on-primary">
+                    PRINCIPAL
+                  </span>
+                )}
+                <div className="absolute bottom-0 right-0 flex bg-black/50">
+                  <button
+                    type="button"
+                    onClick={() => moverFoto(i, -1)}
+                    className="material-symbols-outlined text-[16px] text-white"
+                    title="Mover p/ esquerda"
+                  >
+                    chevron_left
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moverFoto(i, 1)}
+                    className="material-symbols-outlined text-[16px] text-white"
+                    title="Mover p/ direita"
+                  >
+                    chevron_right
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removerFoto(i)}
+                    className="material-symbols-outlined text-[16px] text-white"
+                    title="Excluir"
+                  >
+                    delete
+                  </button>
+                </div>
+              </div>
+            ))}
+            <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-outline/40 bg-surface-container-low text-on-surface-variant hover:border-primary/40">
+              <span className="material-symbols-outlined text-[28px]">
+                {enviandoFoto ? "hourglass_top" : "add_photo_alternate"}
+              </span>
+              <span className="text-label-sm">
+                {enviandoFoto ? "Enviando..." : "Adicionar"}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => enviarFotos(e.target.files)}
+                className="hidden"
+                disabled={enviandoFoto}
+              />
+            </label>
           </div>
         </div>
         <Campo rotulo="Nome do produto">
@@ -285,13 +389,22 @@ export function FormProduto({
         </Campo>
         <div className="grid gap-md sm:grid-cols-2">
           <div>
-            <label className="block text-label-md text-on-surface">Categoria</label>
+            <div className="flex items-center justify-between">
+              <label className="block text-label-md text-on-surface">Categoria</label>
+              <button
+                type="button"
+                onClick={novaCategoria}
+                className="text-label-sm text-secondary"
+              >
+                + Nova categoria
+              </button>
+            </div>
             <select
               value={categoria}
               onChange={(e) => setCategoria(e.target.value)}
               className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
             >
-              {CATEGORIAS.map((c) => (
+              {[...new Set([...cats, categoria].filter(Boolean))].map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>

@@ -238,7 +238,7 @@ export default function Atacado() {
             {/* Categorias */}
             <section className="mt-lg">
               <div className="no-scrollbar flex gap-sm overflow-x-auto px-md lg:flex-wrap">
-                {["Todos", ...CATEGORIAS.filter((c) =>
+                {["Todos", ...(cfg.categorias?.length ? cfg.categorias : CATEGORIAS).filter((c) =>
                   produtos.some((x) => x.produto.categoria === c)
                 )].map((c) => (
                   <button

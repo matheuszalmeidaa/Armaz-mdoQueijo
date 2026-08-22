@@ -35,6 +35,7 @@ export default function LojaHome() {
   const { qtdItens, total } = useCart();
   const cfg = useConfig();
   const CATALOGO = useCatalogo();
+  const CATS = cfg.categorias?.length ? cfg.categorias : CATEGORIAS;
   const status = lojaAbertaAgora(cfg);
   const [avisoVisto, setAvisoVisto] = useState(false);
 
@@ -108,7 +109,7 @@ export default function LojaHome() {
         {/* Categorias */}
         <section className="mt-lg">
           <div className="no-scrollbar flex gap-sm overflow-x-auto px-md lg:flex-wrap">
-            {["Todos", ...CATEGORIAS].map((c) => (
+            {["Todos", ...CATS].map((c) => (
               <button
                 key={c}
                 onClick={() => setCat(c)}
@@ -137,7 +138,7 @@ export default function LojaHome() {
               </p>
             </div>
           )}
-          {CATEGORIAS.filter((c) => lista.some((p) => p.categoria === c)).map(
+          {CATS.filter((c) => lista.some((p) => p.categoria === c)).map(
             (c) => (
               <div key={c} className="mb-lg">
                 <h3 className="mb-sm font-headline-md text-headline-md text-on-surface">

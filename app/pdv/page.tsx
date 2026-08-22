@@ -13,6 +13,7 @@ import {
 import { ProdutoImagem } from "@/components/ProdutoImagem";
 import { registrarVendaPDV } from "@/lib/pedidos-store";
 import { useCatalogo } from "@/lib/catalogo-store";
+import { useConfig } from "@/lib/config-store";
 
 type ItemVenda = {
   key: string;
@@ -77,6 +78,8 @@ export default function PDV() {
   const [cupom, setCupom] = useState<Cupom | null>(null);
 
   const CATALOGO = useCatalogo();
+  const cfgLoja = useConfig();
+  const CATS = cfgLoja.categorias?.length ? cfgLoja.categorias : CATEGORIAS;
   const lista = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return CATALOGO.filter((p) => {
@@ -276,7 +279,7 @@ export default function PDV() {
               )}
             </div>
             <div className="no-scrollbar flex gap-sm overflow-x-auto">
-              {["Todos", ...CATEGORIAS].map((c) => (
+              {["Todos", ...CATS].map((c) => (
                 <button
                   key={c}
                   onClick={() => setCat(c)}

@@ -43,6 +43,8 @@ export default function Configuracoes() {
   const [atacadoPedidoMinimo, setAtacadoPedidoMinimo] = useState(
     String(CONFIG_PADRAO.atacadoPedidoMinimo)
   );
+  const [categorias, setCategorias] = useState<string[]>(CONFIG_PADRAO.categorias);
+  const [novaCat, setNovaCat] = useState("");
   const [horarios, setHorarios] = useState<DiaHorario[]>(CONFIG_PADRAO.horarios);
   const [excecoes, setExcecoes] = useState<Excecao[]>(CONFIG_PADRAO.excecoes);
   const [instagram, setInstagram] = useState(CONFIG_PADRAO.redes.instagram);
@@ -85,6 +87,7 @@ export default function Configuracoes() {
     setAgendamentoAtivo(c.agendamentoAtivo);
     setAtacadoRegraMin(c.atacadoRegraMin);
     setAtacadoPedidoMinimo(String(c.atacadoPedidoMinimo));
+    if (c.categorias?.length) setCategorias(c.categorias);
     });
     return () => {
       vivo = false;
@@ -123,6 +126,7 @@ export default function Configuracoes() {
       agendamentoAtivo,
       atacadoRegraMin,
       atacadoPedidoMinimo: num(atacadoPedidoMinimo),
+      categorias: categorias.map((s) => s.trim()).filter(Boolean),
     };
     salvarConfig(c);
     setSalvo(true);
@@ -253,6 +257,57 @@ export default function Configuracoes() {
             dica="Ex.: 20 = o cliente só fecha o pedido de atacado com 20 itens somados (kg/peças)."
           />
         )}
+      </Secao>
+
+      {/* Categorias */}
+      <Secao icone="category" titulo="Categorias do catálogo">
+        <p className="text-label-sm text-on-surface-variant">
+          Usadas na loja, no PDV e no cadastro de produtos.
+        </p>
+        <div className="flex flex-wrap gap-sm">
+          {categorias.map((c, i) => (
+            <span
+              key={i}
+              className="flex items-center gap-1 rounded-full bg-primary-container/10 px-3 py-1 text-label-md text-primary"
+            >
+              {c}
+              <button
+                onClick={() => setCategorias(categorias.filter((_, j) => j !== i))}
+                className="material-symbols-outlined text-[16px] text-primary/60 hover:text-danger-red"
+              >
+                close
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-sm">
+          <input
+            value={novaCat}
+            onChange={(e) => setNovaCat(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && novaCat.trim()) {
+                setCategorias([...categorias, novaCat.trim()]);
+                setNovaCat("");
+              }
+            }}
+            placeholder="Nova categoria (ex.: Embutidos, Bebidas...)"
+            className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-md outline-none focus:border-primary"
+          />
+          <button
+            onClick={() => {
+              if (novaCat.trim()) {
+                setCategorias([...categorias, novaCat.trim()]);
+                setNovaCat("");
+              }
+            }}
+            className="flex-shrink-0 rounded-lg border border-outline-variant px-md py-2.5 text-label-md text-primary"
+          >
+            + Adicionar
+          </button>
+        </div>
+        <p className="text-label-sm text-on-surface-variant">
+          Lembre de salvar as configurações no fim da página.
+        </p>
       </Secao>
 
       {/* Vitrine */}
