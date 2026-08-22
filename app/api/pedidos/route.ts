@@ -52,7 +52,27 @@ export async function POST(request: Request) {
   // do pedido casar no WhatsApp, no acompanhamento e no banco.
   if (typeof b.id === "string" && b.id) registro.id = b.id;
 
-  const { data, error } = await db.from("pedidos").insert(registro).select().single();
+  let { data, error } = await db.from("pedidos").insert(registro).select().single();
+
+  // Resiliência: se alguma coluna nova ainda não existir no banco, remove os
+  // campos opcionais e tenta de novo — o pedido NUNCA deixa de ser salvo por isso.
+  if (error && /column .* does not exist|Could not find/i.test(error.message)) {
+    const core: Record<string, unknown> = {
+      numero: registro.numero,
+      cliente: registro.cliente,
+      telefone: registro.telefone,
+      canal: registro.canal,
+      modo: registro.modo,
+      entrega: registro.entrega,
+      pagamento: registro.pagamento,
+      itens: registro.itens,
+      total: registro.total,
+      status: registro.status,
+    };
+    if (registro.id) core.id = registro.id;
+    ({ data, error } = await db.from("pedidos").insert(core).select().single());
+  }
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ pedido: data });
 }

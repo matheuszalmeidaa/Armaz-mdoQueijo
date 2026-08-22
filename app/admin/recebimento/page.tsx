@@ -37,24 +37,45 @@ const PROX_ROTULO: Record<StatusLive, string> = {
   Entregue: "",
 };
 
-function beep() {
+// Um único AudioContext, destravado no primeiro gesto do operador (regra dos
+// navegadores: áudio só toca após interação).
+let audioCtx: AudioContext | null = null;
+function getCtx(): AudioContext | null {
   try {
-    const Ctx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext })
-        .webkitAudioContext;
-    const ctx = new Ctx();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.connect(g);
-    g.connect(ctx.destination);
-    o.type = "sine";
-    o.frequency.value = 880;
-    g.gain.setValueAtTime(0.18, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-    o.start();
-    o.stop(ctx.currentTime + 0.35);
-    setTimeout(() => ctx.close(), 600);
+    if (!audioCtx) {
+      const Ctx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      audioCtx = new Ctx();
+    }
+    return audioCtx;
+  } catch {
+    return null;
+  }
+}
+function beep() {
+  const ctx = getCtx();
+  if (!ctx) return;
+  if (ctx.state === "suspended") ctx.resume().catch(() => {});
+  try {
+    const tocar = (freq: number, atraso: number) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.type = "sine";
+      o.frequency.value = freq;
+      const t = ctx.currentTime + atraso;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+      o.start(t);
+      o.stop(t + 0.36);
+    };
+    // Dois toques (ding-dong) — chama mais atenção.
+    tocar(880, 0);
+    tocar(1175, 0.18);
   } catch {}
 }
 
@@ -72,6 +93,21 @@ export default function Recebimento() {
     }
     prevLen.current = pedidos.length;
   }, [pedidos.length, somOn]);
+
+  // Destrava o áudio no primeiro gesto do operador (exigência do navegador).
+  useEffect(() => {
+    const destravar = () => {
+      getCtx()?.resume().catch(() => {});
+      window.removeEventListener("pointerdown", destravar);
+      window.removeEventListener("keydown", destravar);
+    };
+    window.addEventListener("pointerdown", destravar);
+    window.addEventListener("keydown", destravar);
+    return () => {
+      window.removeEventListener("pointerdown", destravar);
+      window.removeEventListener("keydown", destravar);
+    };
+  }, []);
 
   const novos = pedidos.filter((p) => p.status === "Novo").length;
   const ativos = pedidos.filter((p) => p.status !== "Entregue");
@@ -94,7 +130,11 @@ export default function Recebimento() {
         </div>
         <div className="flex items-center gap-sm">
           <button
-            onClick={() => setSomOn((v) => !v)}
+            onClick={() => {
+              const novo = !somOn;
+              setSomOn(novo);
+              if (novo) beep(); // testa/destrava o som ao ligar
+            }}
             className={`flex items-center gap-1 rounded-lg border px-3 py-2 text-label-md ${
               somOn
                 ? "border-tertiary/40 text-tertiary"
