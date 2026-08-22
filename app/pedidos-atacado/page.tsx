@@ -51,10 +51,14 @@ export default function Atacado() {
   const produtos = useMemo(
     () =>
       catalogo
-        .map((p) => ({ produto: p, atacado: cfgMapa[p.id]?.atacado }))
+        .map((p) => ({
+          produto: p,
+          atacado: cfgMapa[p.id]?.atacado,
+          oculto: cfgMapa[p.id]?.oculto,
+        }))
         .filter(
-          (x): x is { produto: Produto; atacado: Atacado } =>
-            Boolean(x.atacado?.ativo && x.atacado.faixas.length)
+          (x): x is { produto: Produto; atacado: Atacado; oculto?: boolean } =>
+            Boolean(x.atacado?.ativo && x.atacado.faixas.length && !x.oculto)
         ),
     [catalogo, cfgMapa]
   );

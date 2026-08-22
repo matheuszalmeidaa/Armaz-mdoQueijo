@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CATEGORIAS, brl, precoBase, type Produto } from "@/lib/catalogo";
-import { useCatalogo } from "@/lib/catalogo-store";
+import { useCatalogo, useCfgMapa } from "@/lib/catalogo-store";
 import { useCart } from "@/lib/cart";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
 import { badgesDe, BADGE_CLS, estaEsgotado } from "@/lib/badges";
@@ -35,12 +35,20 @@ export default function LojaHome() {
   const { qtdItens, total } = useCart();
   const cfg = useConfig();
   const CATALOGO = useCatalogo();
-  const CATS = cfg.categorias?.length ? cfg.categorias : CATEGORIAS;
+  const cfgMapa = useCfgMapa();
+  const ocultas = cfg.categoriasOcultas ?? [];
+  const CATS = (cfg.categorias?.length ? cfg.categorias : CATEGORIAS).filter(
+    (c) => !ocultas.includes(c)
+  );
   const status = lojaAbertaAgora(cfg);
   const [avisoVisto, setAvisoVisto] = useState(false);
 
+  // Só produtos visíveis ao cliente: não ocultos e categoria não escondida.
+  const visiveis = CATALOGO.filter(
+    (p) => !cfgMapa[p.id]?.oculto && !ocultas.includes(p.categoria)
+  );
   const lista =
-    cat === "Todos" ? CATALOGO : CATALOGO.filter((p) => p.categoria === cat);
+    cat === "Todos" ? visiveis : visiveis.filter((p) => p.categoria === cat);
 
   return (
     <main className="min-h-full pb-24">

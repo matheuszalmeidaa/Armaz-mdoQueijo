@@ -73,6 +73,7 @@ export function FormProduto({
     inicial?.img ? [{ url: inicial.img }] : []
   );
   const [enviandoFoto, setEnviandoFoto] = useState(false);
+  const [oculto, setOculto] = useState(false);
   const [descricao, setDescricao] = useState(inicial?.descricao ?? "");
   const [vinculadoId, setVinculadoId] = useState(inicial?.vinculadoId ?? "");
   const [custo, setCusto] = useState("");
@@ -128,6 +129,7 @@ export function FormProduto({
       );
     }
     if (c.fotos && c.fotos.length) setFotos(c.fotos);
+    if (c.oculto) setOculto(true);
     if (c.pesoMedioG) setPesoMedio(String(c.pesoMedioG));
     if (c.vendaPdv) {
       setPdvPeca(c.vendaPdv.peca);
@@ -255,6 +257,7 @@ export function FormProduto({
     salvarCfg(id, {
       videoUrl: videoUrl.trim() || undefined,
       fotos: fotos.length ? fotos : undefined,
+      oculto: oculto || undefined,
       pesoMedioG: num(pesoMedio) || undefined,
       vendaPdv: { peca: pdvPeca, kg: pdvKg },
       vendaDelivery: { peca: delPeca, kg: delKg },
@@ -440,6 +443,17 @@ export function FormProduto({
             Usado pra bipar no PDV e dar baixa no estoque.
           </p>
         </div>
+        <label className="flex items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5">
+          <input
+            type="checkbox"
+            checked={oculto}
+            onChange={(e) => setOculto(e.target.checked)}
+            className="h-5 w-5 accent-primary"
+          />
+          <span className="text-body-md text-on-surface">
+            Ocultar do catálogo do cliente (não aparece na loja nem no atacado)
+          </span>
+        </label>
       </Secao>
 
       {tipo === "peso" ? (

@@ -53,6 +53,7 @@ export type ProdutoCfg = {
   variantes?: Variante[];
   atacado?: Atacado;
   fotos?: Foto[]; // galeria (a 1ª é a principal, usada nos cards)
+  oculto?: boolean; // ocultar do catálogo do cliente (loja/atacado)
   // NOVO — regras por canal (todas opcionais; ausência = comportamento atual):
   pesoMedioG?: number; // peso médio por peça (g); referência p/ estoque peça↔kg
   vendaPdv?: FormaVenda; // como vende no PDV

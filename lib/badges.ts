@@ -3,7 +3,7 @@
 // quando o Supabase ligar); "Novidade" e "Promoção" são tags do produto.
 
 import { getProduto } from "./catalogo";
-import { saldoDe, temControle, unidadeDe } from "./estoque";
+import { saldoDe, minimoDe, temControle, unidadeDe } from "./estoque";
 
 export type Badge = {
   label: string;
@@ -34,11 +34,15 @@ export function badgesDe(produtoId: string): Badge[] {
   const badges: Badge[] = [];
 
   if (total !== null) {
+    const min = minimoDe(produtoId);
     if (total <= 0) {
       badges.push({ label: "Esgotado", tipo: "esgotado" });
-    } else if (un === "un" && total <= 3) {
+    } else if (min > 0 && total <= min) {
+      // Abaixo do mínimo configurado → quase esgotando.
+      badges.push({ label: "Quase esgotando", tipo: "poucos" });
+    } else if (min === 0 && un === "un" && total <= 3) {
       badges.push({ label: `Últimas ${total} un`, tipo: "poucos" });
-    } else if (un === "kg" && total <= 1.5) {
+    } else if (min === 0 && un === "kg" && total <= 1.5) {
       badges.push({ label: "Acabando", tipo: "poucos" });
     }
   }

@@ -44,6 +44,25 @@ export function tipoDe(p: PedidoLive): "Atacado" | "Retirada" | "Delivery" {
   return "Delivery";
 }
 
+// Próximo passo do fluxo conforme o TIPO do pedido. Retirada/Atacado não passam
+// por "Em rota" — vão de Separado direto para concluído.
+export function proximoPasso(
+  p: PedidoLive
+): { status: StatusLive; label: string } | null {
+  const t = tipoDe(p);
+  if (p.status === "Novo")
+    return { status: "Preparando", label: "Marcar como separado" };
+  if (p.status === "Preparando") {
+    if (t === "Delivery") return { status: "Em rota", label: "Enviar para rota" };
+    if (t === "Retirada")
+      return { status: "Entregue", label: "Marcar como retirado" };
+    return { status: "Entregue", label: "Marcar como concluído" }; // Atacado
+  }
+  if (p.status === "Em rota")
+    return { status: "Entregue", label: "Marcar como entregue" };
+  return null;
+}
+
 export function ehHoje(ms: number): boolean {
   const d = new Date(ms);
   const h = new Date();

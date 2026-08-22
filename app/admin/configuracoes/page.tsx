@@ -44,6 +44,7 @@ export default function Configuracoes() {
     String(CONFIG_PADRAO.atacadoPedidoMinimo)
   );
   const [categorias, setCategorias] = useState<string[]>(CONFIG_PADRAO.categorias);
+  const [categoriasOcultas, setCategoriasOcultas] = useState<string[]>([]);
   const [novaCat, setNovaCat] = useState("");
   const [horarios, setHorarios] = useState<DiaHorario[]>(CONFIG_PADRAO.horarios);
   const [excecoes, setExcecoes] = useState<Excecao[]>(CONFIG_PADRAO.excecoes);
@@ -88,6 +89,7 @@ export default function Configuracoes() {
     setAtacadoRegraMin(c.atacadoRegraMin);
     setAtacadoPedidoMinimo(String(c.atacadoPedidoMinimo));
     if (c.categorias?.length) setCategorias(c.categorias);
+    setCategoriasOcultas(c.categoriasOcultas ?? []);
     });
     return () => {
       vivo = false;
@@ -127,6 +129,7 @@ export default function Configuracoes() {
       atacadoRegraMin,
       atacadoPedidoMinimo: num(atacadoPedidoMinimo),
       categorias: categorias.map((s) => s.trim()).filter(Boolean),
+      categoriasOcultas,
     };
     salvarConfig(c);
     setSalvo(true);
@@ -265,20 +268,41 @@ export default function Configuracoes() {
           Usadas na loja, no PDV e no cadastro de produtos.
         </p>
         <div className="flex flex-wrap gap-sm">
-          {categorias.map((c, i) => (
-            <span
-              key={i}
-              className="flex items-center gap-1 rounded-full bg-primary-container/10 px-3 py-1 text-label-md text-primary"
-            >
-              {c}
-              <button
-                onClick={() => setCategorias(categorias.filter((_, j) => j !== i))}
-                className="material-symbols-outlined text-[16px] text-primary/60 hover:text-danger-red"
+          {categorias.map((c, i) => {
+            const oculta = categoriasOcultas.includes(c);
+            return (
+              <span
+                key={i}
+                className={`flex items-center gap-1 rounded-full px-3 py-1 text-label-md ${
+                  oculta
+                    ? "bg-surface-container text-on-surface-variant line-through"
+                    : "bg-primary-container/10 text-primary"
+                }`}
               >
-                close
-              </button>
-            </span>
-          ))}
+                {c}
+                <button
+                  onClick={() =>
+                    setCategoriasOcultas(
+                      oculta
+                        ? categoriasOcultas.filter((x) => x !== c)
+                        : [...categoriasOcultas, c]
+                    )
+                  }
+                  className="material-symbols-outlined text-[16px] opacity-70 hover:opacity-100"
+                  title={oculta ? "Mostrar ao cliente" : "Ocultar do cliente"}
+                >
+                  {oculta ? "visibility_off" : "visibility"}
+                </button>
+                <button
+                  onClick={() => setCategorias(categorias.filter((_, j) => j !== i))}
+                  className="material-symbols-outlined text-[16px] opacity-60 hover:text-danger-red"
+                  title="Excluir categoria"
+                >
+                  close
+                </button>
+              </span>
+            );
+          })}
         </div>
         <div className="flex gap-sm">
           <input

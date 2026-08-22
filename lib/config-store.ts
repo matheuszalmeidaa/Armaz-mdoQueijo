@@ -56,6 +56,7 @@ export type ConfigLoja = {
   atacadoRegraMin: "nenhum" | "produto" | "pedido" | "ambos";
   atacadoPedidoMinimo: number; // qtd mínima somada do pedido de atacado
   categorias: string[]; // categorias do catálogo (editáveis pelo lojista)
+  categoriasOcultas: string[]; // categorias escondidas do cliente
 };
 
 export const CONFIG_PADRAO: ConfigLoja = {
@@ -88,6 +89,7 @@ export const CONFIG_PADRAO: ConfigLoja = {
   atacadoRegraMin: "nenhum",
   atacadoPedidoMinimo: 0,
   categorias: ["Queijos", "Doces", "Mel", "Charcutaria"],
+  categoriasOcultas: [],
 };
 
 // Fotos disponíveis para o banner sem upload (as que já vêm no projeto).

@@ -17,16 +17,22 @@ import {
   restanteLote,
   diasParaVencer,
   contarAlertas,
+  lotesVencendo,
+  nomeDe,
   fmtQtd,
 } from "@/lib/estoque";
 
 const num = (v: string) => Number(String(v).replace(",", ".")) || 0;
+
+const JANELAS = [7, 15, 30, 60] as const;
 
 export default function AdminEstoque() {
   const catalogo = useCatalogo();
   useEstoque(); // assina o estoque vivo (re-renderiza ao mudar)
   const cfgMapa = useCfgMapa();
   const alertas = contarAlertas();
+  const [janela, setJanela] = useState<number>(30);
+  const conferir = lotesVencendo(janela);
 
   return (
     <div className="space-y-lg">
@@ -51,6 +57,67 @@ export default function AdminEstoque() {
         <CardAlerta rotulo="Abaixo do mínimo" valor={alertas.baixo} cor="text-warning-amber" />
         <CardAlerta rotulo="Vencendo (7 dias)" valor={alertas.vencendo} cor="text-secondary" />
       </div>
+
+      {/* Próximos a conferir/vencer (FEFO) */}
+      <section className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-md shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+        <div className="mb-sm flex flex-wrap items-center justify-between gap-sm">
+          <div>
+            <h2 className="font-headline-md text-headline-md text-primary">
+              Próximos a conferir
+            </h2>
+            <p className="text-label-sm text-on-surface-variant">
+              Lotes que vencem em breve — priorize a saída (o mais próximo primeiro).
+            </p>
+          </div>
+          <div className="flex rounded-lg border border-outline-variant p-1">
+            {JANELAS.map((d) => (
+              <button
+                key={d}
+                onClick={() => setJanela(d)}
+                className={`rounded-md px-3 py-1 text-label-sm ${janela === d ? "bg-primary text-on-primary" : "text-on-surface"}`}
+              >
+                {d}d
+              </button>
+            ))}
+          </div>
+        </div>
+        {conferir.length === 0 ? (
+          <p className="py-3 text-center text-body-md text-on-surface-variant">
+            Nenhum lote vencendo nos próximos {janela} dias.
+          </p>
+        ) : (
+          <ul className="divide-y divide-outline-variant/20">
+            {conferir.map((l) => {
+              const un = unidadeDe(l.produtoId);
+              const dias = diasParaVencer(l.validade) ?? 0;
+              const urgente = dias <= 7;
+              return (
+                <li key={l.id} className="flex items-center justify-between gap-sm py-2.5">
+                  <div>
+                    <p className="text-body-md text-on-surface">{nomeDe(l.produtoId)}</p>
+                    <p className="text-label-sm text-on-surface-variant">
+                      {fmtQtd(restanteLote(l), un)}
+                      {l.codigo ? ` · lote ${l.codigo}` : ""}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className={`text-body-md font-semibold ${urgente ? "text-danger-red" : "text-secondary"}`}
+                    >
+                      {dias <= 0 ? "vencido" : `vence em ${dias}d`}
+                    </p>
+                    <p className="text-label-sm text-on-surface-variant">
+                      {l.validade
+                        ? new Date(l.validade + "T00:00:00").toLocaleDateString("pt-BR")
+                        : ""}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       {catalogo.length === 0 ? (
         <div className="rounded-xl border border-outline-variant/40 bg-cream-surface p-lg text-center">

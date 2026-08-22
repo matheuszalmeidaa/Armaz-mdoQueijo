@@ -4,7 +4,6 @@ import { useState } from "react";
 import { brl, precoBase, type Produto } from "@/lib/catalogo";
 import { useCatalogo } from "@/lib/catalogo-store";
 import {
-  avancarStatus,
   definirStatus,
   marcarPago,
   excluirPedido,
@@ -14,7 +13,12 @@ import {
   type PagoStatus,
 } from "@/lib/pedidos-store";
 import { comandaPedidoLive, linkWhatsApp } from "@/lib/pedido-msg";
-import { LABEL_STATUS, dataHoraCompleta, tipoDe } from "@/lib/pedido-ui";
+import {
+  LABEL_STATUS,
+  dataHoraCompleta,
+  tipoDe,
+  proximoPasso,
+} from "@/lib/pedido-ui";
 
 const num = (v: string) => Number(String(v).replace(",", ".")) || 0;
 
@@ -84,15 +88,7 @@ export function PainelPedido({
   const total = itens.reduce((s, e) => s + subtotalEdit(e), 0);
   const pendente = Math.max(0, total - num(valorPago));
   const zapCliente = (pedido.telefone ?? "").replace(/\D/g, "");
-  const podeAvancar = pedido.status !== "Entregue";
-  const proximo =
-    pedido.status === "Novo"
-      ? "Marcar como separado"
-      : pedido.status === "Preparando"
-        ? "Enviar para rota"
-        : pedido.status === "Em rota"
-          ? "Marcar como entregue"
-          : null;
+  const proximo = proximoPasso(pedido); // { status, label } | null — respeita o tipo
 
   function updItem(i: number, patch: Partial<ItemEdit>) {
     setItens(itens.map((e, j) => (j === i ? { ...e, ...patch } : e)));
@@ -146,8 +142,9 @@ export function PainelPedido({
     toast("✓ Pagamento atualizado");
   }
   function avancar() {
-    avancarStatus(pedido.id);
-    toast("✓ Etapa avançada");
+    if (!proximo) return;
+    definirStatus(pedido.id, proximo.status);
+    toast(`✓ ${proximo.label}`);
   }
 
   return (
@@ -383,10 +380,9 @@ export function PainelPedido({
             {proximo && (
               <button
                 onClick={avancar}
-                disabled={!podeAvancar}
-                className="w-full rounded-lg border border-primary py-3 text-body-md font-semibold text-primary disabled:opacity-40"
+                className="w-full rounded-lg border border-primary py-3 text-body-md font-semibold text-primary"
               >
-                {proximo}
+                {proximo.label}
               </button>
             )}
             <div className="grid grid-cols-2 gap-sm">
