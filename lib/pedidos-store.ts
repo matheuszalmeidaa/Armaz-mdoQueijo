@@ -14,7 +14,20 @@ import { useEffect, useState } from "react";
 export type StatusLive = "Novo" | "Preparando" | "Em rota" | "Entregue";
 export const FLUXO: StatusLive[] = ["Novo", "Preparando", "Em rota", "Entregue"];
 
-export type ItemLive = { nome: string; qtd: string; preco: number };
+export type ItemLive = {
+  nome: string;
+  qtd: string; // rótulo p/ exibição/comanda (ex.: "30 kg", "2 un")
+  preco: number; // subtotal da linha
+  // Campos ricos (opcionais; ausência = item antigo simples):
+  produtoId?: string;
+  qtdNum?: number; // quantidade numérica
+  unidade?: "kg" | "un";
+  precoUnit?: number; // preço por kg/un
+  desconto?: number; // desconto em R$ na linha
+  pesoRealG?: number; // peso realmente separado (atacado)
+};
+export type PagoStatus = "pendente" | "pago" | "parcial";
+export type EventoHistorico = { em: number; texto: string };
 export type PedidoLive = {
   id: string;
   numero: string;
@@ -29,7 +42,11 @@ export type PedidoLive = {
   total: number;
   status: StatusLive;
   agendado?: boolean; // pedido feito com a loja fechada (combinar horário)
-  pago?: boolean; // marcado como pago na gestão
+  pago?: boolean; // compat: marcado como pago
+  pagoStatus?: PagoStatus;
+  valorPago?: number;
+  observacao?: string;
+  historico?: EventoHistorico[];
 };
 
 const KEY = "armazem-pedidos-live";
@@ -67,6 +84,10 @@ type Row = {
   status: StatusLive;
   agendado: boolean | null;
   pago?: boolean | null;
+  pago_status?: PagoStatus | null;
+  valor_pago?: number | string | null;
+  observacao?: string | null;
+  historico?: EventoHistorico[] | null;
   criado_em: string;
 };
 
@@ -86,6 +107,10 @@ function rowParaLive(r: Row): PedidoLive {
     status: r.status,
     agendado: Boolean(r.agendado),
     pago: Boolean(r.pago),
+    pagoStatus: (r.pago_status as PagoStatus) ?? (r.pago ? "pago" : "pendente"),
+    valorPago: Number(r.valor_pago) || 0,
+    observacao: r.observacao ?? undefined,
+    historico: Array.isArray(r.historico) ? r.historico : [],
   };
 }
 
@@ -118,6 +143,11 @@ function enviarServidor(p: PedidoLive) {
       total: p.total,
       status: p.status,
       agendado: p.agendado ?? false,
+      pago: p.pago ?? false,
+      pago_status: p.pagoStatus ?? "pendente",
+      valor_pago: p.valorPago ?? 0,
+      observacao: p.observacao ?? null,
+      historico: p.historico ?? [],
     }),
   })
     .then(() => refetch())
@@ -181,12 +211,16 @@ function inserir(
   opts: { status?: StatusLive; marcarUltimo?: boolean } = {}
 ) {
   const lista = ler();
+  const agora = Date.now();
   const pedido: PedidoLive = {
     ...p,
     id: crypto.randomUUID(),
     numero: gerarNumero(lista.length),
-    criadoEm: Date.now(),
+    criadoEm: agora,
     status: opts.status ?? "Novo",
+    pagoStatus: p.pagoStatus ?? "pendente",
+    valorPago: p.valorPago ?? 0,
+    historico: [{ em: agora, texto: "Pedido criado" }],
   };
   // Cache local imediato (o aparelho que fez o pedido vê na hora).
   salvarLocal([pedido, ...lista]);
@@ -246,26 +280,76 @@ export function avancarStatus(id: string) {
   const p = fonte.find((x) => x.id === id);
   if (!p) return;
   const i = FLUXO.indexOf(p.status);
-  if (i < FLUXO.length - 1) atualizarStatus(id, FLUXO[i + 1]);
+  if (i < FLUXO.length - 1)
+    salvarPedido(id, { status: FLUXO[i + 1] }, `Status: ${FLUXO[i + 1]}`);
 }
 
 // Define um status específico (gestão pode pular etapas).
 export function definirStatus(id: string, status: StatusLive) {
-  atualizarStatus(id, status);
+  salvarPedido(id, { status }, `Status: ${status}`);
 }
 
-// Marca/desmarca pago (otimista + servidor).
-export function marcarPago(id: string, pago: boolean) {
-  salvarLocal(ler().map((p) => (p.id === id ? { ...p, pago } : p)));
-  cacheLista = cacheLista.map((p) => (p.id === id ? { ...p, pago } : p));
+// Edição genérica do pedido (itens, total, pagamento, status, obs...) com
+// registro no histórico. Otimista + servidor.
+type PatchPedido = Partial<
+  Pick<
+    PedidoLive,
+    | "itens"
+    | "total"
+    | "pagamento"
+    | "pagoStatus"
+    | "valorPago"
+    | "observacao"
+    | "status"
+    | "pago"
+  >
+>;
+
+export function salvarPedido(id: string, patch: PatchPedido, evento?: string) {
+  const aplicar = (p: PedidoLive): PedidoLive => ({
+    ...p,
+    ...patch,
+    historico: evento
+      ? [...(p.historico ?? []), { em: Date.now(), texto: evento }]
+      : p.historico,
+  });
+  salvarLocal(ler().map((p) => (p.id === id ? aplicar(p) : p)));
+  cacheLista = cacheLista.map((p) => (p.id === id ? aplicar(p) : p));
   notificar();
+
+  const atual = cacheLista.find((p) => p.id === id);
+  const body: Record<string, unknown> = {};
+  if (patch.itens !== undefined) body.itens = patch.itens;
+  if (patch.total !== undefined) body.total = patch.total;
+  if (patch.pagamento !== undefined) body.pagamento = patch.pagamento;
+  if (patch.status !== undefined) body.status = patch.status;
+  if (patch.pago !== undefined) body.pago = patch.pago;
+  if (patch.pagoStatus !== undefined) body.pago_status = patch.pagoStatus;
+  if (patch.valorPago !== undefined) body.valor_pago = patch.valorPago;
+  if (patch.observacao !== undefined) body.observacao = patch.observacao;
+  if (evento && atual) body.historico = atual.historico;
+
   fetch(`/api/pedidos/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pago }),
+    body: JSON.stringify(body),
   })
     .then(() => refetch())
     .catch(() => {});
+}
+
+// Marca pago/pendente (compat + novo status de pagamento).
+export function marcarPago(id: string, pago: boolean) {
+  const p = cacheLista.find((x) => x.id === id);
+  salvarPedido(
+    id,
+    {
+      pago,
+      pagoStatus: pago ? "pago" : "pendente",
+      valorPago: pago ? p?.total ?? 0 : 0,
+    },
+    pago ? "Pagamento marcado como pago" : "Pagamento marcado como pendente"
+  );
 }
 
 // Exclui/cancela um pedido (otimista + servidor).

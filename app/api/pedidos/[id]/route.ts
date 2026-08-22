@@ -32,6 +32,13 @@ export async function PATCH(
   const patch: Record<string, unknown> = {};
   if (typeof b.status === "string") patch.status = b.status;
   if (typeof b.pago === "boolean") patch.pago = b.pago;
+  if (typeof b.pago_status === "string") patch.pago_status = b.pago_status;
+  if (b.valor_pago !== undefined) patch.valor_pago = Number(b.valor_pago) || 0;
+  if (typeof b.observacao === "string") patch.observacao = b.observacao;
+  if (Array.isArray(b.itens)) patch.itens = b.itens;
+  if (b.total !== undefined) patch.total = Number(b.total) || 0;
+  if (typeof b.pagamento === "string") patch.pagamento = b.pagamento;
+  if (Array.isArray(b.historico)) patch.historico = b.historico;
   if (!Object.keys(patch).length)
     return NextResponse.json({ error: "nada para atualizar" }, { status: 400 });
 

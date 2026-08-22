@@ -42,6 +42,11 @@ export async function POST(request: Request) {
     total: Number(b.total) || 0,
     status: b.status ?? "Novo",
     agendado: Boolean(b.agendado),
+    pago: Boolean(b.pago),
+    pago_status: b.pago_status ?? "pendente",
+    valor_pago: Number(b.valor_pago) || 0,
+    observacao: b.observacao ?? null,
+    historico: Array.isArray(b.historico) ? b.historico : [],
   };
   // O cliente pode enviar o mesmo id (uuid) que usou localmente, para o número
   // do pedido casar no WhatsApp, no acompanhamento e no banco.
