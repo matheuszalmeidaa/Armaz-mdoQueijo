@@ -252,6 +252,7 @@ create table pedidos (
   total       numeric(10,2) not null default 0,
   status      text not null default 'Novo',        -- Novo|Preparando|Em rota|Entregue
   agendado    boolean not null default false,
+  pago        boolean not null default false,
   criado_em   timestamptz not null default now()
 );
 create index idx_pedidos_criado on pedidos (criado_em desc);

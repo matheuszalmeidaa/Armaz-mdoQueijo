@@ -5,9 +5,14 @@ import { brl } from "@/lib/catalogo";
 import {
   usePedidosLive,
   avancarStatus,
+  definirStatus,
+  marcarPago,
+  excluirPedido,
+  FLUXO,
   type PedidoLive,
   type StatusLive,
 } from "@/lib/pedidos-store";
+import { comandaPedidoLive, linkWhatsApp } from "@/lib/pedido-msg";
 
 const STATUS_CHIP: Record<StatusLive, string> = {
   Novo: "bg-error-container text-on-error-container",
@@ -17,39 +22,66 @@ const STATUS_CHIP: Record<StatusLive, string> = {
 };
 
 const CANAIS = ["Todos", "Delivery", "PDV", "Atacado"] as const;
+const ETAPAS = ["Todos", ...FLUXO] as const;
 
 const hora = (ms: number) =>
-  new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  new Date(ms).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 const subtotalDe = (p: PedidoLive) => p.itens.reduce((s, i) => s + i.preco, 0);
 
 export default function AdminPedidos() {
   const pedidos = usePedidosLive();
   const [canal, setCanal] = useState<(typeof CANAIS)[number]>("Todos");
+  const [etapa, setEtapa] = useState<(typeof ETAPAS)[number]>("Todos");
   const [selId, setSelId] = useState<string | null>(null);
 
-  const lista =
-    canal === "Todos" ? pedidos : pedidos.filter((p) => p.canal === canal);
+  const lista = pedidos.filter(
+    (p) =>
+      (canal === "Todos" || p.canal === canal) &&
+      (etapa === "Todos" || p.status === etapa)
+  );
   const sel = pedidos.find((p) => p.id === selId) ?? null;
   const totalDia = pedidos.reduce((s, p) => s + p.total, 0);
 
   return (
     <div className="space-y-lg">
-      <div className="flex flex-wrap items-end justify-between gap-md">
-        <div>
-          <h1 className="font-headline-lg text-headline-lg text-primary">
-            Pedidos
-          </h1>
-          <p className="mt-1 text-body-md text-on-surface-variant">
-            {pedidos.length} pedidos · {brl(totalDia)} — delivery e PDV.
-          </p>
+      <div>
+        <h1 className="font-headline-lg text-headline-lg text-primary">Pedidos</h1>
+        <p className="mt-1 text-body-md text-on-surface-variant">
+          {pedidos.length} pedidos · {brl(totalDia)} — delivery, PDV e atacado.
+        </p>
+      </div>
+
+      {/* Filtros */}
+      <div className="space-y-sm">
+        <div className="no-scrollbar flex gap-sm overflow-x-auto">
+          {ETAPAS.map((e) => (
+            <button
+              key={e}
+              onClick={() => setEtapa(e)}
+              className={`flex-shrink-0 rounded-full border px-4 py-1.5 text-label-md transition-all active:scale-95 ${
+                etapa === e
+                  ? "border-primary bg-primary text-on-primary"
+                  : "border-outline-variant bg-surface-container-lowest text-on-surface"
+              }`}
+            >
+              {e}
+            </button>
+          ))}
         </div>
-        <div className="flex rounded-lg border border-outline-variant p-1">
+        <div className="no-scrollbar flex gap-sm overflow-x-auto">
           {CANAIS.map((c) => (
             <button
               key={c}
               onClick={() => setCanal(c)}
-              className={`rounded-md px-4 py-1.5 text-label-md transition-colors ${
-                canal === c ? "bg-primary text-on-primary" : "text-on-surface"
+              className={`flex-shrink-0 rounded-full px-3 py-1 text-label-sm transition-colors ${
+                canal === c
+                  ? "bg-secondary-container text-on-secondary-container"
+                  : "bg-surface-container text-on-surface-variant"
               }`}
             >
               {c}
@@ -58,116 +90,118 @@ export default function AdminPedidos() {
         </div>
       </div>
 
-      {pedidos.length === 0 && (
+      {lista.length === 0 ? (
         <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-lowest p-lg text-center">
           <span className="material-symbols-outlined text-[40px] text-on-surface-variant/50">
             receipt_long
           </span>
           <p className="mt-sm text-body-md text-on-surface-variant">
-            Nenhum pedido ainda. Os pedidos do delivery e as vendas do PDV
-            aparecem aqui automaticamente.
+            Nenhum pedido nesta etapa. Delivery, PDV e atacado aparecem aqui.
           </p>
+        </div>
+      ) : (
+        <div className="space-y-sm">
+          {lista.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setSelId(p.id)}
+              className="flex w-full items-center gap-md rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-md text-left shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all hover:border-primary/30 active:scale-[0.99]"
+            >
+              <div className="min-w-0 flex-grow">
+                <div className="flex items-center gap-sm">
+                  <span className="font-medium text-on-surface">{p.cliente}</span>
+                  {p.pago && (
+                    <span className="rounded-full bg-tertiary-container/40 px-2 py-0.5 text-[10px] font-semibold text-tertiary">
+                      PAGO
+                    </span>
+                  )}
+                </div>
+                <p className="text-label-sm text-on-surface-variant">
+                  {p.telefone || "sem telefone"} · #{p.numero}
+                </p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1 text-caption text-on-surface-variant">
+                  <span className="rounded-full bg-surface-container px-2 py-0.5">
+                    {p.canal}
+                  </span>
+                  {p.agendado && (
+                    <span className="rounded-full bg-secondary-container px-2 py-0.5 font-semibold text-on-secondary-container">
+                      Agendado
+                    </span>
+                  )}
+                  <span>· {hora(p.criadoEm)}</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-label-sm font-medium ${STATUS_CHIP[p.status]}`}
+                >
+                  {p.status}
+                </span>
+                <span className="font-headline-md text-headline-md text-primary">
+                  {brl(p.total)}
+                </span>
+              </div>
+            </button>
+          ))}
         </div>
       )}
 
-      <div className="flex flex-col gap-lg lg:flex-row">
-        {/* Lista */}
-        <div
-          className={
-            sel ? "hidden lg:block lg:w-[360px] lg:flex-shrink-0" : "w-full"
-          }
-        >
-          <div className="space-y-sm">
-            {lista.map((p) => {
-              const ativo = sel?.id === p.id;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => setSelId(p.id)}
-                  className={`w-full rounded-xl border bg-surface-container-lowest p-md text-left shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all active:scale-[0.99] ${
-                    ativo
-                      ? "border-primary ring-1 ring-primary"
-                      : "border-outline-variant/10 hover:border-primary/30"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-primary">#{p.numero}</span>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-label-sm font-medium ${STATUS_CHIP[p.status]}`}
-                    >
-                      {p.status}
-                    </span>
-                  </div>
-                  <div className="mt-1 flex items-center justify-between">
-                    <span className="text-body-md text-on-surface">
-                      {p.cliente}
-                    </span>
-                    <span className="font-headline-md text-headline-md text-primary">
-                      {brl(p.total)}
-                    </span>
-                  </div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-sm text-caption text-on-surface-variant">
-                    <span className="rounded-full bg-surface-container px-2 py-0.5">
-                      {p.canal}
-                    </span>
-                    {p.agendado && (
-                      <span className="flex items-center gap-0.5 rounded-full bg-secondary-container px-2 py-0.5 font-semibold text-on-secondary-container">
-                        <span className="material-symbols-outlined text-[13px]">event</span>
-                        Agendado
-                      </span>
-                    )}
-                    <span>
-                      {p.itens.length} {p.itens.length === 1 ? "item" : "itens"}
-                    </span>
-                    <span>·</span>
-                    <span>{hora(p.criadoEm)}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Detalhe */}
-        {sel && (
-          <div className="w-full lg:flex-1">
-            <DetalhePedido pedido={sel} onFechar={() => setSelId(null)} />
-          </div>
-        )}
-      </div>
-
-      {!sel && pedidos.length > 0 && (
-        <p className="text-caption text-on-surface-variant">
-          Toque num pedido para ver os detalhes ao lado.
-        </p>
+      {/* Painel lateral (drawer à direita) */}
+      {sel && (
+        <PainelPedido pedido={sel} onFechar={() => setSelId(null)} />
       )}
     </div>
   );
 }
 
-function DetalhePedido({
+function PainelPedido({
   pedido,
   onFechar,
 }: {
   pedido: PedidoLive;
   onFechar: () => void;
 }) {
+  const [copiado, setCopiado] = useState("");
   const subtotal = subtotalDe(pedido);
-  const extras = pedido.total - subtotal; // frete/descontos embutidos
+  const extras = pedido.total - subtotal;
   const ehEntrega = pedido.modo === "entrega";
   const podeAvancar = pedido.status !== "Entregue";
+  const zapCliente = (pedido.telefone ?? "").replace(/\D/g, "");
+
+  function copiar(texto: string, marca: string) {
+    navigator.clipboard?.writeText(texto).then(() => {
+      setCopiado(marca);
+      setTimeout(() => setCopiado(""), 1500);
+    });
+  }
+
+  const infoTexto =
+    `Pedido #${pedido.numero} — ${pedido.canal}\n` +
+    `Cliente: ${pedido.cliente}${pedido.telefone ? ` (${pedido.telefone})` : ""}\n` +
+    `${ehEntrega ? "Entrega" : "Retirada"}: ${pedido.entrega}\n` +
+    pedido.itens.map((i) => `• ${i.qtd} ${i.nome} — ${brl(i.preco)}`).join("\n") +
+    `\nTotal: ${brl(pedido.total)} · ${pedido.pagamento}`;
+
+  function enviarCliente() {
+    const texto =
+      `Olá, ${pedido.cliente}! Sobre seu pedido #${pedido.numero} no Armazém do Queijo:\n` +
+      `Status: ${pedido.status}.\n` +
+      `Total: ${brl(pedido.total)}.`;
+    const link = linkWhatsApp(pedido.telefone ?? "", texto);
+    if (link) window.open(link, "_blank");
+  }
 
   return (
-    <div className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0_2px_8px_rgba(0,0,0,0.06)] lg:sticky lg:top-20">
-      {/* Cabeçalho */}
-      <div className="flex items-center justify-between border-b border-outline-variant/20 px-md py-sm">
-        <div className="flex items-center gap-sm">
-          <button
-            onClick={onFechar}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-primary hover:bg-surface-container active:scale-95 lg:hidden"
-          >
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
+    <div className="fixed inset-0 z-[60]">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={onFechar}
+        aria-hidden
+      />
+      {/* Drawer */}
+      <aside className="absolute right-0 top-0 flex h-full w-full max-w-[30rem] flex-col overflow-y-auto bg-surface shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-outline-variant/20 bg-surface px-md py-sm">
           <div>
             <h2 className="font-headline-md text-headline-md text-primary">
               Pedido #{pedido.numero}
@@ -176,155 +210,194 @@ function DetalhePedido({
               {hora(pedido.criadoEm)} · {pedido.canal}
             </span>
           </div>
+          <div className="flex items-center gap-sm">
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-label-sm font-medium ${STATUS_CHIP[pedido.status]}`}
+            >
+              {pedido.status}
+            </span>
+            <button
+              onClick={onFechar}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-sm">
-          <span
-            className={`rounded-full px-2.5 py-0.5 text-label-sm font-medium ${STATUS_CHIP[pedido.status]}`}
-          >
-            {pedido.status}
-          </span>
-          <button
-            onClick={onFechar}
-            className="hidden h-9 w-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container lg:flex"
-          >
-            <span className="material-symbols-outlined">close</span>
-          </button>
-        </div>
-      </div>
 
-      <div className="space-y-md p-md">
-        {/* Cliente + entrega */}
-        <div className="grid gap-sm sm:grid-cols-2">
-          <InfoBloco icone="person" rotulo="Cliente">
-            <p className="text-body-lg text-on-surface">{pedido.cliente}</p>
-            {pedido.telefone && (
-              <p className="text-label-sm text-on-surface-variant">
+        <div className="space-y-md p-md">
+          {/* Cliente */}
+          <div className="rounded-lg border border-outline-variant/20 p-md">
+            <p className="text-body-lg font-medium text-on-surface">
+              {pedido.cliente}
+            </p>
+            {pedido.telefone ? (
+              <a
+                href={zapCliente ? `https://wa.me/55${zapCliente}` : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-0.5 flex items-center gap-1 text-label-md text-tertiary"
+              >
+                <span className="material-symbols-outlined text-[16px]">call</span>
                 {pedido.telefone}
-              </p>
+              </a>
+            ) : (
+              <p className="text-label-sm text-on-surface-variant">sem telefone</p>
             )}
-          </InfoBloco>
-          <InfoBloco
-            icone={ehEntrega ? "location_on" : "storefront"}
-            rotulo={ehEntrega ? "Entrega" : "Retirada / Balcão"}
-          >
-            <p className="text-body-md text-on-surface">{pedido.entrega}</p>
-          </InfoBloco>
-        </div>
+            <p className="mt-sm flex items-center gap-1 text-body-md text-on-surface">
+              <span className="material-symbols-outlined text-[18px] text-secondary">
+                {ehEntrega ? "location_on" : "storefront"}
+              </span>
+              {pedido.entrega}
+            </p>
+          </div>
 
-        {/* Itens */}
-        <div>
-          <h3 className="mb-sm text-label-sm uppercase tracking-wide text-on-surface-variant">
-            Itens
-          </h3>
+          {/* Itens */}
           <ul className="divide-y divide-outline-variant/20 rounded-lg border border-outline-variant/20">
             {pedido.itens.map((it, i) => (
               <li key={i} className="flex items-center justify-between px-md py-2.5">
                 <span className="text-body-md text-on-surface">
-                  <span className="text-on-surface-variant">{it.qtd}</span>{" "}
-                  {it.nome}
+                  <span className="text-on-surface-variant">{it.qtd}</span> {it.nome}
                 </span>
                 <span className="font-medium text-primary">{brl(it.preco)}</span>
               </li>
             ))}
           </ul>
-        </div>
 
-        {/* Resumo */}
-        <div className="rounded-lg bg-cream-surface p-md">
-          <Linha rotulo="Subtotal" valor={brl(subtotal)} />
-          {Math.abs(extras) >= 0.01 && (
-            <Linha
-              rotulo={extras > 0 ? "Frete / ajustes" : "Descontos"}
-              valor={brl(extras)}
+          {/* Resumo */}
+          <div className="rounded-lg bg-cream-surface p-md">
+            <div className="flex justify-between py-0.5 text-body-md text-on-surface-variant">
+              <span>Subtotal</span>
+              <span>{brl(subtotal)}</span>
+            </div>
+            {Math.abs(extras) >= 0.01 && (
+              <div className="flex justify-between py-0.5 text-body-md text-on-surface-variant">
+                <span>{extras > 0 ? "Frete / ajustes" : "Descontos"}</span>
+                <span>{brl(extras)}</span>
+              </div>
+            )}
+            <div className="my-sm border-t border-dashed border-outline/20" />
+            <div className="flex justify-between">
+              <span className="text-body-lg font-semibold">Total</span>
+              <span className="font-headline-md text-headline-md text-primary">
+                {brl(pedido.total)}
+              </span>
+            </div>
+            <p className="mt-sm flex items-center justify-between text-label-md">
+              <span className="text-on-surface-variant">
+                Pagamento: {pedido.pagamento || "—"}
+              </span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-label-sm font-semibold ${
+                  pedido.pago
+                    ? "bg-tertiary-container/40 text-tertiary"
+                    : "bg-error-container text-on-error-container"
+                }`}
+              >
+                {pedido.pago ? "Pago" : "Não pago"}
+              </span>
+            </p>
+          </div>
+
+          {/* Etapas (status) */}
+          <div>
+            <p className="mb-sm text-label-sm uppercase tracking-wide text-on-surface-variant">
+              Etapa
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {FLUXO.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => definirStatus(pedido.id, s)}
+                  className={`rounded-full px-3 py-1.5 text-label-sm ${
+                    pedido.status === s
+                      ? "bg-primary text-on-primary"
+                      : "border border-outline-variant text-on-surface"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Ações */}
+          <div className="grid grid-cols-2 gap-sm">
+            <AcaoBtn
+              icone={pedido.pago ? "check_circle" : "payments"}
+              rotulo={pedido.pago ? "Pago ✓" : "Marcar pago"}
+              onClick={() => marcarPago(pedido.id, !pedido.pago)}
+              destaque={!pedido.pago}
             />
-          )}
-          <div className="my-sm border-t border-dashed border-outline/20" />
-          <Linha rotulo="Total" valor={brl(pedido.total)} destaque />
-          <p className="mt-sm flex items-center gap-1 text-label-sm text-on-surface-variant">
-            <span className="material-symbols-outlined text-[16px]">
-              {pedido.pagamento.includes("Pix")
-                ? "qr_code_2"
-                : pedido.pagamento.includes("inheiro")
-                  ? "payments"
-                  : "credit_card"}
-            </span>
-            Pago em {pedido.pagamento}
-          </p>
+            <AcaoBtn
+              icone="arrow_forward"
+              rotulo={podeAvancar ? "Avançar etapa" : "Entregue"}
+              onClick={() => podeAvancar && avancarStatus(pedido.id)}
+              desabilitado={!podeAvancar}
+            />
+            <AcaoBtn
+              icone="receipt_long"
+              rotulo={copiado === "comanda" ? "Copiada!" : "Criar comanda"}
+              onClick={() => copiar(comandaPedidoLive(pedido), "comanda")}
+            />
+            <AcaoBtn
+              icone="content_copy"
+              rotulo={copiado === "info" ? "Copiado!" : "Copiar dados"}
+              onClick={() => copiar(infoTexto, "info")}
+            />
+            {zapCliente && (
+              <AcaoBtn
+                icone="chat"
+                rotulo="Enviar ao cliente"
+                onClick={enviarCliente}
+              />
+            )}
+            <AcaoBtn
+              icone="delete"
+              rotulo="Excluir"
+              perigo
+              onClick={() => {
+                if (confirm(`Excluir o pedido #${pedido.numero}?`)) {
+                  excluirPedido(pedido.id);
+                  onFechar();
+                }
+              }}
+            />
+          </div>
         </div>
-
-        {/* Ações */}
-        <div className="flex gap-sm">
-          <button className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-outline-variant py-3 text-label-md text-on-surface">
-            <span className="material-symbols-outlined text-[20px]">print</span>
-            Imprimir
-          </button>
-          <button
-            onClick={() => podeAvancar && avancarStatus(pedido.id)}
-            disabled={!podeAvancar}
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-primary py-3 text-label-md font-semibold text-on-primary disabled:opacity-40"
-          >
-            <span className="material-symbols-outlined text-[20px]">
-              arrow_forward
-            </span>
-            {podeAvancar ? "Avançar status" : "Entregue"}
-          </button>
-        </div>
-      </div>
+      </aside>
     </div>
   );
 }
 
-function InfoBloco({
+function AcaoBtn({
   icone,
   rotulo,
-  children,
+  onClick,
+  destaque,
+  perigo,
+  desabilitado,
 }: {
   icone: string;
   rotulo: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-outline-variant/20 p-sm">
-      <span className="mb-1 flex items-center gap-1 text-label-sm uppercase tracking-wide text-on-surface-variant">
-        <span className="material-symbols-outlined text-[18px] text-secondary">
-          {icone}
-        </span>
-        {rotulo}
-      </span>
-      {children}
-    </div>
-  );
-}
-
-function Linha({
-  rotulo,
-  valor,
-  destaque,
-}: {
-  rotulo: string;
-  valor: string;
+  onClick: () => void;
   destaque?: boolean;
+  perigo?: boolean;
+  desabilitado?: boolean;
 }) {
+  const cls = perigo
+    ? "border border-danger-red/40 text-danger-red"
+    : destaque
+      ? "bg-primary text-on-primary"
+      : "border border-outline-variant text-on-surface";
   return (
-    <div className="flex items-center justify-between py-1">
-      <span
-        className={
-          destaque
-            ? "text-body-lg font-semibold text-on-surface"
-            : "text-body-md text-on-surface-variant"
-        }
-      >
-        {rotulo}
-      </span>
-      <span
-        className={
-          destaque
-            ? "font-headline-md text-headline-md text-primary"
-            : "text-body-md text-on-surface"
-        }
-      >
-        {valor}
-      </span>
-    </div>
+    <button
+      onClick={onClick}
+      disabled={desabilitado}
+      className={`flex items-center justify-center gap-1 rounded-lg py-2.5 text-label-md active:scale-95 disabled:opacity-40 ${cls}`}
+    >
+      <span className="material-symbols-outlined text-[18px]">{icone}</span>
+      {rotulo}
+    </button>
   );
 }

@@ -29,6 +29,7 @@ export type PedidoLive = {
   total: number;
   status: StatusLive;
   agendado?: boolean; // pedido feito com a loja fechada (combinar horário)
+  pago?: boolean; // marcado como pago na gestão
 };
 
 const KEY = "armazem-pedidos-live";
@@ -65,6 +66,7 @@ type Row = {
   total: number | string;
   status: StatusLive;
   agendado: boolean | null;
+  pago?: boolean | null;
   criado_em: string;
 };
 
@@ -83,6 +85,7 @@ function rowParaLive(r: Row): PedidoLive {
     total: Number(r.total) || 0,
     status: r.status,
     agendado: Boolean(r.agendado),
+    pago: Boolean(r.pago),
   };
 }
 
@@ -244,6 +247,35 @@ export function avancarStatus(id: string) {
   if (!p) return;
   const i = FLUXO.indexOf(p.status);
   if (i < FLUXO.length - 1) atualizarStatus(id, FLUXO[i + 1]);
+}
+
+// Define um status específico (gestão pode pular etapas).
+export function definirStatus(id: string, status: StatusLive) {
+  atualizarStatus(id, status);
+}
+
+// Marca/desmarca pago (otimista + servidor).
+export function marcarPago(id: string, pago: boolean) {
+  salvarLocal(ler().map((p) => (p.id === id ? { ...p, pago } : p)));
+  cacheLista = cacheLista.map((p) => (p.id === id ? { ...p, pago } : p));
+  notificar();
+  fetch(`/api/pedidos/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pago }),
+  })
+    .then(() => refetch())
+    .catch(() => {});
+}
+
+// Exclui/cancela um pedido (otimista + servidor).
+export function excluirPedido(id: string) {
+  salvarLocal(ler().filter((p) => p.id !== id));
+  cacheLista = cacheLista.filter((p) => p.id !== id);
+  notificar();
+  fetch(`/api/pedidos/${id}`, { method: "DELETE" })
+    .then(() => refetch())
+    .catch(() => {});
 }
 
 // --- Hooks ---
