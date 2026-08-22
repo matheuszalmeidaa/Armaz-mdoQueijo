@@ -4,32 +4,54 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCatalogo } from "@/lib/catalogo-store";
-import { darEntrada, lerSaldo } from "@/lib/estoque-store";
+import { registrarChegada } from "@/lib/estoque-store";
 import { unidadeDe } from "@/lib/estoque";
 
 const num = (v: string) => Number(String(v).replace(",", ".")) || 0;
 
-export default function EntradaEstoque() {
+type Linha = { qtd: string; validade: string; codigo: string };
+
+export default function ChegadaMercadoria() {
   const router = useRouter();
   const catalogo = useCatalogo();
   const [produtoId, setProdutoId] = useState("");
-  const [qtd, setQtd] = useState("");
-  const [validade, setValidade] = useState("");
+  const [linhas, setLinhas] = useState<Linha[]>([
+    { qtd: "", validade: "", codigo: "" },
+  ]);
   const [salvo, setSalvo] = useState(false);
 
   const un = produtoId ? unidadeDe(produtoId) : "un";
-  const saldoAtual = produtoId ? lerSaldo(produtoId).saldo : 0;
-  const pode = produtoId && num(qtd) > 0;
+  const totalRecebido = linhas.reduce((s, l) => s + num(l.qtd), 0);
+  const pode = produtoId && totalRecebido > 0;
 
-  function registrar() {
+  function addLinha() {
+    setLinhas([...linhas, { qtd: "", validade: "", codigo: "" }]);
+  }
+  function updLinha(i: number, patch: Partial<Linha>) {
+    setLinhas(linhas.map((l, j) => (j === i ? { ...l, ...patch } : l)));
+  }
+  function delLinha(i: number) {
+    setLinhas(linhas.length > 1 ? linhas.filter((_, j) => j !== i) : linhas);
+  }
+
+  function finalizar() {
     if (!pode) return;
-    darEntrada(produtoId, num(qtd), validade || undefined);
+    registrarChegada(
+      produtoId,
+      linhas
+        .filter((l) => num(l.qtd) > 0)
+        .map((l) => ({
+          qtd: num(l.qtd),
+          validade: l.validade || undefined,
+          codigo: l.codigo || undefined,
+        }))
+    );
     setSalvo(true);
     setTimeout(() => router.push("/admin/estoque"), 800);
   }
 
   return (
-    <div className="mx-auto max-w-[40rem] space-y-lg">
+    <div className="mx-auto max-w-[44rem] space-y-lg">
       <div className="flex items-center gap-sm">
         <Link
           href="/admin/estoque"
@@ -38,7 +60,7 @@ export default function EntradaEstoque() {
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
         <h1 className="font-headline-lg text-headline-lg text-primary">
-          Dar entrada no estoque
+          Chegada de mercadoria
         </h1>
       </div>
 
@@ -68,45 +90,93 @@ export default function EntradaEstoque() {
                 </option>
               ))}
             </select>
-            {produtoId && (
-              <p className="mt-1 text-label-sm text-on-surface-variant">
-                Saldo atual: {saldoAtual} {un}
-              </p>
-            )}
           </div>
 
-          <div>
-            <label className="block text-label-md text-on-surface">
-              Quantidade a adicionar ({un})
-            </label>
-            <input
-              value={qtd}
-              onChange={(e) => setQtd(e.target.value)}
-              inputMode="decimal"
-              placeholder="0"
-              className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
-            />
-          </div>
+          {produtoId && (
+            <>
+              <div>
+                <label className="block text-label-md text-on-surface">
+                  Lotes recebidos ({un})
+                </label>
+                <p className="mb-sm text-label-sm text-on-surface-variant">
+                  Uma linha por validade. Ex.: 15 un vencendo 15/09 e 30 un
+                  vencendo 30/09 → duas linhas.
+                </p>
+                <div className="space-y-sm">
+                  {linhas.map((l, i) => (
+                    <div key={i} className="flex flex-wrap items-end gap-sm">
+                      <div>
+                        <label className="block text-label-sm text-on-surface-variant">
+                          Quantidade ({un})
+                        </label>
+                        <input
+                          value={l.qtd}
+                          onChange={(e) => updLinha(i, { qtd: e.target.value })}
+                          inputMode="decimal"
+                          placeholder="0"
+                          className="mt-1 w-24 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2 text-body-md outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-label-sm text-on-surface-variant">
+                          Validade
+                        </label>
+                        <input
+                          type="date"
+                          value={l.validade}
+                          onChange={(e) => updLinha(i, { validade: e.target.value })}
+                          className="mt-1 w-40 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2 text-body-md outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div className="flex-grow">
+                        <label className="block text-label-sm text-on-surface-variant">
+                          Lote (opcional)
+                        </label>
+                        <input
+                          value={l.codigo}
+                          onChange={(e) => updLinha(i, { codigo: e.target.value })}
+                          placeholder="código"
+                          className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2 text-body-md outline-none focus:border-primary"
+                        />
+                      </div>
+                      <button
+                        onClick={() => delLinha(i)}
+                        className="material-symbols-outlined pb-2 text-danger-red disabled:opacity-30"
+                        disabled={linhas.length === 1}
+                        title="Remover linha"
+                      >
+                        delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={addLinha}
+                  className="mt-sm flex items-center gap-1 text-label-md text-secondary"
+                >
+                  <span className="material-symbols-outlined text-[18px]">add</span>
+                  Adicionar outra validade
+                </button>
+              </div>
 
-          <div>
-            <label className="block text-label-md text-on-surface">
-              Validade do lote (opcional)
-            </label>
-            <input
-              type="date"
-              value={validade}
-              onChange={(e) => setValidade(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
-            />
-          </div>
+              <div className="flex items-center justify-between rounded-lg bg-cream-surface px-md py-2.5">
+                <span className="text-body-md text-on-surface-variant">
+                  Total recebido
+                </span>
+                <span className="font-headline-md text-headline-md text-primary">
+                  {totalRecebido} {un}
+                </span>
+              </div>
 
-          <button
-            onClick={registrar}
-            disabled={!pode}
-            className="w-full rounded-lg bg-primary px-lg py-3 text-body-lg font-semibold text-on-primary shadow-lg active:scale-[0.98] disabled:opacity-40"
-          >
-            {salvo ? "Entrada registrada!" : "Registrar entrada"}
-          </button>
+              <button
+                onClick={finalizar}
+                disabled={!pode}
+                className="w-full rounded-lg bg-primary px-lg py-3 text-body-lg font-semibold text-on-primary shadow-lg active:scale-[0.98] disabled:opacity-40"
+              >
+                {salvo ? "Chegada registrada!" : "Finalizar recebimento"}
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

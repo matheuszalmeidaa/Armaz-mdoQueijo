@@ -1,22 +1,55 @@
 "use client";
 
-// Estoque ao vivo no Supabase (/api/estoque, service_role). Guarda um mapa
-// produtoId -> {saldo,min,validade} numa única linha JSON. Mantém o padrão das
-// outras stores (fallback local, polling). Injeta no lib/estoque via setEstoqueLive
-// para os helpers/badges lerem sem virar hook.
+// Estoque ao vivo no Supabase (/api/estoque, service_role) — agora por LOTES.
+// Guarda { lotes, minimos } numa única linha JSON. Mantém o padrão das outras
+// stores (fallback local, polling) e injeta no lib/estoque via setEstoqueLive.
 
 import { useEffect, useState } from "react";
-import { setEstoqueLive, type EstoqueMapa, type SaldoProduto } from "./estoque";
+import {
+  setEstoqueLive,
+  type EstoqueDados,
+  type Lote,
+} from "./estoque";
 
 const EVT = "estoque-change";
 
 let modoServidor: boolean | null = null;
-let cache: EstoqueMapa = {};
+let cache: EstoqueDados = { lotes: [], minimos: {} };
 let timer: ReturnType<typeof setInterval> | null = null;
 let assinantes = 0;
 
 function notificar() {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(EVT));
+}
+
+// Aceita o formato novo { lotes, minimos } e migra o formato antigo
+// ({ produtoId: { saldo, min, validade } }) para lotes.
+function normalizar(bruto: unknown): EstoqueDados {
+  const d = (bruto ?? {}) as Record<string, unknown>;
+  if (Array.isArray(d.lotes)) {
+    return {
+      lotes: d.lotes as Lote[],
+      minimos: (d.minimos as Record<string, number>) ?? {},
+    };
+  }
+  // Formato antigo → migra
+  const lotes: Lote[] = [];
+  const minimos: Record<string, number> = {};
+  for (const [produtoId, v] of Object.entries(d)) {
+    const s = v as { saldo?: number; min?: number; validade?: string };
+    if (typeof s?.saldo === "number" && s.saldo > 0) {
+      lotes.push({
+        id: crypto.randomUUID(),
+        produtoId,
+        qtd: s.saldo,
+        usado: 0,
+        entradaEm: Date.now(),
+        validade: s.validade,
+      });
+    }
+    if (typeof s?.min === "number" && s.min > 0) minimos[produtoId] = s.min;
+  }
+  return { lotes, minimos };
 }
 
 async function refetch() {
@@ -27,7 +60,7 @@ async function refetch() {
       modoServidor = false;
     } else {
       modoServidor = true;
-      cache = j.saldos && typeof j.saldos === "object" ? j.saldos : {};
+      cache = normalizar(j.saldos);
     }
   } catch {
     modoServidor = false;
@@ -48,42 +81,60 @@ function publicar() {
     .catch(() => {});
 }
 
-// Define saldo/min/validade de um produto (edição direta).
-export function salvarSaldo(produtoId: string, s: SaldoProduto) {
-  cache = { ...cache, [produtoId]: s };
+// Registra uma chegada: um ou mais lotes para o mesmo produto.
+export function registrarChegada(
+  produtoId: string,
+  entradas: { qtd: number; validade?: string; codigo?: string }[]
+) {
+  const novos: Lote[] = entradas
+    .filter((e) => e.qtd > 0)
+    .map((e) => ({
+      id: crypto.randomUUID(),
+      produtoId,
+      qtd: e.qtd,
+      usado: 0,
+      entradaEm: Date.now(),
+      validade: e.validade || undefined,
+      codigo: e.codigo || undefined,
+    }));
+  if (!novos.length) return;
+  cache = { ...cache, lotes: [...cache.lotes, ...novos] };
   publicar();
 }
 
-// Dá entrada: soma quantidade ao saldo atual (e atualiza validade se informada).
-export function darEntrada(produtoId: string, qtd: number, validade?: string) {
-  const atual = cache[produtoId] ?? { saldo: 0, min: 0 };
+export function definirMinimo(produtoId: string, min: number) {
+  cache = { ...cache, minimos: { ...cache.minimos, [produtoId]: min } };
+  publicar();
+}
+
+export function excluirLote(loteId: string) {
+  cache = { ...cache, lotes: cache.lotes.filter((l) => l.id !== loteId) };
+  publicar();
+}
+
+// Ajusta o "usado" de um lote (baixa manual/correção).
+export function ajustarUsado(loteId: string, usado: number) {
   cache = {
     ...cache,
-    [produtoId]: {
-      saldo: Math.max(0, (atual.saldo ?? 0) + qtd),
-      min: atual.min ?? 0,
-      validade: validade || atual.validade,
-    },
+    lotes: cache.lotes.map((l) =>
+      l.id === loteId ? { ...l, usado: Math.max(0, Math.min(l.qtd, usado)) } : l
+    ),
   };
   publicar();
 }
 
-export function lerSaldo(produtoId: string): SaldoProduto {
-  return cache[produtoId] ?? { saldo: 0, min: 0 };
-}
-
-export function useEstoque(): EstoqueMapa {
-  const [mapa, setMapa] = useState<EstoqueMapa>(() => cache);
+export function useEstoque(): EstoqueDados {
+  const [dados, setDados] = useState<EstoqueDados>(() => cache);
   useEffect(() => {
     assinantes += 1;
     if (!timer) {
       refetch();
       timer = setInterval(refetch, 15000);
     }
-    const h = () => setMapa({ ...cache });
+    const h = () => setDados({ lotes: [...cache.lotes], minimos: { ...cache.minimos } });
     window.addEventListener(EVT, h);
     window.addEventListener("storage", h);
-    setMapa({ ...cache });
+    setDados({ lotes: [...cache.lotes], minimos: { ...cache.minimos } });
     return () => {
       window.removeEventListener(EVT, h);
       window.removeEventListener("storage", h);
@@ -94,5 +145,5 @@ export function useEstoque(): EstoqueMapa {
       }
     };
   }, []);
-  return mapa;
+  return dados;
 }

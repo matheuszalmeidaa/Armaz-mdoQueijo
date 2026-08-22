@@ -2,45 +2,50 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useCatalogo } from "@/lib/catalogo-store";
-import { useEstoque, salvarSaldo } from "@/lib/estoque-store";
+import { useCatalogo, useCfgMapa } from "@/lib/catalogo-store";
 import {
-  contarAlertas,
-  statusSaldo,
+  useEstoque,
+  definirMinimo,
+  excluirLote,
+} from "@/lib/estoque-store";
+import {
+  saldoDe,
+  minimoDe,
+  statusDe,
   unidadeDe,
+  lotesDe,
+  restanteLote,
   diasParaVencer,
-  type EstoqueMapa,
+  contarAlertas,
+  fmtQtd,
 } from "@/lib/estoque";
 
 const num = (v: string) => Number(String(v).replace(",", ".")) || 0;
 
 export default function AdminEstoque() {
   const catalogo = useCatalogo();
-  const mapa = useEstoque();
-  const alertas = contarAlertas(mapa);
+  useEstoque(); // assina o estoque vivo (re-renderiza ao mudar)
+  const cfgMapa = useCfgMapa();
+  const alertas = contarAlertas();
 
   return (
     <div className="space-y-lg">
       <div className="flex flex-wrap items-center justify-between gap-md">
         <div>
-          <h1 className="font-headline-lg text-headline-lg text-primary">
-            Estoque
-          </h1>
+          <h1 className="font-headline-lg text-headline-lg text-primary">Estoque</h1>
           <p className="mt-1 text-body-md text-on-surface-variant">
-            Saldo por produto. Sincroniza com o delivery (mostra “Esgotado” quando
-            zera) e o PDV.
+            Controle por lotes e validade. Sincroniza com delivery, PDV e atacado.
           </p>
         </div>
         <Link
           href="/admin/estoque/entrada"
           className="flex items-center gap-1 rounded-lg bg-primary px-md py-2.5 text-label-md text-on-primary shadow active:scale-[0.98]"
         >
-          <span className="material-symbols-outlined text-[20px]">add_box</span>
-          Dar entrada
+          <span className="material-symbols-outlined text-[20px]">local_shipping</span>
+          Chegada de mercadoria
         </Link>
       </div>
 
-      {/* Alertas */}
       <div className="grid grid-cols-3 gap-md">
         <CardAlerta rotulo="Esgotados" valor={alertas.esgotado} cor="text-danger-red" />
         <CardAlerta rotulo="Abaixo do mínimo" valor={alertas.baixo} cor="text-warning-amber" />
@@ -50,17 +55,22 @@ export default function AdminEstoque() {
       {catalogo.length === 0 ? (
         <div className="rounded-xl border border-outline-variant/40 bg-cream-surface p-lg text-center">
           <p className="text-body-md text-on-surface-variant">
-            Nenhum produto no catálogo ainda. Cadastre em{" "}
+            Nenhum produto no catálogo. Cadastre em{" "}
             <Link href="/admin/produtos/novo" className="text-primary underline">
               Produtos → Novo produto
-            </Link>{" "}
-            para controlar o estoque.
+            </Link>
+            .
           </p>
         </div>
       ) : (
         <div className="space-y-sm">
           {catalogo.map((p) => (
-            <LinhaProduto key={p.id} produtoId={p.id} nome={p.nome} mapa={mapa} />
+            <LinhaProduto
+              key={p.id}
+              produtoId={p.id}
+              nome={p.nome}
+              pesoMedioG={cfgMapa[p.id]?.pesoMedioG}
+            />
           ))}
         </div>
       )}
@@ -71,105 +81,129 @@ export default function AdminEstoque() {
 function LinhaProduto({
   produtoId,
   nome,
-  mapa,
+  pesoMedioG,
 }: {
   produtoId: string;
   nome: string;
-  mapa: EstoqueMapa;
+  pesoMedioG?: number;
 }) {
-  const atual = mapa[produtoId] ?? { saldo: 0, min: 0 };
   const un = unidadeDe(produtoId);
-  const [saldo, setSaldo] = useState(String(atual.saldo));
-  const [min, setMin] = useState(String(atual.min));
-  const [validade, setValidade] = useState(atual.validade ?? "");
-  const [salvo, setSalvo] = useState(false);
+  const saldo = saldoDe(produtoId);
+  const min = minimoDe(produtoId);
+  const st = statusDe(produtoId);
+  const lotes = lotesDe(produtoId).filter((l) => restanteLote(l) > 0);
+  const [aberto, setAberto] = useState(false);
+  const [minEdit, setMinEdit] = useState(String(min));
 
-  // Reflete atualizações vindas de outro aparelho (a menos que esteja editando).
-  useEffect(() => {
-    setSaldo(String(atual.saldo));
-    setMin(String(atual.min));
-    setValidade(atual.validade ?? "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [atual.saldo, atual.min, atual.validade]);
+  useEffect(() => setMinEdit(String(min)), [min]);
 
-  const st = statusSaldo({ saldo: num(saldo), min: num(min) });
-  const dias = diasParaVencer(validade || undefined);
   const corStatus =
     st === "esgotado"
       ? "bg-error-container text-on-error-container"
       : st === "baixo"
         ? "bg-warning-amber/20 text-secondary"
         : "bg-tertiary-container/30 text-tertiary";
-  const rotStatus = st === "esgotado" ? "Esgotado" : st === "baixo" ? "Baixo" : "OK";
+  const rot = st === "esgotado" ? "Esgotado" : st === "baixo" ? "Baixo" : "OK";
 
-  function salvar() {
-    salvarSaldo(produtoId, {
-      saldo: num(saldo),
-      min: num(min),
-      validade: validade || undefined,
-    });
-    setSalvo(true);
-    setTimeout(() => setSalvo(false), 1500);
-  }
+  // Estimativa em kg quando vendido por peça e há peso médio.
+  const kgEstimado =
+    un === "un" && pesoMedioG ? (saldo * pesoMedioG) / 1000 : null;
 
   return (
     <div className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-md shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
-      <div className="flex flex-wrap items-end gap-md">
-        <div className="min-w-[10rem] flex-grow">
-          <p className="font-medium text-on-surface">{nome}</p>
-          <span
-            className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-label-sm ${corStatus}`}
-          >
-            {rotStatus}
-            {dias !== null && dias <= 7 && num(saldo) > 0 && (
-              <span className="text-label-sm">
-                · vence em {dias}d
-              </span>
-            )}
-          </span>
-        </div>
-        <CampoNum rotulo={`Saldo (${un})`} valor={saldo} onChange={setSaldo} />
-        <CampoNum rotulo={`Mínimo (${un})`} valor={min} onChange={setMin} />
-        <div>
-          <label className="block text-label-sm text-on-surface-variant">
-            Validade
-          </label>
-          <input
-            type="date"
-            value={validade}
-            onChange={(e) => setValidade(e.target.value)}
-            className="mt-1 w-40 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2 text-body-md outline-none focus:border-primary"
-          />
-        </div>
+      <div className="flex flex-wrap items-center gap-md">
         <button
-          onClick={salvar}
-          className="rounded-lg border border-outline-variant px-md py-2 text-label-md text-primary active:scale-95"
+          onClick={() => setAberto((v) => !v)}
+          className="flex min-w-[10rem] flex-grow items-center gap-sm text-left"
         >
-          {salvo ? "Salvo!" : "Salvar"}
+          <span className="material-symbols-outlined text-on-surface-variant">
+            {aberto ? "expand_more" : "chevron_right"}
+          </span>
+          <div>
+            <p className="font-medium text-on-surface">{nome}</p>
+            <span
+              className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-label-sm ${corStatus}`}
+            >
+              {rot} · {fmtQtd(saldo, un)}
+              {kgEstimado !== null && (
+                <span className="text-on-surface-variant">
+                  {" "}
+                  (~{kgEstimado.toFixed(1).replace(".", ",")} kg)
+                </span>
+              )}
+            </span>
+          </div>
         </button>
+        <div className="flex items-center gap-1">
+          <label className="text-label-sm text-on-surface-variant">Mín.</label>
+          <input
+            value={minEdit}
+            onChange={(e) => setMinEdit(e.target.value)}
+            onBlur={() => definirMinimo(produtoId, num(minEdit))}
+            inputMode="decimal"
+            className="w-16 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1.5 text-center text-body-md outline-none focus:border-primary"
+          />
+          <span className="text-label-sm text-on-surface-variant">{un}</span>
+        </div>
       </div>
-    </div>
-  );
-}
 
-function CampoNum({
-  rotulo,
-  valor,
-  onChange,
-}: {
-  rotulo: string;
-  valor: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div>
-      <label className="block text-label-sm text-on-surface-variant">{rotulo}</label>
-      <input
-        value={valor}
-        onChange={(e) => onChange(e.target.value)}
-        inputMode="decimal"
-        className="mt-1 w-24 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2 text-body-md outline-none focus:border-primary"
-      />
+      {aberto && (
+        <div className="mt-md border-t border-outline-variant/20 pt-md">
+          {lotes.length === 0 ? (
+            <p className="text-label-md text-on-surface-variant">
+              Sem lotes ativos. Registre uma{" "}
+              <Link href="/admin/estoque/entrada" className="text-primary underline">
+                chegada de mercadoria
+              </Link>
+              .
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {lotes.map((l) => {
+                const dias = diasParaVencer(l.validade);
+                const alerta = dias !== null && dias <= 7;
+                return (
+                  <div
+                    key={l.id}
+                    className="flex items-center justify-between rounded-lg bg-surface-container-low px-md py-2 text-body-md"
+                  >
+                    <span className="text-on-surface">
+                      {fmtQtd(restanteLote(l), un)}
+                      {l.codigo && (
+                        <span className="text-label-sm text-on-surface-variant">
+                          {" "}· lote {l.codigo}
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex items-center gap-md">
+                      <span
+                        className={
+                          alerta ? "text-danger-red" : "text-on-surface-variant"
+                        }
+                      >
+                        {l.validade
+                          ? `vence ${new Date(l.validade + "T00:00:00").toLocaleDateString("pt-BR")}${
+                              dias !== null ? ` (${dias}d)` : ""
+                            }`
+                          : "sem validade"}
+                      </span>
+                      <button
+                        onClick={() => {
+                          if (confirm("Excluir este lote?")) excluirLote(l.id);
+                        }}
+                        className="material-symbols-outlined text-[18px] text-danger-red"
+                        title="Excluir lote"
+                      >
+                        delete
+                      </button>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
