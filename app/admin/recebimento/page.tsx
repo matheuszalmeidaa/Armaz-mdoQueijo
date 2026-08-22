@@ -1,44 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { brl } from "@/lib/catalogo";
-import {
-  usePedidosLive,
-  avancarStatus,
-  FLUXO,
-  type StatusLive,
-  type PedidoLive,
-} from "@/lib/pedidos-store";
-import { comandaPedidoLive, linkWhatsAppLivre } from "@/lib/pedido-msg";
+import { usePedidosLive } from "@/lib/pedidos-store";
+import { COLUNAS, colunaDe } from "@/lib/pedido-ui";
+import { CardPedido } from "@/components/CardPedido";
+import { PainelPedido } from "@/components/PainelPedido";
 
-function imprimirComanda(p: PedidoLive) {
-  const w = window.open("", "_blank", "width=380,height=640");
-  if (!w) return;
-  const texto = comandaPedidoLive(p).replace(/\*/g, "");
-  w.document.write(
-    `<pre style="font-family:ui-monospace,monospace;font-size:13px;line-height:1.5;white-space:pre-wrap;padding:16px;margin:0;">${texto.replace(/</g, "&lt;")}</pre>`
-  );
-  w.document.close();
-  w.focus();
-  w.print();
-}
-
-const COL_STYLE: Record<StatusLive, string> = {
-  Novo: "border-error/40",
-  Preparando: "border-warning-amber/50",
-  "Em rota": "border-primary/40",
-  Entregue: "border-tertiary/40",
-};
-
-const PROX_ROTULO: Record<StatusLive, string> = {
-  Novo: "Aceitar e preparar",
-  Preparando: "Saiu para entrega",
-  "Em rota": "Marcar entregue",
-  Entregue: "",
-};
-
-// Um único AudioContext, destravado no primeiro gesto do operador (regra dos
-// navegadores: áudio só toca após interação).
+// --- Alerta sonoro (um único AudioContext, destravado no 1º gesto) ---
 let audioCtx: AudioContext | null = null;
 function getCtx(): AudioContext | null {
   try {
@@ -73,15 +41,26 @@ function beep() {
       o.start(t);
       o.stop(t + 0.36);
     };
-    // Dois toques (ding-dong) — chama mais atenção.
     tocar(880, 0);
     tocar(1175, 0.18);
   } catch {}
 }
 
+// Cores suaves por coluna (dentro do padrão da marca).
+const COL_ACCENT: Record<string, string> = {
+  ATACADO: "text-secondary",
+  RETIRADA: "text-secondary",
+  "PEDIDO NOVO": "text-error",
+  SEPARADO: "text-secondary",
+  "EM ROTA": "text-primary",
+  ENTREGUE: "text-tertiary",
+};
+
 export default function Recebimento() {
   const pedidos = usePedidosLive();
   const [somOn, setSomOn] = useState(true);
+  const [selId, setSelId] = useState<string | null>(null);
+  const [msg, setMsg] = useState("");
   const prevLen = useRef<number | null>(null);
   const [flash, setFlash] = useState(false);
 
@@ -89,12 +68,11 @@ export default function Recebimento() {
     if (prevLen.current !== null && pedidos.length > prevLen.current) {
       if (somOn) beep();
       setFlash(true);
-      setTimeout(() => setFlash(false), 1200);
+      setTimeout(() => setFlash(false), 1500);
     }
     prevLen.current = pedidos.length;
   }, [pedidos.length, somOn]);
 
-  // Destrava o áudio no primeiro gesto do operador (exigência do navegador).
   useEffect(() => {
     const destravar = () => {
       getCtx()?.resume().catch(() => {});
@@ -109,156 +87,106 @@ export default function Recebimento() {
     };
   }, []);
 
-  const novos = pedidos.filter((p) => p.status === "Novo").length;
-  const ativos = pedidos.filter((p) => p.status !== "Entregue");
+  const sel = pedidos.find((p) => p.id === selId) ?? null;
+  const porColuna = (col: string) =>
+    pedidos.filter((p) => colunaDe(p) === col);
+  const novos = porColuna("PEDIDO NOVO").length;
+
+  function toast(t: string) {
+    setMsg(t);
+    setTimeout(() => setMsg(""), 2200);
+  }
 
   return (
-    <div className="space-y-lg">
+    <div className="space-y-md">
       <div className="flex flex-wrap items-center justify-between gap-md">
         <div>
           <h1 className="flex items-center gap-sm font-headline-lg text-headline-lg text-primary">
             Recebimento
             {novos > 0 && (
-              <span className={`rounded-full bg-error px-2.5 py-0.5 text-label-sm font-bold text-on-error ${flash ? "animate-pulse" : ""}`}>
+              <span
+                className={`rounded-full bg-error px-2.5 py-0.5 text-label-sm font-bold text-on-error ${flash ? "animate-pulse" : ""}`}
+              >
                 {novos} novo{novos === 1 ? "" : "s"}
               </span>
             )}
           </h1>
           <p className="mt-1 text-body-md text-on-surface-variant">
-            Pedidos do delivery ao vivo. Quando entra um novo, toca o alerta.
+            Painel operacional ao vivo. Quando entra um pedido novo, toca o alerta.
           </p>
         </div>
-        <div className="flex items-center gap-sm">
-          <button
-            onClick={() => {
-              const novo = !somOn;
-              setSomOn(novo);
-              if (novo) beep(); // testa/destrava o som ao ligar
-            }}
-            className={`flex items-center gap-1 rounded-lg border px-3 py-2 text-label-md ${
-              somOn
-                ? "border-tertiary/40 text-tertiary"
-                : "border-outline-variant text-on-surface-variant"
-            }`}
-          >
-            <span className="material-symbols-outlined text-[20px]">
-              {somOn ? "notifications_active" : "notifications_off"}
-            </span>
-            Som {somOn ? "ligado" : "desligado"}
-          </button>
-        </div>
-      </div>
-
-      {ativos.length === 0 ? (
-        <div className="flex min-h-[50vh] flex-col items-center justify-center text-center text-on-surface-variant">
-          <span className="material-symbols-outlined mb-sm text-[56px] text-outline">
-            inbox
+        <button
+          onClick={() => {
+            const novo = !somOn;
+            setSomOn(novo);
+            if (novo) beep();
+          }}
+          className={`flex items-center gap-1 rounded-lg border px-3 py-2 text-label-md ${
+            somOn
+              ? "border-tertiary/40 text-tertiary"
+              : "border-outline-variant text-on-surface-variant"
+          }`}
+        >
+          <span className="material-symbols-outlined text-[20px]">
+            {somOn ? "notifications_active" : "notifications_off"}
           </span>
-          <p className="text-body-md">Nenhum pedido ativo. Os pedidos do delivery aparecem aqui automaticamente.</p>
-        </div>
-      ) : (
-        <div className="flex gap-md overflow-x-auto pb-2">
-          {FLUXO.map((status) => {
-            const daColuna = pedidos.filter((p) => p.status === status);
-            return (
-              <div key={status} className="w-[280px] flex-shrink-0">
-                <div className="mb-sm flex items-center justify-between">
-                  <h2 className="font-headline-md text-headline-md text-on-surface">
-                    {status}
-                  </h2>
-                  <span className="rounded-full bg-surface-container px-2 py-0.5 text-label-sm text-on-surface-variant">
-                    {daColuna.length}
-                  </span>
-                </div>
-                <div className="space-y-sm">
-                  {daColuna.map((p) => (
-                    <CartaoPedido key={p.id} pedido={p} destacar={status === "Novo"} />
-                  ))}
-                </div>
+          Som {somOn ? "ligado" : "desligado"}
+        </button>
+      </div>
+
+      {/* Kanban — 6 colunas responsivas, sem scroll horizontal no desktop */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 lg:gap-3">
+        {COLUNAS.map((col) => {
+          const cards = porColuna(col);
+          const ehNovo = col === "PEDIDO NOVO";
+          return (
+            <div
+              key={col}
+              className={`flex flex-col rounded-xl p-2 ${
+                ehNovo
+                  ? "bg-error-container/15"
+                  : "bg-surface-container/40"
+              }`}
+            >
+              <div className="mb-2 flex items-center justify-between px-0.5">
+                <h2
+                  className={`text-[11px] font-bold uppercase leading-tight tracking-wide ${COL_ACCENT[col]}`}
+                >
+                  {col}
+                </h2>
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-surface px-1.5 text-[11px] font-bold text-on-surface-variant">
+                  {cards.length}
+                </span>
               </div>
-            );
-          })}
-        </div>
+              <div className="space-y-2">
+                {cards.map((p) => (
+                  <CardPedido
+                    key={p.id}
+                    pedido={p}
+                    onClick={() => setSelId(p.id)}
+                    maxItens={3}
+                    novo={ehNovo}
+                  />
+                ))}
+                {cards.length === 0 && (
+                  <p className="py-3 text-center text-caption text-on-surface-variant/60">
+                    —
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {sel && (
+        <PainelPedido pedido={sel} onFechar={() => setSelId(null)} toast={toast} />
       )}
-    </div>
-  );
-}
 
-function CartaoPedido({
-  pedido,
-  destacar,
-}: {
-  pedido: PedidoLive;
-  destacar: boolean;
-}) {
-  const hora = new Date(pedido.criadoEm).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  return (
-    <div
-      className={`rounded-xl border bg-surface-container-lowest p-md shadow-[0_2px_8px_rgba(0,0,0,0.06)] ${
-        destacar ? "border-error/50 ring-1 ring-error/30" : COL_STYLE[pedido.status]
-      }`}
-    >
-      <div className="flex items-center justify-between">
-        <span className="font-medium text-primary">#{pedido.numero}</span>
-        <span className="text-caption text-on-surface-variant">{hora}</span>
-      </div>
-      <p className="mt-0.5 text-body-md text-on-surface">{pedido.cliente}</p>
-      <p className="flex items-center gap-1 text-caption text-on-surface-variant">
-        <span className="material-symbols-outlined text-[14px]">
-          {pedido.modo === "retirada" ? "storefront" : "local_shipping"}
-        </span>
-        {pedido.entrega}
-      </p>
-
-      <ul className="mt-sm space-y-0.5 border-t border-outline-variant/20 pt-sm">
-        {pedido.itens.map((it, i) => (
-          <li key={i} className="flex justify-between text-label-md text-on-surface">
-            <span className="truncate">
-              <span className="text-on-surface-variant">{it.qtd}</span> {it.nome}
-            </span>
-            <span className="ml-2 whitespace-nowrap">{brl(it.preco)}</span>
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-sm flex items-center justify-between border-t border-outline-variant/20 pt-sm">
-        <span className="text-caption text-on-surface-variant">{pedido.pagamento}</span>
-        <span className="font-headline-md text-headline-md text-primary">
-          {brl(pedido.total)}
-        </span>
-      </div>
-
-      {/* Comanda para o motoboy / impressão */}
-      <div className="mt-sm flex gap-sm">
-        <a
-          href={linkWhatsAppLivre(comandaPedidoLive(pedido))}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-tertiary/40 py-2 text-label-md text-tertiary active:scale-[0.98]"
-        >
-          <span className="material-symbols-outlined text-[18px]">chat</span>
-          Comanda
-        </a>
-        <button
-          onClick={() => imprimirComanda(pedido)}
-          className="flex items-center justify-center gap-1 rounded-lg border border-outline-variant px-3 py-2 text-label-md text-on-surface active:scale-[0.98]"
-          title="Imprimir comanda"
-        >
-          <span className="material-symbols-outlined text-[18px]">print</span>
-        </button>
-      </div>
-
-      {pedido.status !== "Entregue" && (
-        <button
-          onClick={() => avancarStatus(pedido.id)}
-          className="mt-sm flex w-full items-center justify-center gap-1 rounded-lg bg-primary py-2.5 text-label-md font-semibold text-on-primary active:scale-[0.98]"
-        >
-          {PROX_ROTULO[pedido.status]}
-          <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-        </button>
+      {msg && (
+        <div className="fixed bottom-4 left-1/2 z-[70] -translate-x-1/2 rounded-lg bg-on-surface px-md py-2.5 text-body-md text-surface shadow-lg">
+          {msg}
+        </div>
       )}
     </div>
   );
