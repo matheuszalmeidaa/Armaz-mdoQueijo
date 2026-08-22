@@ -13,11 +13,14 @@ const TABELAS = [
 ];
 
 type Resultado = { tabela: string; ok: boolean; detalhe: string };
+type Contagem = { tabela: string; count: number; erro: string | null };
 
 export default function Conexao() {
   const [resultados, setResultados] = useState<Resultado[]>([]);
   const [testando, setTestando] = useState(false);
   const [servidor, setServidor] = useState<string>("verificando...");
+  const [emUso, setEmUso] = useState<Contagem[]>([]);
+  const [aguardando, setAguardando] = useState<Contagem[]>([]);
 
   useEffect(() => {
     fetch("/api/pedidos")
@@ -29,6 +32,14 @@ export default function Conexao() {
         else setServidor(`OK — ${(j.pedidos ?? []).length} pedido(s) no banco`);
       })
       .catch((e) => setServidor(`falha: ${String(e)}`));
+
+    fetch("/api/diagnostico")
+      .then((r) => r.json())
+      .then((j) => {
+        setEmUso(j.emUso ?? []);
+        setAguardando(j.aguardando ?? []);
+      })
+      .catch(() => {});
   }, []);
 
   async function testar() {
@@ -132,6 +143,64 @@ export default function Conexao() {
           </ul>
         </div>
       )}
+
+      {/* Contagem por tabela (via servidor) */}
+      {(emUso.length > 0 || aguardando.length > 0) && (
+        <div className="grid gap-md lg:grid-cols-2">
+          <BlocoContagem
+            titulo="Em uso agora"
+            sub="Devem ter dados conforme você usa o sistema."
+            itens={emUso}
+            esperaVazio={false}
+          />
+          <BlocoContagem
+            titulo="Aguardando migração relacional"
+            sub="Vazias de propósito até ligarmos o modo relacional. Não é erro."
+            itens={aguardando}
+            esperaVazio
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BlocoContagem({
+  titulo,
+  sub,
+  itens,
+  esperaVazio,
+}: {
+  titulo: string;
+  sub: string;
+  itens: Contagem[];
+  esperaVazio: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-md shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+      <h2 className="font-headline-md text-headline-md text-on-surface">{titulo}</h2>
+      <p className="mb-sm text-label-sm text-on-surface-variant">{sub}</p>
+      <ul className="divide-y divide-outline-variant/20">
+        {itens.map((c) => {
+          const ok = esperaVazio ? true : c.count > 0;
+          return (
+            <li key={c.tabela} className="flex items-center justify-between py-2">
+              <span className="font-mono text-body-md text-on-surface">{c.tabela}</span>
+              <span
+                className={`flex items-center gap-1 text-label-md ${
+                  c.erro
+                    ? "text-danger-red"
+                    : ok
+                      ? "text-tertiary"
+                      : "text-warning-amber"
+                }`}
+              >
+                {c.erro ? c.erro : `${c.count} linha(s)`}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
