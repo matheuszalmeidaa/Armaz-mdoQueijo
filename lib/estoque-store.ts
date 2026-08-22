@@ -81,16 +81,18 @@ function publicar() {
     .catch(() => {});
 }
 
-// Registra uma chegada: um ou mais lotes para o mesmo produto.
+// Registra uma chegada: um ou mais lotes para o mesmo produto NUMA loja.
 export function registrarChegada(
   produtoId: string,
-  entradas: { qtd: number; validade?: string; codigo?: string }[]
+  entradas: { qtd: number; validade?: string; codigo?: string }[],
+  lojaId?: string
 ) {
   const novos: Lote[] = entradas
     .filter((e) => e.qtd > 0)
     .map((e) => ({
       id: crypto.randomUUID(),
       produtoId,
+      lojaId: lojaId || undefined,
       qtd: e.qtd,
       usado: 0,
       entradaEm: Date.now(),

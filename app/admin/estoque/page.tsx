@@ -10,10 +10,12 @@ import {
 } from "@/lib/estoque-store";
 import {
   saldoDe,
+  saldoLoja,
+  lotesLoja,
+  lojasComLote,
   minimoDe,
   statusDe,
   unidadeDe,
-  lotesDe,
   restanteLote,
   diasParaVencer,
   contarAlertas,
@@ -21,6 +23,7 @@ import {
   nomeDe,
   fmtQtd,
 } from "@/lib/estoque";
+import { useLojas } from "@/lib/lojas-store";
 
 const num = (v: string) => Number(String(v).replace(",", ".")) || 0;
 
@@ -30,6 +33,10 @@ export default function AdminEstoque() {
   const catalogo = useCatalogo();
   useEstoque(); // assina o estoque vivo (re-renderiza ao mudar)
   const cfgMapa = useCfgMapa();
+  const { lojas } = useLojas();
+  const lojasNome: Record<string, string> = Object.fromEntries(
+    lojas.map((l) => [l.id, l.nome])
+  );
   const alertas = contarAlertas();
   const [janela, setJanela] = useState<number>(30);
   const conferir = lotesVencendo(janela);
@@ -137,6 +144,7 @@ export default function AdminEstoque() {
               produtoId={p.id}
               nome={p.nome}
               pesoMedioG={cfgMapa[p.id]?.pesoMedioG}
+              lojasNome={lojasNome}
             />
           ))}
         </div>
@@ -153,12 +161,13 @@ function LinhaProduto({
   produtoId: string;
   nome: string;
   pesoMedioG?: number;
+  lojasNome: Record<string, string>;
 }) {
   const un = unidadeDe(produtoId);
   const saldo = saldoDe(produtoId);
   const min = minimoDe(produtoId);
   const st = statusDe(produtoId);
-  const lotes = lotesDe(produtoId).filter((l) => restanteLote(l) > 0);
+  const lojasP = lojasComLote(produtoId);
   const [aberto, setAberto] = useState(false);
   const [minEdit, setMinEdit] = useState(String(min));
 
@@ -215,8 +224,8 @@ function LinhaProduto({
       </div>
 
       {aberto && (
-        <div className="mt-md border-t border-outline-variant/20 pt-md">
-          {lotes.length === 0 ? (
+        <div className="mt-md space-y-md border-t border-outline-variant/20 pt-md">
+          {lojasP.length === 0 ? (
             <p className="text-label-md text-on-surface-variant">
               Sem lotes ativos. Registre uma{" "}
               <Link href="/admin/estoque/entrada" className="text-primary underline">
@@ -225,49 +234,70 @@ function LinhaProduto({
               .
             </p>
           ) : (
-            <div className="space-y-1">
-              {lotes.map((l) => {
-                const dias = diasParaVencer(l.validade);
-                const alerta = dias !== null && dias <= 7;
-                return (
-                  <div
-                    key={l.id}
-                    className="flex items-center justify-between rounded-lg bg-surface-container-low px-md py-2 text-body-md"
-                  >
-                    <span className="text-on-surface">
-                      {fmtQtd(restanteLote(l), un)}
-                      {l.codigo && (
-                        <span className="text-label-sm text-on-surface-variant">
-                          {" "}· lote {l.codigo}
-                        </span>
-                      )}
-                    </span>
-                    <span className="flex items-center gap-md">
-                      <span
-                        className={
-                          alerta ? "text-danger-red" : "text-on-surface-variant"
-                        }
-                      >
-                        {l.validade
-                          ? `vence ${new Date(l.validade + "T00:00:00").toLocaleDateString("pt-BR")}${
-                              dias !== null ? ` (${dias}d)` : ""
-                            }`
-                          : "sem validade"}
+            lojasP.map((lid) => {
+              const lotes = lotesLoja(produtoId, lid).filter(
+                (l) => restanteLote(l) > 0
+              );
+              if (lotes.length === 0) return null;
+              return (
+                <div key={lid || "sem-loja"}>
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1 text-label-md font-semibold text-on-surface">
+                      <span className="material-symbols-outlined text-[16px] text-secondary">
+                        storefront
                       </span>
-                      <button
-                        onClick={() => {
-                          if (confirm("Excluir este lote?")) excluirLote(l.id);
-                        }}
-                        className="material-symbols-outlined text-[18px] text-danger-red"
-                        title="Excluir lote"
-                      >
-                        delete
-                      </button>
+                      {lid ? lojasNome[lid] ?? "Loja" : "Sem loja definida"}
+                    </span>
+                    <span className="text-label-md text-primary">
+                      {fmtQtd(saldoLoja(produtoId, lid), un)}
                     </span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="space-y-1">
+                    {lotes.map((l) => {
+                      const dias = diasParaVencer(l.validade);
+                      const alerta = dias !== null && dias <= 7;
+                      return (
+                        <div
+                          key={l.id}
+                          className="flex items-center justify-between rounded-lg bg-surface-container-low px-md py-2 text-body-md"
+                        >
+                          <span className="text-on-surface">
+                            {fmtQtd(restanteLote(l), un)}
+                            {l.codigo && (
+                              <span className="text-label-sm text-on-surface-variant">
+                                {" "}· lote {l.codigo}
+                              </span>
+                            )}
+                          </span>
+                          <span className="flex items-center gap-md">
+                            <span
+                              className={
+                                alerta ? "text-danger-red" : "text-on-surface-variant"
+                              }
+                            >
+                              {l.validade
+                                ? `vence ${new Date(l.validade + "T00:00:00").toLocaleDateString("pt-BR")}${
+                                    dias !== null ? ` (${dias}d)` : ""
+                                  }`
+                                : "sem validade"}
+                            </span>
+                            <button
+                              onClick={() => {
+                                if (confirm("Excluir este lote?")) excluirLote(l.id);
+                              }}
+                              className="material-symbols-outlined text-[18px] text-danger-red"
+                              title="Excluir lote"
+                            >
+                              delete
+                            </button>
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       )}

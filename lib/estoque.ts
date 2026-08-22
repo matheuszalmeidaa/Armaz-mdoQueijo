@@ -10,6 +10,7 @@ import { getProduto } from "./catalogo";
 export type Lote = {
   id: string;
   produtoId: string;
+  lojaId?: string; // loja onde o lote está (multi-loja); ausente = "sem loja"
   qtd: number; // quantidade recebida (na unidade de estoque do produto)
   usado: number; // quantidade já vendida/baixada
   entradaEm: number; // data de entrada (ms)
@@ -38,8 +39,25 @@ export function restanteLote(l: Lote): number {
   return Math.max(0, l.qtd - l.usado);
 }
 
+// Saldo total do produto (todas as lojas = estoque consolidado).
 export function saldoDe(produtoId: string): number {
   return lotesDe(produtoId).reduce((s, l) => s + restanteLote(l), 0);
+}
+
+// Lotes/saldo de um produto numa loja específica.
+export function lotesLoja(produtoId: string, lojaId?: string): Lote[] {
+  return LIVE.lotes.filter(
+    (l) => l.produtoId === produtoId && (l.lojaId ?? "") === (lojaId ?? "")
+  );
+}
+export function saldoLoja(produtoId: string, lojaId?: string): number {
+  return lotesLoja(produtoId, lojaId).reduce((s, l) => s + restanteLote(l), 0);
+}
+// Lojas que possuem lote deste produto (para o detalhamento por loja).
+export function lojasComLote(produtoId: string): string[] {
+  const set = new Set<string>();
+  for (const l of lotesDe(produtoId)) set.add(l.lojaId ?? "");
+  return Array.from(set);
 }
 
 export function minimoDe(produtoId: string): number {

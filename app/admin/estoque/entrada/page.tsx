@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useCatalogo } from "@/lib/catalogo-store";
 import { registrarChegada } from "@/lib/estoque-store";
 import { unidadeDe } from "@/lib/estoque";
+import { useLojas } from "@/lib/lojas-store";
 
 const num = (v: string) => Number(String(v).replace(",", ".")) || 0;
 
@@ -14,6 +15,8 @@ type Linha = { qtd: string; validade: string; codigo: string };
 export default function ChegadaMercadoria() {
   const router = useRouter();
   const catalogo = useCatalogo();
+  const { lojas } = useLojas();
+  const [lojaId, setLojaId] = useState("");
   const [produtoId, setProdutoId] = useState("");
   const [linhas, setLinhas] = useState<Linha[]>([
     { qtd: "", validade: "", codigo: "" },
@@ -22,7 +25,8 @@ export default function ChegadaMercadoria() {
 
   const un = produtoId ? unidadeDe(produtoId) : "un";
   const totalRecebido = linhas.reduce((s, l) => s + num(l.qtd), 0);
-  const pode = produtoId && totalRecebido > 0;
+  const precisaLoja = lojas.length > 0;
+  const pode = produtoId && totalRecebido > 0 && (!precisaLoja || lojaId);
 
   function addLinha() {
     setLinhas([...linhas, { qtd: "", validade: "", codigo: "" }]);
@@ -44,7 +48,8 @@ export default function ChegadaMercadoria() {
           qtd: num(l.qtd),
           validade: l.validade || undefined,
           codigo: l.codigo || undefined,
-        }))
+        })),
+      lojaId || undefined
     );
     setSalvo(true);
     setTimeout(() => router.push("/admin/estoque"), 800);
@@ -76,6 +81,26 @@ export default function ChegadaMercadoria() {
         </div>
       ) : (
         <div className="space-y-md rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-lg shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+          {precisaLoja && (
+            <div>
+              <label className="block text-label-md text-on-surface">Loja</label>
+              <select
+                value={lojaId}
+                onChange={(e) => setLojaId(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
+              >
+                <option value="">Escolha a loja</option>
+                {lojas.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.nome}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-label-sm text-on-surface-variant">
+                O estoque entra nesta loja. O saldo total é a soma de todas.
+              </p>
+            </div>
+          )}
           <div>
             <label className="block text-label-md text-on-surface">Produto</label>
             <select
