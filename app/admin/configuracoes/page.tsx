@@ -37,6 +37,12 @@ export default function Configuracoes() {
   const [agendamentoAtivo, setAgendamentoAtivo] = useState(
     CONFIG_PADRAO.agendamentoAtivo
   );
+  const [atacadoRegraMin, setAtacadoRegraMin] = useState(
+    CONFIG_PADRAO.atacadoRegraMin
+  );
+  const [atacadoPedidoMinimo, setAtacadoPedidoMinimo] = useState(
+    String(CONFIG_PADRAO.atacadoPedidoMinimo)
+  );
   const [horarios, setHorarios] = useState<DiaHorario[]>(CONFIG_PADRAO.horarios);
   const [excecoes, setExcecoes] = useState<Excecao[]>(CONFIG_PADRAO.excecoes);
   const [instagram, setInstagram] = useState(CONFIG_PADRAO.redes.instagram);
@@ -77,6 +83,8 @@ export default function Configuracoes() {
     setEntregaAtiva(c.entregaAtiva);
     setRetiradaAtiva(c.retiradaAtiva);
     setAgendamentoAtivo(c.agendamentoAtivo);
+    setAtacadoRegraMin(c.atacadoRegraMin);
+    setAtacadoPedidoMinimo(String(c.atacadoPedidoMinimo));
     });
     return () => {
       vivo = false;
@@ -113,6 +121,8 @@ export default function Configuracoes() {
       entregaAtiva,
       retiradaAtiva,
       agendamentoAtivo,
+      atacadoRegraMin,
+      atacadoPedidoMinimo: num(atacadoPedidoMinimo),
     };
     salvarConfig(c);
     setSalvo(true);
@@ -205,6 +215,44 @@ export default function Configuracoes() {
           ativo={agendamentoAtivo}
           onToggle={() => setAgendamentoAtivo((v) => !v)}
         />
+      </Secao>
+
+      {/* Regras do atacado */}
+      <Secao icone="inventory_2" titulo="Regras do atacado">
+        <div>
+          <label className="block text-label-md text-on-surface">
+            Quantidade mínima
+          </label>
+          <p className="mb-1 text-label-sm text-on-surface-variant">
+            Como o mínimo é exigido no catálogo de atacado (/pedidos-atacado).
+          </p>
+          <select
+            value={atacadoRegraMin}
+            onChange={(e) =>
+              setAtacadoRegraMin(e.target.value as typeof atacadoRegraMin)
+            }
+            className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
+          >
+            <option value="nenhum">Sem quantidade mínima</option>
+            <option value="produto">Mínimo por produto</option>
+            <option value="pedido">Mínimo para o pedido (total)</option>
+            <option value="ambos">Ambos (produto + pedido)</option>
+          </select>
+        </div>
+        {(atacadoRegraMin === "produto" || atacadoRegraMin === "ambos") && (
+          <p className="rounded-lg bg-cream-surface px-md py-2 text-label-sm text-on-surface-variant">
+            O mínimo <strong>por produto</strong> é definido no cadastro de cada
+            produto (Produtos → Editar → Atacado → “Pedido mínimo”).
+          </p>
+        )}
+        {(atacadoRegraMin === "pedido" || atacadoRegraMin === "ambos") && (
+          <Campo
+            rotulo="Mínimo do pedido (soma das quantidades)"
+            valor={atacadoPedidoMinimo}
+            onChange={setAtacadoPedidoMinimo}
+            dica="Ex.: 20 = o cliente só fecha o pedido de atacado com 20 itens somados (kg/peças)."
+          />
+        )}
       </Secao>
 
       {/* Vitrine */}

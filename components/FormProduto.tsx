@@ -82,6 +82,12 @@ export function FormProduto({
   const [atacadoFaixas, setAtacadoFaixas] = useState<
     { min: string; preco: string }[]
   >([{ min: "", preco: "" }]);
+  // Peso médio + forma de venda por canal
+  const [pesoMedio, setPesoMedio] = useState("");
+  const [pdvPeca, setPdvPeca] = useState(true);
+  const [pdvKg, setPdvKg] = useState(false);
+  const [delPeca, setDelPeca] = useState(true);
+  const [delKg, setDelKg] = useState(false);
   const [salvo, setSalvo] = useState(false);
   const router = useRouter();
   const catalogo = useCatalogo();
@@ -105,6 +111,15 @@ export function FormProduto({
             }))
           : [{ min: "", preco: "" }]
       );
+    }
+    if (c.pesoMedioG) setPesoMedio(String(c.pesoMedioG));
+    if (c.vendaPdv) {
+      setPdvPeca(c.vendaPdv.peca);
+      setPdvKg(c.vendaPdv.kg);
+    }
+    if (c.vendaDelivery) {
+      setDelPeca(c.vendaDelivery.peca);
+      setDelKg(c.vendaDelivery.kg);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inicial?.id]);
@@ -179,6 +194,9 @@ export function FormProduto({
     salvarProduto(produto);
     salvarCfg(id, {
       videoUrl: videoUrl.trim() || undefined,
+      pesoMedioG: num(pesoMedio) || undefined,
+      vendaPdv: { peca: pdvPeca, kg: pdvKg },
+      vendaDelivery: { peca: delPeca, kg: delKg },
       variantes: variantes
         .map((v) => ({ ...v, nome: v.nome.trim() }))
         .filter((v) => v.nome),
@@ -561,6 +579,44 @@ export function FormProduto({
         </div>
       </Secao>
 
+      {/* Peso médio + venda por canal */}
+      <Secao titulo="Peso médio e forma de venda por canal">
+        <Campo rotulo="Peso médio por unidade" sufixo="g">
+          <input
+            value={pesoMedio}
+            onChange={(e) => setPesoMedio(e.target.value)}
+            inputMode="numeric"
+            placeholder="ex: 500"
+            className="w-full bg-transparent text-body-lg outline-none"
+          />
+        </Campo>
+        <p className="text-label-sm text-on-surface-variant">
+          Referência para vender por peça um produto pesado por kg (ex.: 1 peça ≈
+          500 g). É uma média — não obriga todas as peças a terem esse peso.
+        </p>
+
+        <div className="grid gap-md sm:grid-cols-2">
+          <FormaCanal
+            titulo="No PDV (balcão)"
+            peca={pdvPeca}
+            kg={pdvKg}
+            setPeca={setPdvPeca}
+            setKg={setPdvKg}
+          />
+          <FormaCanal
+            titulo="No Delivery"
+            peca={delPeca}
+            kg={delKg}
+            setPeca={setDelPeca}
+            setKg={setDelKg}
+          />
+        </div>
+        <p className="text-label-sm text-on-surface-variant">
+          Cada canal vende de forma independente. O atacado tem a própria
+          configuração abaixo.
+        </p>
+      </Secao>
+
       {/* Atacado */}
       <Secao titulo="Atacado (venda por volume)">
         <p className="text-label-sm text-on-surface-variant">
@@ -775,6 +831,44 @@ function BotaoTipo({
       <span className="material-symbols-outlined text-[20px]">{icone}</span>
       {label}
     </button>
+  );
+}
+
+function FormaCanal({
+  titulo,
+  peca,
+  kg,
+  setPeca,
+  setKg,
+}: {
+  titulo: string;
+  peca: boolean;
+  kg: boolean;
+  setPeca: (v: boolean) => void;
+  setKg: (v: boolean) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-outline-variant/60 bg-surface-container-low p-md">
+      <p className="mb-sm text-label-md text-on-surface">{titulo}</p>
+      <label className="flex items-center gap-sm py-1">
+        <input
+          type="checkbox"
+          checked={peca}
+          onChange={(e) => setPeca(e.target.checked)}
+          className="h-5 w-5 accent-primary"
+        />
+        <span className="text-body-md text-on-surface">Por peça</span>
+      </label>
+      <label className="flex items-center gap-sm py-1">
+        <input
+          type="checkbox"
+          checked={kg}
+          onChange={(e) => setKg(e.target.checked)}
+          className="h-5 w-5 accent-primary"
+        />
+        <span className="text-body-md text-on-surface">Por quilo</span>
+      </label>
+    </div>
   );
 }
 

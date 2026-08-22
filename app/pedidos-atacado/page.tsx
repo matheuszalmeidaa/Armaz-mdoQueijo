@@ -40,6 +40,12 @@ export default function Atacado() {
   const [enviado, setEnviado] = useState<{ numero: string } | null>(null);
 
   const zap = cfg.whatsapp.replace(/\D/g, "");
+  const regra = cfg.atacadoRegraMin;
+  const exigeMinProduto = regra === "produto" || regra === "ambos";
+  const exigeMinPedido = regra === "pedido" || regra === "ambos";
+  // Mínimo por produto só vale quando a regra exige; senão o piso é 1.
+  const minDe = (a: Atacado) =>
+    exigeMinProduto ? minimoAtacado(a) : 1;
 
   // Produtos marcados como atacado, com faixas válidas.
   const produtos = useMemo(
@@ -83,7 +89,7 @@ export default function Atacado() {
   function setQtd(id: string, qtd: number) {
     const a = getAtacado(id);
     if (!a) return;
-    const min = minimoAtacado(a);
+    const min = minDe(a);
     setCarrinho((c) => {
       const nc = { ...c };
       if (qtd < min) delete nc[id];
@@ -94,6 +100,7 @@ export default function Atacado() {
 
   function enviar() {
     if (!nome.trim() || telefone.replace(/\D/g, "").length < 10 || !zap) return;
+    if (faltaPedido > 0) return;
     const itensLive = itens.map((i) => ({
       nome: i.produto.nome,
       qtd: `${i.qtd} ${un(i.atacado)}`,
@@ -125,7 +132,18 @@ export default function Atacado() {
   }
 
   const telValido = telefone.replace(/\D/g, "").length >= 10;
-  const podeEnviar = nome.trim().length > 1 && telValido && nItens > 0 && Boolean(zap);
+  // Regra de mínimo do pedido (soma das quantidades).
+  const somaQtd = itens.reduce((s, i) => s + i.qtd, 0);
+  const faltaPedido =
+    exigeMinPedido && somaQtd < cfg.atacadoPedidoMinimo
+      ? cfg.atacadoPedidoMinimo - somaQtd
+      : 0;
+  const podeEnviar =
+    nome.trim().length > 1 &&
+    telValido &&
+    nItens > 0 &&
+    Boolean(zap) &&
+    faltaPedido === 0;
 
   // --- Tela de sucesso ---
   if (enviado) {
@@ -246,6 +264,7 @@ export default function Atacado() {
                     key={produto.id}
                     produto={produto}
                     atacado={atacado}
+                    min={minDe(atacado)}
                     qtd={carrinho[produto.id] ?? 0}
                     onQtd={(q) => setQtd(produto.id, q)}
                   />
@@ -311,11 +330,25 @@ export default function Atacado() {
             </div>
 
             <div className="mt-md flex items-center justify-between rounded-xl bg-cream-surface px-md py-3">
-              <span className="text-body-lg text-on-surface">Total</span>
+              <span className="text-body-lg text-on-surface">
+                Total{" "}
+                <span className="text-label-sm text-on-surface-variant">
+                  ({somaQtd} {somaQtd === 1 ? "item" : "itens"})
+                </span>
+              </span>
               <span className="font-display text-headline-md text-primary">
                 {brl(total)}
               </span>
             </div>
+            {faltaPedido > 0 && (
+              <div className="mt-sm flex items-center gap-sm rounded-lg bg-error-container/40 px-md py-2.5 text-on-error-container">
+                <span className="material-symbols-outlined text-[20px]">info</span>
+                <span className="text-label-md">
+                  O pedido mínimo do atacado é {cfg.atacadoPedidoMinimo} itens.
+                  Faltam {faltaPedido} para fechar.
+                </span>
+              </div>
+            )}
 
             <h2 className="mt-lg font-headline-md text-headline-md text-on-surface">
               Seus dados
@@ -391,15 +424,16 @@ export default function Atacado() {
 function CardAtacado({
   produto,
   atacado,
+  min,
   qtd,
   onQtd,
 }: {
   produto: Produto;
   atacado: Atacado;
+  min: number;
   qtd: number;
   onQtd: (q: number) => void;
 }) {
-  const min = minimoAtacado(atacado);
   const noCarrinho = qtd >= min;
   const unit = precoAtacado(atacado, Math.max(qtd, min));
 

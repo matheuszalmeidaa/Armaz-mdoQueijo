@@ -44,10 +44,17 @@ export type Atacado = {
   minimo?: number; // quantidade mínima do pedido de atacado (kg/peças)
   faixas: FaixaAtacado[];
 };
+// Forma de venda de um canal: por peça, por quilo, ou ambas.
+export type FormaVenda = { peca: boolean; kg: boolean };
+
 export type ProdutoCfg = {
   videoUrl?: string;
   variantes?: Variante[];
   atacado?: Atacado;
+  // NOVO — regras por canal (todas opcionais; ausência = comportamento atual):
+  pesoMedioG?: number; // peso médio por peça (g); referência p/ estoque peça↔kg
+  vendaPdv?: FormaVenda; // como vende no PDV
+  vendaDelivery?: FormaVenda; // como vende no Delivery
 };
 
 // Catálogo começa VAZIO — o lojista cadastra os produtos reais em

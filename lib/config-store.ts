@@ -52,6 +52,9 @@ export type ConfigLoja = {
   entregaAtiva: boolean; // oferece entrega no delivery
   retiradaAtiva: boolean; // oferece retirada na loja
   agendamentoAtivo: boolean; // permite pedido agendado quando fechada
+  // Regras de quantidade mínima do ATACADO (seção 4/5):
+  atacadoRegraMin: "nenhum" | "produto" | "pedido" | "ambos";
+  atacadoPedidoMinimo: number; // qtd mínima somada do pedido de atacado
 };
 
 export const CONFIG_PADRAO: ConfigLoja = {
@@ -81,6 +84,8 @@ export const CONFIG_PADRAO: ConfigLoja = {
   entregaAtiva: true,
   retiradaAtiva: true,
   agendamentoAtivo: false,
+  atacadoRegraMin: "nenhum",
+  atacadoPedidoMinimo: 0,
 };
 
 // Fotos disponíveis para o banner sem upload (as que já vêm no projeto).
