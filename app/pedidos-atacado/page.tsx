@@ -7,6 +7,8 @@ import { useCatalogo, useCfgMapa } from "@/lib/catalogo-store";
 import {
   brl,
   precoAtacado,
+  precoAtacadoBase,
+  temPrecoAtacado,
   minimoAtacado,
   CATEGORIAS,
   type Produto,
@@ -17,8 +19,7 @@ import { linkWhatsApp } from "@/lib/pedido-msg";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
 
 const un = (a: Atacado) => (a.unidade === "kg" ? "kg" : "pç");
-const precoEntrada = (a: Atacado) =>
-  Math.min(...a.faixas.map((f) => f.preco));
+const precoEntrada = (a: Atacado) => precoAtacadoBase(a);
 
 function mascaraTel(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 11);
@@ -58,7 +59,7 @@ export default function Atacado() {
         }))
         .filter(
           (x): x is { produto: Produto; atacado: Atacado; oculto?: boolean } =>
-            Boolean(x.atacado?.ativo && x.atacado.faixas.length && !x.oculto)
+            Boolean(x.atacado?.ativo && temPrecoAtacado(x.atacado) && !x.oculto)
         ),
     [catalogo, cfgMapa]
   );
@@ -457,7 +458,9 @@ function CardAtacado({
           mín {min} {un(atacado)}
         </span>
         <div className="mt-auto pt-sm">
-          <span className="text-caption text-on-surface-variant">a partir de</span>
+          <span className="text-caption text-on-surface-variant">
+            {atacado.faixas.length ? "a partir de" : "preço"}
+          </span>
           <div className="flex items-end justify-between">
             <span className="font-headline-md text-headline-md text-primary">
               {brl(precoEntrada(atacado))}

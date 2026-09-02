@@ -83,6 +83,7 @@ export function FormProduto({
   // Atacado (fluxo à parte /pedidos-atacado)
   const [atacadoAtivo, setAtacadoAtivo] = useState(false);
   const [atacadoUnidade, setAtacadoUnidade] = useState<"kg" | "peca">("kg");
+  const [atacadoFixo, setAtacadoFixo] = useState("");
   const [atacadoMinimo, setAtacadoMinimo] = useState("");
   const [atacadoFaixas, setAtacadoFaixas] = useState<
     { min: string; preco: string }[]
@@ -118,6 +119,7 @@ export function FormProduto({
     if (c.atacado) {
       setAtacadoAtivo(c.atacado.ativo);
       setAtacadoUnidade(c.atacado.unidade);
+      setAtacadoFixo(c.atacado.precoFixo ? String(c.atacado.precoFixo) : "");
       setAtacadoMinimo(c.atacado.minimo ? String(c.atacado.minimo) : "");
       setAtacadoFaixas(
         c.atacado.faixas.length
@@ -265,11 +267,12 @@ export function FormProduto({
         .map((v) => ({ ...v, nome: v.nome.trim() }))
         .filter((v) => v.nome),
       atacado:
-        atacadoAtivo && faixasAtacado.length
+        atacadoAtivo && (faixasAtacado.length || num(atacadoFixo))
           ? {
               ativo: true,
               unidade: atacadoUnidade,
               minimo: num(atacadoMinimo) || undefined,
+              precoFixo: num(atacadoFixo) || undefined,
               faixas: faixasAtacado,
             }
           : undefined,
@@ -798,13 +801,29 @@ export function FormProduto({
               </Campo>
             </div>
 
+            <Campo
+              rotulo={`Preço fixo (R$/${atacadoUnidade === "kg" ? "kg" : "peça"}) — o valor não muda com a quantidade`}
+              prefixo="R$"
+              sufixo={`/${atacadoUnidade === "kg" ? "kg" : "pç"}`}
+            >
+              <input
+                value={atacadoFixo}
+                onChange={(e) => setAtacadoFixo(e.target.value)}
+                inputMode="decimal"
+                placeholder="0,00"
+                className="w-full bg-transparent text-body-lg outline-none"
+              />
+            </Campo>
+
             <div>
               <label className="block text-label-md text-on-surface">
-                Faixas de preço por volume
+                Faixas de preço por volume (opcional)
               </label>
               <p className="mb-sm text-label-sm text-on-surface-variant">
-                Ex.: a partir de 10 {atacadoUnidade === "kg" ? "kg" : "peças"} →
-                R$ X {atacadoUnidade === "kg" ? "o kg" : "a peça"}.
+                Só se quiser <strong>desconto por volume</strong>. Ex.: a partir de
+                10 {atacadoUnidade === "kg" ? "kg" : "peças"} → R$ X{" "}
+                {atacadoUnidade === "kg" ? "o kg" : "a peça"}. Deixe vazio para
+                usar só o preço fixo acima.
               </p>
               <div className="space-y-sm">
                 {atacadoFaixas.map((f, i) => (

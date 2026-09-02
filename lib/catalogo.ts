@@ -42,7 +42,8 @@ export type Atacado = {
   ativo: boolean;
   unidade: "kg" | "peca";
   minimo?: number; // quantidade mínima do pedido de atacado (kg/peças)
-  faixas: FaixaAtacado[];
+  precoFixo?: number; // preço fixo por kg/peça (vale para qualquer quantidade)
+  faixas: FaixaAtacado[]; // desconto por volume (opcional; sobrepõe o fixo)
 };
 // Forma de venda de um canal: por peça, por quilo, ou ambas.
 export type FormaVenda = { peca: boolean; kg: boolean };
@@ -108,9 +109,23 @@ export function precoBase(p: Produto) {
 // quantidade (abaixo da menor faixa, usa o preço de entrada).
 export function precoAtacado(a: Atacado, qtd: number): number {
   const ordenadas = [...a.faixas].sort((x, y) => x.min - y.min);
-  let preco = ordenadas[0]?.preco ?? 0;
+  // Base = preço fixo (se houver), senão a menor faixa. As faixas de volume
+  // sobrepõem o fixo quando a quantidade as alcança (desconto por volume).
+  let preco = a.precoFixo ?? ordenadas[0]?.preco ?? 0;
   for (const f of ordenadas) if (qtd >= f.min) preco = f.preco;
   return preco;
+}
+
+// Menor preço do produto no atacado (para exibir "a partir de" no card).
+export function precoAtacadoBase(a: Atacado): number {
+  const precos = a.faixas.map((f) => f.preco);
+  if (a.precoFixo) precos.push(a.precoFixo);
+  return precos.length ? Math.min(...precos) : 0;
+}
+
+// O produto tem preço de atacado configurado? (fixo ou faixas)
+export function temPrecoAtacado(a: Atacado): boolean {
+  return Boolean(a.precoFixo || a.faixas.length);
 }
 
 // Quantidade mínima do pedido de atacado: o que o lojista definiu, ou 1 (o
