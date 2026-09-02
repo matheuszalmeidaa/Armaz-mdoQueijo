@@ -6,8 +6,10 @@ export const dynamic = "force-dynamic";
 const BUCKET = "produtos";
 
 async function garantirBucket(db: NonNullable<ReturnType<typeof getSupabaseAdmin>>) {
-  // Cria o bucket público na primeira vez; ignora se já existir.
+  // Cria o bucket público na primeira vez; se já existir, garante que está
+  // público (para as URLs das fotos abrirem sem autenticação).
   await db.storage.createBucket(BUCKET, { public: true }).catch(() => {});
+  await db.storage.updateBucket(BUCKET, { public: true }).catch(() => {});
 }
 
 // POST /api/upload — sobe uma imagem (FormData: file) e retorna {url, path}.
