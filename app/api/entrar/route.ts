@@ -1,27 +1,59 @@
 import { NextResponse } from "next/server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
-// Login simples (sem backend): confere a senha contra a env server-only
-// ADMIN_SENHA e seta o cookie de sessão. Defina ADMIN_SENHA na Vercel; o
-// padrão abaixo só serve para não travar antes de configurar.
+// Login contra a tabela `usuarios` do Supabase (senha via pgcrypto/crypt).
+// Fallback de emergência: a env ADMIN_SENHA (senha única) — evita ficar
+// trancado se o banco/função ainda não estiver configurado.
 const COOKIE = "armazem_sessao";
-const SENHA = process.env.ADMIN_SENHA ?? "armazem";
+const COOKIE_USER = "armazem_user";
+const SENHA_EMERGENCIA = process.env.ADMIN_SENHA ?? "armazem";
 
-export async function POST(request: Request) {
-  const { senha, lembrar } = await request
-    .json()
-    .catch(() => ({ senha: "" as string, lembrar: false }));
-
-  if (typeof senha !== "string" || senha !== SENHA) {
-    return NextResponse.json({ ok: false }, { status: 401 });
-  }
-
-  const res = NextResponse.json({ ok: true });
+function setSessao(nome: string, lembrar: boolean) {
+  const res = NextResponse.json({ ok: true, nome });
+  const maxAge = lembrar ? 60 * 60 * 24 * 30 : 60 * 60 * 12;
   res.cookies.set(COOKIE, "1", {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    // "Manter conectado": ~30 dias; senão, 12 horas.
-    maxAge: lembrar ? 60 * 60 * 24 * 30 : 60 * 60 * 12,
+    maxAge,
+  });
+  // Cookie legível pela UI (nome de quem entrou) — não é segredo.
+  res.cookies.set(COOKIE_USER, encodeURIComponent(nome), {
+    sameSite: "lax",
+    path: "/",
+    maxAge,
   });
   return res;
+}
+
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => ({}));
+  const email = typeof body?.email === "string" ? body.email.trim() : "";
+  const senha = typeof body?.senha === "string" ? body.senha : "";
+  const lembrar = Boolean(body?.lembrar);
+
+  if (!senha) return NextResponse.json({ ok: false }, { status: 401 });
+
+  // 1) Login pelo Supabase (usuarios + verificar_login)
+  const db = getSupabaseAdmin();
+  if (db && email) {
+    try {
+      const { data, error } = await db.rpc("verificar_login", {
+        p_email: email,
+        p_senha: senha,
+      });
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return setSessao(data[0].nome ?? "Usuário", lembrar);
+      }
+    } catch {
+      // cai no fallback abaixo
+    }
+  }
+
+  // 2) Fallback de emergência: senha única da env (sem depender do banco)
+  if (senha === SENHA_EMERGENCIA) {
+    return setSessao("Administrador", lembrar);
+  }
+
+  return NextResponse.json({ ok: false }, { status: 401 });
 }

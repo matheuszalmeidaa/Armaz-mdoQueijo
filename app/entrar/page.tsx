@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 export default function EntrarPage() {
   const router = useRouter();
-  const [email, setEmail] = useState(""); // aceito, mas ignorado até ligarmos as contas
+  const [email, setEmail] = useState(""); // validado contra a tabela usuarios do Supabase
   const [senha, setSenha] = useState("");
   const [lembrar, setLembrar] = useState(false);
   const [erro, setErro] = useState(false);
@@ -25,7 +25,7 @@ export default function EntrarPage() {
     const r = await fetch("/api/entrar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ senha, lembrar }),
+      body: JSON.stringify({ email, senha, lembrar }),
     });
     setEnviando(false);
     if (r.ok) {
@@ -129,7 +129,7 @@ export default function EntrarPage() {
             {erro && (
               <p className="flex items-center gap-1 text-label-md text-danger-red">
                 <span className="material-symbols-outlined text-[18px]">error</span>
-                Senha incorreta.
+                Email ou senha incorretos.
               </p>
             )}
 
