@@ -71,6 +71,17 @@ export function salvarProduto(p: Produto) {
   publicar();
 }
 
+// Salva o produto E a config numa ÚNICA publicação (evita a corrida de dois
+// PUTs que podia perder a config de atacado/fotos/variantes).
+export function salvarProdutoComCfg(p: Produto, cfg: ProdutoCfg) {
+  const existe = cacheProdutos.some((x) => x.id === p.id);
+  cacheProdutos = existe
+    ? cacheProdutos.map((x) => (x.id === p.id ? p : x))
+    : [...cacheProdutos, p];
+  cacheCfg = { ...cacheCfg, [p.id]: cfg };
+  publicar();
+}
+
 export function excluirProduto(id: string) {
   cacheProdutos = cacheProdutos.filter((x) => x.id !== id);
   if (cacheCfg[id]) {

@@ -7,9 +7,8 @@ import { CATEGORIAS, brl, type Produto, type FaixaAtacado } from "@/lib/catalogo
 import { useConfig, lerConfig, salvarConfig } from "@/lib/config-store";
 import {
   useCatalogo,
-  salvarProduto,
+  salvarProdutoComCfg,
   lerCfg,
-  salvarCfg,
 } from "@/lib/catalogo-store";
 import type { Variante } from "@/lib/produto-config-store";
 
@@ -255,8 +254,7 @@ export function FormProduto({
       .filter((f) => f.min > 0 && f.preco > 0)
       .sort((a, b) => a.min - b.min);
 
-    salvarProduto(produto);
-    salvarCfg(id, {
+    salvarProdutoComCfg(produto, {
       videoUrl: videoUrl.trim() || undefined,
       fotos: fotos.length ? fotos : undefined,
       oculto: oculto || undefined,
@@ -266,16 +264,18 @@ export function FormProduto({
       variantes: variantes
         .map((v) => ({ ...v, nome: v.nome.trim() }))
         .filter((v) => v.nome),
-      atacado:
-        atacadoAtivo && (faixasAtacado.length || num(atacadoFixo))
-          ? {
-              ativo: true,
-              unidade: atacadoUnidade,
-              minimo: num(atacadoMinimo) || undefined,
-              precoFixo: num(atacadoFixo) || undefined,
-              faixas: faixasAtacado,
-            }
-          : undefined,
+      // Salva sempre que o toggle estiver ligado (mesmo sem preço ainda), para o
+      // estado do "Vender no atacado" persistir. O produto só aparece no catálogo
+      // de atacado quando tiver preço fixo ou faixas (temPrecoAtacado).
+      atacado: atacadoAtivo
+        ? {
+            ativo: true,
+            unidade: atacadoUnidade,
+            minimo: num(atacadoMinimo) || undefined,
+            precoFixo: num(atacadoFixo) || undefined,
+            faixas: faixasAtacado,
+          }
+        : undefined,
     });
     setSalvo(true);
     setTimeout(() => router.push("/admin/produtos"), 700);
