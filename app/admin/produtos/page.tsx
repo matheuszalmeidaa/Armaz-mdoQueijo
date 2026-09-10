@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { brl } from "@/lib/catalogo";
 import { useCatalogo, excluirProduto } from "@/lib/catalogo-store";
+import { confirmar } from "@/components/Dialogo";
 
 export default function AdminProdutos() {
   const CATALOGO = useCatalogo();
@@ -89,8 +90,15 @@ export default function AdminProdutos() {
                       <span className="material-symbols-outlined text-[20px]">edit</span>
                     </Link>
                     <button
-                      onClick={() => {
-                        if (confirm(`Excluir "${p.nome}" do catálogo?`))
+                      onClick={async () => {
+                        if (
+                          await confirmar({
+                            titulo: "Excluir produto",
+                            mensagem: `Excluir "${p.nome}" do catálogo?`,
+                            okLabel: "Excluir",
+                            perigo: true,
+                          })
+                        )
                           excluirProduto(p.id);
                       }}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-full text-danger-red hover:bg-surface-container active:scale-95"

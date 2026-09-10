@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useConfig, salvarConfig, lojaAbertaAgora } from "@/lib/config-store";
+import { DialogHost } from "@/components/Dialogo";
 
 const NAV = [
   { href: "/admin", icon: "dashboard", label: "Dashboard" },
@@ -144,6 +145,7 @@ export default function AdminLayout({
           {children}
         </main>
       </div>
+      <DialogHost />
     </div>
   );
 }

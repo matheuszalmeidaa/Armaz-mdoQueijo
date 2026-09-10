@@ -13,6 +13,7 @@ import {
   type PagoStatus,
 } from "@/lib/pedidos-store";
 import { comandaPedidoLive, linkWhatsApp } from "@/lib/pedido-msg";
+import { confirmar } from "@/components/Dialogo";
 import {
   LABEL_STATUS,
   dataHoraCompleta,
@@ -411,8 +412,16 @@ export function PainelPedido({
               )}
             </div>
             <button
-              onClick={() => {
-                if (confirm(`Cancelar o pedido #${pedido.numero}?`)) {
+              onClick={async () => {
+                if (
+                  await confirmar({
+                    titulo: "Cancelar pedido",
+                    mensagem: `Cancelar o pedido #${pedido.numero}? Esta ação encerra o pedido.`,
+                    okLabel: "Cancelar pedido",
+                    cancelLabel: "Voltar",
+                    perigo: true,
+                  })
+                ) {
                   definirStatus(pedido.id, "Entregue");
                   salvarPedido(pedido.id, {}, "Pedido cancelado");
                   toast("Pedido cancelado");
@@ -424,8 +433,15 @@ export function PainelPedido({
               Cancelar pedido
             </button>
             <button
-              onClick={() => {
-                if (confirm(`Excluir DEFINITIVAMENTE o pedido #${pedido.numero}?`)) {
+              onClick={async () => {
+                if (
+                  await confirmar({
+                    titulo: "Excluir pedido",
+                    mensagem: `Excluir DEFINITIVAMENTE o pedido #${pedido.numero}? Não dá para desfazer.`,
+                    okLabel: "Excluir",
+                    perigo: true,
+                  })
+                ) {
                   excluirPedido(pedido.id);
                   toast("Pedido excluído");
                   onFechar();

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CATEGORIAS, brl, type Produto, type FaixaAtacado } from "@/lib/catalogo";
 import { useConfig, lerConfig, salvarConfig } from "@/lib/config-store";
+import { perguntar } from "@/components/Dialogo";
 import {
   useCatalogo,
   salvarProdutoComCfg,
@@ -99,8 +100,15 @@ export function FormProduto({
   const cfg = useConfig();
   const cats = cfg.categorias?.length ? cfg.categorias : CATEGORIAS;
 
-  function novaCategoria() {
-    const nome = window.prompt("Nome da nova categoria:")?.trim();
+  async function novaCategoria() {
+    const nome = (
+      await perguntar({
+        titulo: "Nova categoria",
+        mensagem: "Como quer chamar a nova categoria?",
+        placeholder: "ex.: Embutidos, Bebidas...",
+        okLabel: "Criar",
+      })
+    )?.trim();
     if (!nome) return;
     const c = lerConfig();
     if (!c.categorias.includes(nome))

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useLojas, criarLoja, atualizarLoja } from "@/lib/lojas-store";
+import { confirmar } from "@/components/Dialogo";
 
 export default function AdminLojas() {
   const { lojas, carregando, semBanco, recarregar } = useLojas();
@@ -124,7 +125,14 @@ function LinhaLoja({
       </button>
       <button
         onClick={async () => {
-          if (confirm(`Arquivar a loja "${loja.nome}"?`)) {
+          if (
+            await confirmar({
+              titulo: "Arquivar loja",
+              mensagem: `Arquivar a loja "${loja.nome}"? Ela sai da operação (o histórico é mantido).`,
+              okLabel: "Arquivar",
+              perigo: true,
+            })
+          ) {
             await atualizarLoja(loja.id, { ativa: false });
             onMudou();
           }

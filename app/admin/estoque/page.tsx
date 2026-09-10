@@ -24,6 +24,7 @@ import {
   fmtQtd,
 } from "@/lib/estoque";
 import { useLojas } from "@/lib/lojas-store";
+import { confirmar } from "@/components/Dialogo";
 
 const num = (v: string) => Number(String(v).replace(",", ".")) || 0;
 
@@ -282,8 +283,16 @@ function LinhaProduto({
                                 : "sem validade"}
                             </span>
                             <button
-                              onClick={() => {
-                                if (confirm("Excluir este lote?")) excluirLote(l.id);
+                              onClick={async () => {
+                                if (
+                                  await confirmar({
+                                    titulo: "Excluir lote",
+                                    mensagem: "Excluir este lote do estoque?",
+                                    okLabel: "Excluir",
+                                    perigo: true,
+                                  })
+                                )
+                                  excluirLote(l.id);
                               }}
                               className="material-symbols-outlined text-[18px] text-danger-red"
                               title="Excluir lote"
