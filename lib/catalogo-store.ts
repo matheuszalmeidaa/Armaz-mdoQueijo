@@ -91,6 +91,25 @@ export function excluirProduto(id: string) {
   publicar();
 }
 
+// Importação em massa: insere/atualiza vários produtos (e cfg opcional) numa
+// ÚNICA publicação. Produtos existentes (mesmo id) são atualizados.
+export function importarProdutos(
+  itens: { produto: Produto; cfg?: ProdutoCfg }[]
+) {
+  let lista = [...cacheProdutos];
+  let cfgs = { ...cacheCfg };
+  for (const { produto, cfg } of itens) {
+    const existe = lista.some((x) => x.id === produto.id);
+    lista = existe
+      ? lista.map((x) => (x.id === produto.id ? produto : x))
+      : [...lista, produto];
+    if (cfg) cfgs = { ...cfgs, [produto.id]: cfg };
+  }
+  cacheProdutos = lista;
+  cacheCfg = cfgs;
+  publicar();
+}
+
 export function lerCfg(id: string): ProdutoCfg {
   return cacheCfg[id] ?? {};
 }

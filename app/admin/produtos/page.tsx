@@ -18,13 +18,22 @@ export default function AdminProdutos() {
             {CATALOGO.length} produtos no catálogo — usados no delivery e no PDV.
           </p>
         </div>
-        <Link
-          href="/admin/produtos/novo"
-          className="flex items-center gap-1 rounded-lg bg-primary px-md py-2.5 text-label-md text-on-primary shadow active:scale-[0.98]"
-        >
-          <span className="material-symbols-outlined text-[20px]">add</span>
-          Novo produto
-        </Link>
+        <div className="flex gap-sm">
+          <Link
+            href="/admin/importar"
+            className="flex items-center gap-1 rounded-lg border border-outline-variant px-md py-2.5 text-label-md text-primary active:scale-[0.98]"
+          >
+            <span className="material-symbols-outlined text-[20px]">upload</span>
+            Importar
+          </Link>
+          <Link
+            href="/admin/produtos/novo"
+            className="flex items-center gap-1 rounded-lg bg-primary px-md py-2.5 text-label-md text-on-primary shadow active:scale-[0.98]"
+          >
+            <span className="material-symbols-outlined text-[20px]">add</span>
+            Novo produto
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
