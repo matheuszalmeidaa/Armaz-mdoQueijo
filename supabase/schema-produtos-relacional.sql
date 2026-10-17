@@ -5,8 +5,8 @@
 -- A migração dos dados do catalogo_app acontece sozinha no 1º acesso.
 -- ============================================================
 alter table produtos add column if not exists app_id  text;
-create unique index if not exists idx_produtos_app_id
-  on produtos (app_id) where app_id is not null;
+drop index if exists idx_produtos_app_id;
+create unique index idx_produtos_app_id on produtos (app_id);
 alter table produtos add column if not exists dados   jsonb;
 alter table produtos add column if not exists cfg     jsonb;
 alter table produtos add column if not exists ordem   integer not null default 0;
