@@ -9,6 +9,7 @@ import {
   brl,
   gramas,
   type Produto,
+  type Adicional,
 } from "@/lib/catalogo";
 import { useCart } from "@/lib/cart";
 import { useConfig } from "@/lib/config-store";
@@ -137,9 +138,31 @@ export default function ProdutoPage() {
           )}
 
           {produto.tipo === "peso" ? (
-            <SeletorPeso produto={produto} variante={variante} />
+            <SeletorPeso
+              produto={produto}
+              variante={variante}
+              adicionais={cfgP.adicionais ?? []}
+            />
           ) : (
-            <SeletorUnidade produto={produto} variante={variante} />
+            <SeletorUnidade
+              produto={produto}
+              variante={variante}
+              adicionais={cfgP.adicionais ?? []}
+            />
+          )}
+
+          {cfgP.harmonizacao && (
+            <div className="mt-lg flex items-start gap-sm rounded-xl border border-secondary/30 bg-cream-surface px-md py-3">
+              <span className="material-symbols-outlined text-secondary">
+                wine_bar
+              </span>
+              <div>
+                <p className="text-label-sm font-semibold uppercase tracking-wide text-secondary">
+                  Harmoniza com
+                </p>
+                <p className="text-body-md text-on-surface">{cfgP.harmonizacao}</p>
+              </div>
+            </div>
           )}
 
           <Detalhes produto={produto} descricao={variante?.descricao} />
@@ -254,21 +277,77 @@ function Header({ nome }: { nome: string }) {
 }
 
 // ---------- Produto por PESO ----------
+function useAdicionais(adicionais: Adicional[]) {
+  const [sel, setSel] = useState<Record<string, boolean>>({});
+  const escolhidos = adicionais.filter((a) => sel[a.id]);
+  const extra = escolhidos.reduce((s, a) => s + a.preco, 0);
+  const toggle = (id: string) => setSel((s) => ({ ...s, [id]: !s[id] }));
+  const assinatura = escolhidos.map((a) => a.id).join("+");
+  return { sel, toggle, escolhidos, extra, assinatura };
+}
+
+function ListaAdicionais({
+  adicionais,
+  sel,
+  toggle,
+}: {
+  adicionais: Adicional[];
+  sel: Record<string, boolean>;
+  toggle: (id: string) => void;
+}) {
+  if (!adicionais.length) return null;
+  return (
+    <div className="mt-lg">
+      <h2 className="mb-sm font-headline-md text-headline-md text-primary">
+        Adicionais
+      </h2>
+      <div className="space-y-sm">
+        {adicionais.map((a) => (
+          <label
+            key={a.id}
+            className={`flex cursor-pointer items-center justify-between rounded-lg border px-md py-3 transition-colors ${
+              sel[a.id]
+                ? "border-primary bg-primary-container/10"
+                : "border-outline-variant bg-surface-container-lowest"
+            }`}
+          >
+            <span className="flex items-center gap-sm text-body-md text-on-surface">
+              <input
+                type="checkbox"
+                checked={!!sel[a.id]}
+                onChange={() => toggle(a.id)}
+                className="h-5 w-5 accent-primary"
+              />
+              {a.nome}
+            </span>
+            <span className="text-body-md font-semibold text-primary">
+              + {brl(a.preco)}
+            </span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SeletorPeso({
   produto,
   variante,
+  adicionais,
 }: {
   produto: Extract<Produto, { tipo: "peso" }>;
   variante?: Variante;
+  adicionais: Adicional[];
 }) {
   const { add } = useCart();
   const router = useRouter();
   const cfg = useConfig();
   const [peso, setPeso] = useState(produto.pesos[1] ?? produto.pesos[0]);
+  const { sel, toggle, escolhidos, extra, assinatura } = useAdicionais(adicionais);
 
   const precoBaseKg = produto.faixas[0].kg;
   const kg = precoPorKg(produto, peso);
-  const total = (kg * peso) / 1000;
+  const total = (kg * peso) / 1000 + extra;
   const economia = ((precoBaseKg - kg) * peso) / 1000;
 
   const proxima = produto.faixas.find((f) => f.min > peso);
@@ -281,13 +360,14 @@ function SeletorPeso({
 
   function adicionar() {
     add({
-      key: `${produto.id}-${peso}${variante ? `-${variante.id}` : ""}`,
+      key: `${produto.id}-${peso}${variante ? `-${variante.id}` : ""}${assinatura ? `-${assinatura}` : ""}`,
       produtoId: produto.id,
       nome: variante ? `${produto.nome} — ${variante.nome}` : produto.nome,
       icone: produto.icone,
       pesoG: peso,
       qtd: 1,
       precoLinha: total,
+      adicionais: escolhidos.map((a) => ({ nome: a.nome, preco: a.preco })),
     });
     router.push("/loja");
   }
@@ -375,6 +455,8 @@ function SeletorPeso({
         </button>
       )}
 
+      <ListaAdicionais adicionais={adicionais} sel={sel} toggle={toggle} />
+
       <BarraAdicionar rotulo={gramas(peso)} total={total} onClick={adicionar} />
     </>
   );
@@ -384,25 +466,29 @@ function SeletorPeso({
 function SeletorUnidade({
   produto,
   variante,
+  adicionais,
 }: {
   produto: Extract<Produto, { tipo: "unidade" }>;
   variante?: Variante;
+  adicionais: Adicional[];
 }) {
   const { add } = useCart();
   const router = useRouter();
   const cfg = useConfig();
   const [qtd, setQtd] = useState(1);
+  const { sel, toggle, escolhidos, extra, assinatura } = useAdicionais(adicionais);
   const precoUnit = variante?.preco ?? produto.preco;
-  const total = precoUnit * qtd;
+  const total = precoUnit * qtd + extra * qtd;
 
   function adicionar() {
     add({
-      key: variante ? `${produto.id}-${variante.id}` : produto.id,
+      key: `${variante ? `${produto.id}-${variante.id}` : produto.id}${assinatura ? `-${assinatura}` : ""}`,
       produtoId: produto.id,
       nome: variante ? `${produto.nome} — ${variante.nome}` : produto.nome,
       icone: produto.icone,
       qtd,
       precoLinha: total,
+      adicionais: escolhidos.map((a) => ({ nome: a.nome, preco: a.preco })),
     });
     router.push("/loja");
   }
@@ -446,6 +532,8 @@ function SeletorUnidade({
           </button>
         </div>
       </div>
+
+      <ListaAdicionais adicionais={adicionais} sel={sel} toggle={toggle} />
 
       <BarraAdicionar
         rotulo={`${qtd} un`}

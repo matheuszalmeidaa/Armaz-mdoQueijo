@@ -74,6 +74,10 @@ export function FormProduto({
   );
   const [enviandoFoto, setEnviandoFoto] = useState(false);
   const [oculto, setOculto] = useState(false);
+  const [harmonizacao, setHarmonizacao] = useState("");
+  const [adicionais, setAdicionais] = useState<
+    { id: string; nome: string; preco: string }[]
+  >([]);
   const [descricao, setDescricao] = useState(inicial?.descricao ?? "");
   const [vinculadoId, setVinculadoId] = useState(inicial?.vinculadoId ?? "");
   const [custo, setCusto] = useState("");
@@ -139,6 +143,11 @@ export function FormProduto({
     }
     if (c.fotos && c.fotos.length) setFotos(c.fotos);
     if (c.oculto) setOculto(true);
+    if (c.harmonizacao) setHarmonizacao(c.harmonizacao);
+    if (c.adicionais?.length)
+      setAdicionais(
+        c.adicionais.map((a) => ({ id: a.id, nome: a.nome, preco: String(a.preco) }))
+      );
     if (c.pesoMedioG) setPesoMedio(String(c.pesoMedioG));
     if (c.vendaPdv) {
       setPdvPeca(c.vendaPdv.peca);
@@ -266,6 +275,10 @@ export function FormProduto({
       videoUrl: videoUrl.trim() || undefined,
       fotos: fotos.length ? fotos : undefined,
       oculto: oculto || undefined,
+      harmonizacao: harmonizacao.trim() || undefined,
+      adicionais: adicionais
+        .map((a) => ({ id: a.id, nome: a.nome.trim(), preco: num(a.preco) }))
+        .filter((a) => a.nome && a.preco >= 0),
       pesoMedioG: num(pesoMedio) || undefined,
       vendaPdv: { peca: pdvPeca, kg: pdvKg },
       vendaDelivery: { peca: delPeca, kg: delKg },
@@ -631,6 +644,80 @@ export function FormProduto({
               </option>
             ))}
           </select>
+        </div>
+      </Secao>
+
+      {/* Adicionais + harmonização */}
+      <Secao titulo="Adicionais e harmonização">
+        <Campo rotulo="Harmoniza com (aparece na página do produto)">
+          <input
+            value={harmonizacao}
+            onChange={(e) => setHarmonizacao(e.target.value)}
+            placeholder="Ex.: vinho tinto encorpado, geleia de pimenta, mel"
+            className="w-full bg-transparent text-body-lg outline-none placeholder:text-on-surface-variant/60"
+          />
+        </Campo>
+
+        <div>
+          <label className="block text-label-md text-on-surface">
+            Adicionais (complementos opcionais)
+          </label>
+          <p className="mb-sm text-label-sm text-on-surface-variant">
+            O cliente marca no checkout e soma ao total. Ex.: Geleia (+R$ 8).
+          </p>
+          <div className="space-y-sm">
+            {adicionais.map((a, i) => (
+              <div key={a.id} className="flex items-center gap-sm">
+                <input
+                  value={a.nome}
+                  onChange={(e) =>
+                    setAdicionais(
+                      adicionais.map((x, j) =>
+                        j === i ? { ...x, nome: e.target.value } : x
+                      )
+                    )
+                  }
+                  placeholder="Nome (ex.: Geleia de amora)"
+                  className="w-full flex-grow rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 text-body-md outline-none focus:border-primary"
+                />
+                <div className="flex w-28 items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2">
+                  <span className="text-label-sm text-on-surface-variant">R$</span>
+                  <input
+                    value={a.preco}
+                    onChange={(e) =>
+                      setAdicionais(
+                        adicionais.map((x, j) =>
+                          j === i ? { ...x, preco: e.target.value } : x
+                        )
+                      )
+                    }
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    className="w-full bg-transparent text-body-md outline-none"
+                  />
+                </div>
+                <button
+                  onClick={() => setAdicionais(adicionais.filter((_, j) => j !== i))}
+                  className="material-symbols-outlined text-danger-red"
+                  title="Remover"
+                >
+                  delete
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={() =>
+                setAdicionais([
+                  ...adicionais,
+                  { id: crypto.randomUUID(), nome: "", preco: "" },
+                ])
+              }
+              className="flex items-center gap-1 text-label-md text-secondary"
+            >
+              <span className="material-symbols-outlined text-[18px]">add</span>
+              Adicionar complemento
+            </button>
+          </div>
         </div>
       </Secao>
 

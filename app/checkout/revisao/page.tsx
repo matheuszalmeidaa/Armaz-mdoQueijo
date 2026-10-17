@@ -48,6 +48,7 @@ export default function Revisao() {
       nome: it.nome,
       qtd: it.pesoG ? gramas(it.pesoG) : `${it.qtd} un`,
       preco: it.precoLinha,
+      adicionais: it.adicionais,
     }));
 
     // Cria o pedido na "espinha temporária" (localStorage) — cai no painel de

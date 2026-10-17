@@ -142,6 +142,19 @@ export default function Carrinho() {
                       ? `Pedaço aprox. ${gramas(it.pesoG)}${it.qtd > 1 ? ` × ${it.qtd}` : ""}`
                       : `${it.qtd} un`}
                   </span>
+                  {it.adicionais && it.adicionais.length > 0 && (
+                    <ul className="mt-0.5">
+                      {it.adicionais.map((a, i) => (
+                        <li
+                          key={i}
+                          className="text-caption text-on-surface-variant"
+                        >
+                          + {a.nome}{" "}
+                          <span className="text-tertiary">({brl(a.preco)})</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   <p className="mt-1 font-headline-md text-headline-md text-primary">
                     {brl(it.precoLinha)}
                   </p>

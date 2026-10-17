@@ -49,12 +49,15 @@ export type Atacado = {
 export type FormaVenda = { peca: boolean; kg: boolean };
 
 export type Foto = { url: string; path?: string };
+export type Adicional = { id: string; nome: string; preco: number };
 export type ProdutoCfg = {
   videoUrl?: string;
   variantes?: Variante[];
   atacado?: Atacado;
   fotos?: Foto[]; // galeria (a 1ª é a principal, usada nos cards)
   oculto?: boolean; // ocultar do catálogo do cliente (loja/atacado)
+  adicionais?: Adicional[]; // complementos opcionais (ex.: geleia +R$8)
+  harmonizacao?: string; // "vai bem com..." mostrado na página do produto
   // NOVO — regras por canal (todas opcionais; ausência = comportamento atual):
   pesoMedioG?: number; // peso médio por peça (g); referência p/ estoque peça↔kg
   vendaPdv?: FormaVenda; // como vende no PDV

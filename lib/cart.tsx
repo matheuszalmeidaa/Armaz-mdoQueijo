@@ -15,7 +15,8 @@ export type ItemCarrinho = {
   icone: string;
   pesoG?: number; // presente em produtos por peso
   qtd: number; // produtos por unidade
-  precoLinha: number; // preço já calculado desta linha
+  precoLinha: number; // preço já calculado desta linha (inclui adicionais)
+  adicionais?: { nome: string; preco: number }[]; // complementos escolhidos
 };
 
 export type DadosCheckout = {

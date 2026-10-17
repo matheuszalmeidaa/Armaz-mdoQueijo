@@ -27,10 +27,26 @@ export function formatarEndereco(d: DadosCheckout): string {
   return (base + ref).trim() || (d.endereco ?? "");
 }
 
+type ItemMsg = {
+  nome: string;
+  qtd: string;
+  preco: number;
+  adicionais?: { nome: string; preco: number }[];
+};
+
+// Linha do item + sub-linhas dos adicionais (complementos) escolhidos.
+function linhasItem(it: ItemMsg): string[] {
+  const out = [`• ${it.qtd} · ${it.nome} — ${brl(it.preco)}`];
+  (it.adicionais ?? []).forEach((a) =>
+    out.push(`   ↳ + ${a.nome} (${brl(a.preco)})`)
+  );
+  return out;
+}
+
 type Args = {
   numero: string;
   dados: DadosCheckout;
-  itens: { nome: string; qtd: string; preco: number }[];
+  itens: ItemMsg[];
   resumo: {
     subtotal: number;
     frete: number;
@@ -67,7 +83,7 @@ export function mensagemPedido(a: Args): string {
 
   // Itens
   L.push("🛍️ *Itens*");
-  a.itens.forEach((it) => L.push(`• ${it.qtd} · ${it.nome} — ${brl(it.preco)}`));
+  a.itens.forEach((it) => L.push(...linhasItem(it)));
   L.push("");
 
   // Entrega ou retirada
@@ -119,7 +135,7 @@ type PedidoComanda = {
   modo: "entrega" | "retirada";
   entrega: string;
   pagamento: string;
-  itens: { nome: string; qtd: string; preco: number }[];
+  itens: ItemMsg[];
   total: number;
   agendado?: boolean;
 };
@@ -139,7 +155,7 @@ export function comandaPedidoLive(p: PedidoComanda): string {
   );
   L.push("");
   L.push("🛍️ *Itens*");
-  p.itens.forEach((it) => L.push(`• ${it.qtd} · ${it.nome} — ${brl(it.preco)}`));
+  p.itens.forEach((it) => L.push(...linhasItem(it)));
   L.push("");
   L.push(`💳 ${p.pagamento}`);
   L.push(`*Total: ${brl(p.total)}*`);

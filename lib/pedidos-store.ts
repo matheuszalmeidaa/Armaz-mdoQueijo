@@ -19,6 +19,7 @@ export type ItemLive = {
   qtd: string; // rótulo p/ exibição/comanda (ex.: "30 kg", "2 un")
   preco: number; // subtotal da linha
   // Campos ricos (opcionais; ausência = item antigo simples):
+  adicionais?: { nome: string; preco: number }[]; // complementos escolhidos
   produtoId?: string;
   qtdNum?: number; // quantidade numérica
   unidade?: "kg" | "un";
