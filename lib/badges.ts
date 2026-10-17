@@ -23,6 +23,8 @@ function saldoTotal(produtoId: string): number | null {
 }
 
 export function estaEsgotado(produtoId: string): boolean {
+  // Esgotado manual (marcado no cadastro) OU sem saldo no estoque controlado.
+  if (getProduto(produtoId)?.esgotado) return true;
   const t = saldoTotal(produtoId);
   return t !== null && t <= 0;
 }
@@ -33,7 +35,10 @@ export function badgesDe(produtoId: string): Badge[] {
   const un = unidadeDe(produtoId);
   const badges: Badge[] = [];
 
-  if (total !== null) {
+  // Esgotado manual vence qualquer outra badge de estoque.
+  if (p?.esgotado) {
+    badges.push({ label: "Esgotado", tipo: "esgotado" });
+  } else if (total !== null) {
     const min = minimoDe(produtoId);
     if (total <= 0) {
       badges.push({ label: "Esgotado", tipo: "esgotado" });

@@ -74,6 +74,8 @@ export function FormProduto({
   );
   const [enviandoFoto, setEnviandoFoto] = useState(false);
   const [oculto, setOculto] = useState(false);
+  const [esgotado, setEsgotado] = useState(inicial?.esgotado ?? false);
+  const [novidade, setNovidade] = useState(inicial?.novidade ?? false);
   const [harmonizacao, setHarmonizacao] = useState("");
   const [adicionais, setAdicionais] = useState<
     { id: string; nome: string; preco: string }[]
@@ -236,7 +238,8 @@ export function FormProduto({
       nota: inicial?.nota,
       origem: inicial?.origem,
       intensidade: inicial?.intensidade,
-      novidade: inicial?.novidade,
+      novidade: novidade || undefined,
+      esgotado: esgotado || undefined,
       vinculadoId: vinculadoId || undefined,
     };
 
@@ -467,6 +470,29 @@ export function FormProduto({
             Usado pra bipar no PDV e dar baixa no estoque.
           </p>
         </div>
+        <label className="flex items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5">
+          <input
+            type="checkbox"
+            checked={esgotado}
+            onChange={(e) => setEsgotado(e.target.checked)}
+            className="h-5 w-5 accent-danger-red"
+          />
+          <span className="text-body-md text-on-surface">
+            Marcar como <strong>Esgotado</strong> (mostra a tag na loja e bloqueia
+            a compra; continua visível no catálogo)
+          </span>
+        </label>
+        <label className="flex items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5">
+          <input
+            type="checkbox"
+            checked={novidade}
+            onChange={(e) => setNovidade(e.target.checked)}
+            className="h-5 w-5 accent-tertiary"
+          />
+          <span className="text-body-md text-on-surface">
+            Marcar como <strong>Novidade</strong> (destaca com a tag na loja)
+          </span>
+        </label>
         <label className="flex items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5">
           <input
             type="checkbox"

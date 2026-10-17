@@ -16,7 +16,7 @@ import { useConfig } from "@/lib/config-store";
 import { useCatalogo } from "@/lib/catalogo-store";
 import { useProdutoCfg, type Variante } from "@/lib/produto-config-store";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
-import { badgesDe, BADGE_CLS } from "@/lib/badges";
+import { badgesDe, BADGE_CLS, estaEsgotado } from "@/lib/badges";
 
 export default function ProdutoPage() {
   const { id } = useParams<{ id: string }>();
@@ -342,6 +342,7 @@ function SeletorPeso({
   const { add } = useCart();
   const router = useRouter();
   const cfg = useConfig();
+  const esgotado = estaEsgotado(produto.id);
   const [peso, setPeso] = useState(produto.pesos[1] ?? produto.pesos[0]);
   const { sel, toggle, escolhidos, extra, assinatura } = useAdicionais(adicionais);
 
@@ -359,6 +360,7 @@ function SeletorPeso({
     })();
 
   function adicionar() {
+    if (esgotado) return;
     add({
       key: `${produto.id}-${peso}${variante ? `-${variante.id}` : ""}${assinatura ? `-${assinatura}` : ""}`,
       produtoId: produto.id,
@@ -457,7 +459,12 @@ function SeletorPeso({
 
       <ListaAdicionais adicionais={adicionais} sel={sel} toggle={toggle} />
 
-      <BarraAdicionar rotulo={gramas(peso)} total={total} onClick={adicionar} />
+      <BarraAdicionar
+        rotulo={gramas(peso)}
+        total={total}
+        onClick={adicionar}
+        esgotado={esgotado}
+      />
     </>
   );
 }
@@ -475,12 +482,14 @@ function SeletorUnidade({
   const { add } = useCart();
   const router = useRouter();
   const cfg = useConfig();
+  const esgotado = estaEsgotado(produto.id);
   const [qtd, setQtd] = useState(1);
   const { sel, toggle, escolhidos, extra, assinatura } = useAdicionais(adicionais);
   const precoUnit = variante?.preco ?? produto.preco;
   const total = precoUnit * qtd + extra * qtd;
 
   function adicionar() {
+    if (esgotado) return;
     add({
       key: `${variante ? `${produto.id}-${variante.id}` : produto.id}${assinatura ? `-${assinatura}` : ""}`,
       produtoId: produto.id,
@@ -539,6 +548,7 @@ function SeletorUnidade({
         rotulo={`${qtd} un`}
         total={total}
         onClick={adicionar}
+        esgotado={esgotado}
       />
     </>
   );
@@ -548,22 +558,34 @@ function BarraAdicionar({
   rotulo,
   total,
   onClick,
+  esgotado,
 }: {
   rotulo: string;
   total: number;
   onClick: () => void;
+  esgotado?: boolean;
 }) {
   return (
     <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md lg:static lg:left-auto lg:z-auto lg:mt-lg lg:max-w-none lg:translate-x-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
       <button
         onClick={onClick}
-        className="flex w-full items-center justify-between rounded-lg bg-primary px-lg py-4 text-on-primary shadow-lg transition-transform active:scale-[0.98]"
+        disabled={esgotado}
+        className="flex w-full items-center justify-between rounded-lg bg-primary px-lg py-4 text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-50"
       >
-        <span className="flex items-center gap-2 text-body-lg font-semibold">
-          <span className="material-symbols-outlined">add_shopping_cart</span>
-          Adicionar · {rotulo}
-        </span>
-        <span className="font-headline-md text-headline-md">{brl(total)}</span>
+        {esgotado ? (
+          <span className="flex w-full items-center justify-center gap-2 text-body-lg font-semibold">
+            <span className="material-symbols-outlined">block</span>
+            Esgotado
+          </span>
+        ) : (
+          <>
+            <span className="flex items-center gap-2 text-body-lg font-semibold">
+              <span className="material-symbols-outlined">add_shopping_cart</span>
+              Adicionar · {rotulo}
+            </span>
+            <span className="font-headline-md text-headline-md">{brl(total)}</span>
+          </>
+        )}
       </button>
     </div>
   );

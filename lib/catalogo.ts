@@ -16,6 +16,7 @@ type Base = {
   origem?: string;
   intensidade?: string;
   novidade?: boolean; // tag manual "Novidade"
+  esgotado?: boolean; // tag manual "Esgotado" (sem precisar de controle de estoque)
   vinculadoId?: string; // "Vai bem com" — produto sugerido junto no carrinho
 };
 
