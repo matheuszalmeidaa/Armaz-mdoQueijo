@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePedidosLive } from "@/lib/pedidos-store";
+import { usePedidosLive, type PedidoLive } from "@/lib/pedidos-store";
 import { COLUNAS, colunaDe } from "@/lib/pedido-ui";
 import { CardPedido } from "@/components/CardPedido";
 import { PainelPedido } from "@/components/PainelPedido";
+import { ComandaTermica } from "@/components/ComandaTermica";
 
 // --- Alerta sonoro (um único AudioContext, destravado no 1º gesto) ---
 let audioCtx: AudioContext | null = null;
@@ -59,19 +60,47 @@ const COL_ACCENT: Record<string, string> = {
 export default function Recebimento() {
   const pedidos = usePedidosLive();
   const [somOn, setSomOn] = useState(true);
+  const [autoPrint, setAutoPrint] = useState(false);
   const [selId, setSelId] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
+  const [printAlvo, setPrintAlvo] = useState<PedidoLive | null>(null);
   const prevLen = useRef<number | null>(null);
+  const prevIds = useRef<Set<string>>(new Set());
   const [flash, setFlash] = useState(false);
+
+  // Lembra a preferência de impressão automática neste aparelho.
+  useEffect(() => {
+    setAutoPrint(localStorage.getItem("armazem-auto-print") === "1");
+  }, []);
+  function alternarAutoPrint() {
+    setAutoPrint((v) => {
+      const novo = !v;
+      localStorage.setItem("armazem-auto-print", novo ? "1" : "0");
+      return novo;
+    });
+  }
+
+  // Dispara a impressão de uma comanda (manual ou automática).
+  function imprimir(p: PedidoLive) {
+    setPrintAlvo(p);
+    // Aguarda o React pintar a comanda antes de abrir o diálogo de impressão.
+    setTimeout(() => window.print(), 120);
+  }
 
   useEffect(() => {
     if (prevLen.current !== null && pedidos.length > prevLen.current) {
       if (somOn) beep();
       setFlash(true);
       setTimeout(() => setFlash(false), 1500);
+      // Impressão automática do(s) pedido(s) realmente novo(s).
+      if (autoPrint) {
+        const novos = pedidos.filter((p) => !prevIds.current.has(p.id));
+        if (novos.length) imprimir(novos[0]);
+      }
     }
     prevLen.current = pedidos.length;
-  }, [pedidos.length, somOn]);
+    prevIds.current = new Set(pedidos.map((p) => p.id));
+  }, [pedidos.length, somOn, autoPrint, pedidos]);
 
   useEffect(() => {
     const destravar = () => {
@@ -115,23 +144,39 @@ export default function Recebimento() {
             Painel operacional ao vivo. Quando entra um pedido novo, toca o alerta.
           </p>
         </div>
-        <button
-          onClick={() => {
-            const novo = !somOn;
-            setSomOn(novo);
-            if (novo) beep();
-          }}
-          className={`flex items-center gap-1 rounded-lg border px-3 py-2 text-label-md ${
-            somOn
-              ? "border-tertiary/40 text-tertiary"
-              : "border-outline-variant text-on-surface-variant"
-          }`}
-        >
-          <span className="material-symbols-outlined text-[20px]">
-            {somOn ? "notifications_active" : "notifications_off"}
-          </span>
-          Som {somOn ? "ligado" : "desligado"}
-        </button>
+        <div className="flex items-center gap-sm">
+          <button
+            onClick={alternarAutoPrint}
+            title="Imprime a comanda automaticamente quando entra um pedido novo"
+            className={`flex items-center gap-1 rounded-lg border px-3 py-2 text-label-md ${
+              autoPrint
+                ? "border-tertiary/40 text-tertiary"
+                : "border-outline-variant text-on-surface-variant"
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              {autoPrint ? "print" : "print_disabled"}
+            </span>
+            Impressão {autoPrint ? "automática" : "manual"}
+          </button>
+          <button
+            onClick={() => {
+              const novo = !somOn;
+              setSomOn(novo);
+              if (novo) beep();
+            }}
+            className={`flex items-center gap-1 rounded-lg border px-3 py-2 text-label-md ${
+              somOn
+                ? "border-tertiary/40 text-tertiary"
+                : "border-outline-variant text-on-surface-variant"
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              {somOn ? "notifications_active" : "notifications_off"}
+            </span>
+            Som {somOn ? "ligado" : "desligado"}
+          </button>
+        </div>
       </div>
 
       {/* Kanban — 6 colunas responsivas, sem scroll horizontal no desktop */}
@@ -180,8 +225,16 @@ export default function Recebimento() {
       </div>
 
       {sel && (
-        <PainelPedido pedido={sel} onFechar={() => setSelId(null)} toast={toast} />
+        <PainelPedido
+          pedido={sel}
+          onFechar={() => setSelId(null)}
+          toast={toast}
+          imprimir={imprimir}
+        />
       )}
+
+      {/* Comanda térmica (oculta na tela; só aparece ao imprimir) */}
+      <ComandaTermica pedido={printAlvo} />
 
       {msg && (
         <div className="fixed bottom-4 left-1/2 z-[70] -translate-x-1/2 rounded-lg bg-on-surface px-md py-2.5 text-body-md text-surface shadow-lg">

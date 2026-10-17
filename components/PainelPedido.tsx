@@ -70,10 +70,12 @@ export function PainelPedido({
   pedido,
   onFechar,
   toast,
+  imprimir,
 }: {
   pedido: PedidoLive;
   onFechar: () => void;
   toast: (t: string) => void;
+  imprimir?: (p: PedidoLive) => void;
 }) {
   const catalogo = useCatalogo();
   const [itens, setItens] = useState<ItemEdit[]>(pedido.itens.map(itemParaEdit));
@@ -411,6 +413,15 @@ export function PainelPedido({
                 </button>
               )}
             </div>
+            {imprimir && (
+              <button
+                onClick={() => imprimir(pedido)}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-outline-variant py-2.5 text-label-md text-on-surface"
+              >
+                <span className="material-symbols-outlined text-[20px]">print</span>
+                Imprimir comanda (térmica)
+              </button>
+            )}
             <button
               onClick={async () => {
                 if (

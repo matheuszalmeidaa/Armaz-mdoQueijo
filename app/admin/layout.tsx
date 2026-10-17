@@ -14,6 +14,7 @@ const NAV = [
   { href: "/admin/lojas", icon: "storefront", label: "Lojas" },
   { href: "/admin/clientes", icon: "group", label: "Clientes" },
   { href: "/admin/relatorios", icon: "bar_chart", label: "Relatórios" },
+  { href: "/admin/qrcode", icon: "qr_code_2", label: "QR do cardápio" },
   { href: "/admin/configuracoes", icon: "settings", label: "Configurações" },
 ];
 
