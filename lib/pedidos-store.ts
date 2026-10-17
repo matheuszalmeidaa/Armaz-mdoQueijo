@@ -248,6 +248,16 @@ export function registrarVendaPDV(
   );
 }
 
+// Entrega criada PELO BALCÃO/PDV para um cliente que não conseguiu pedir sozinho.
+// Entra como "Novo" (vai para o Recebimento e segue o fluxo de entrega). O
+// endereço vem de quem está operando o PDV.
+export function registrarEntregaPDV(p: Omit<NovoPedido, "canal" | "modo">) {
+  return inserir(
+    { ...p, canal: "Delivery", modo: "entrega" },
+    { status: "Novo", marcarUltimo: false }
+  );
+}
+
 // Pedido de ATACADO: entra como "Novo" (vira comanda na gestão/recebimento) e
 // segue também para o WhatsApp. Não é o pedido acompanhado pelo cliente.
 export function registrarPedidoAtacado(

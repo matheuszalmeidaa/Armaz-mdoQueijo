@@ -11,9 +11,25 @@ import {
   type Produto,
 } from "@/lib/catalogo";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
-import { registrarVendaPDV } from "@/lib/pedidos-store";
+import {
+  registrarVendaPDV,
+  registrarEntregaPDV,
+  type PedidoLive,
+} from "@/lib/pedidos-store";
+import { comandaPedidoLive, linkWhatsApp } from "@/lib/pedido-msg";
 import { useCatalogo } from "@/lib/catalogo-store";
 import { useConfig } from "@/lib/config-store";
+
+// Máscara de telefone BR (DDD + número), até 11 dígitos.
+function mascararTel(v: string) {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
+type TipoVenda = "balcao" | "entrega";
 
 type ItemVenda = {
   key: string;
@@ -76,6 +92,12 @@ export default function PDV() {
   const [sangrias, setSangrias] = useState<{ valor: number; motivo: string }[]>([]);
   const [fecharAberto, setFecharAberto] = useState(false);
   const [cupom, setCupom] = useState<Cupom | null>(null);
+  // Venda de balcão (padrão) ou entrega para um cliente específico.
+  const [tipoVenda, setTipoVenda] = useState<TipoVenda>("balcao");
+  const [cliNome, setCliNome] = useState("");
+  const [cliTel, setCliTel] = useState("");
+  const [cliEnd, setCliEnd] = useState("");
+  const [entregaOk, setEntregaOk] = useState<PedidoLive | null>(null);
 
   const CATALOGO = useCatalogo();
   const cfgLoja = useConfig();
@@ -156,8 +178,40 @@ export default function PDV() {
     }
   }
 
+  const itensMsg = () =>
+    itens.map((it) => ({
+      nome: it.nome,
+      qtd: it.pesoG ? gramas(it.pesoG) : `${it.qtd} un`,
+      preco: it.precoLinha,
+    }));
+
+  // Entrega para um cliente: cria um pedido "Novo" que vai para o Recebimento,
+  // em vez de registrar uma venda de balcão já concluída.
+  function criarEntrega() {
+    if (itens.length === 0 || !cliNome.trim()) return;
+    const pedido = registrarEntregaPDV({
+      cliente: cliNome.trim(),
+      telefone: cliTel.replace(/\D/g, "") || undefined,
+      entrega: cliEnd.trim() || "Entrega — combinar endereço",
+      pagamento: pagamento ? PAG_LABEL[pagamento] ?? pagamento : "A combinar",
+      itens: itensMsg(),
+      total,
+    });
+    setEntregaOk(pedido);
+    setItens([]);
+    setAjuste(null);
+    setPagamento(null);
+    setAbrirVenda(false);
+    setCliNome("");
+    setCliTel("");
+    setCliEnd("");
+    setTipoVenda("balcao");
+  }
+
   function finalizar() {
-    if (itens.length === 0 || !pagamento) return;
+    if (itens.length === 0) return;
+    if (tipoVenda === "entrega") return criarEntrega();
+    if (!pagamento) return;
     setCaixa((prev) => ({
       ...prev,
       [pagamento]: {
@@ -358,6 +412,14 @@ export default function PDV() {
             totalHoje={totalHoje}
             abrirAjuste={() => setAjusteAberto(true)}
             removerAjuste={() => setAjuste(null)}
+            tipoVenda={tipoVenda}
+            setTipoVenda={setTipoVenda}
+            cliNome={cliNome}
+            setCliNome={setCliNome}
+            cliTel={cliTel}
+            setCliTel={setCliTel}
+            cliEnd={cliEnd}
+            setCliEnd={setCliEnd}
           />
         </aside>
       </div>
@@ -406,6 +468,14 @@ export default function PDV() {
               totalHoje={totalHoje}
               abrirAjuste={() => setAjusteAberto(true)}
               removerAjuste={() => setAjuste(null)}
+              tipoVenda={tipoVenda}
+              setTipoVenda={setTipoVenda}
+              cliNome={cliNome}
+              setCliNome={setCliNome}
+              cliTel={cliTel}
+              setCliTel={setCliTel}
+              cliEnd={cliEnd}
+              setCliEnd={setCliEnd}
               semCabecalho
             />
           </div>
@@ -461,6 +531,11 @@ export default function PDV() {
 
       {/* Cupom (após finalizar) */}
       {cupom && <ModalCupom cupom={cupom} onFechar={() => setCupom(null)} />}
+
+      {/* Confirmação de entrega criada */}
+      {entregaOk && (
+        <ModalEntregaOk pedido={entregaOk} onFechar={() => setEntregaOk(null)} />
+      )}
     </div>
   );
 }
@@ -481,6 +556,14 @@ function PainelVenda({
   totalHoje,
   abrirAjuste,
   removerAjuste,
+  tipoVenda,
+  setTipoVenda,
+  cliNome,
+  setCliNome,
+  cliTel,
+  setCliTel,
+  cliEnd,
+  setCliEnd,
   semCabecalho,
 }: {
   itens: ItemVenda[];
@@ -497,8 +580,18 @@ function PainelVenda({
   totalHoje: number;
   abrirAjuste: () => void;
   removerAjuste: () => void;
+  tipoVenda: TipoVenda;
+  setTipoVenda: (t: TipoVenda) => void;
+  cliNome: string;
+  setCliNome: (v: string) => void;
+  cliTel: string;
+  setCliTel: (v: string) => void;
+  cliEnd: string;
+  setCliEnd: (v: string) => void;
   semCabecalho?: boolean;
 }) {
+  const entrega = tipoVenda === "entrega";
+  const faltaCliente = entrega && !cliNome.trim();
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col">
       {!semCabecalho && (
@@ -583,6 +676,61 @@ function PainelVenda({
 
       {/* Rodapé */}
       <div className="flex-shrink-0 border-t border-outline-variant/20 bg-surface p-md">
+        {/* Tipo da venda: balcão ou entrega para um cliente */}
+        <div className="mb-sm flex rounded-lg border border-outline-variant p-1">
+          <button
+            onClick={() => setTipoVenda("balcao")}
+            className={`flex flex-1 items-center justify-center gap-1 rounded-md py-1.5 text-label-md transition-colors ${
+              !entrega ? "bg-primary text-on-primary" : "text-on-surface"
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              storefront
+            </span>
+            Balcão
+          </button>
+          <button
+            onClick={() => setTipoVenda("entrega")}
+            className={`flex flex-1 items-center justify-center gap-1 rounded-md py-1.5 text-label-md transition-colors ${
+              entrega ? "bg-primary text-on-primary" : "text-on-surface"
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              local_shipping
+            </span>
+            Entrega
+          </button>
+        </div>
+
+        {/* Dados do cliente (só para entrega) */}
+        {entrega && (
+          <div className="mb-sm space-y-sm rounded-lg bg-surface-container-low p-sm">
+            <input
+              value={cliNome}
+              onChange={(e) => setCliNome(e.target.value)}
+              placeholder="Nome do cliente *"
+              className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 text-body-md outline-none focus:border-primary"
+            />
+            <input
+              value={cliTel}
+              onChange={(e) => setCliTel(mascararTel(e.target.value))}
+              inputMode="numeric"
+              placeholder="Telefone / WhatsApp"
+              className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 text-body-md outline-none focus:border-primary"
+            />
+            <input
+              value={cliEnd}
+              onChange={(e) => setCliEnd(e.target.value)}
+              placeholder="Endereço de entrega"
+              className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 text-body-md outline-none focus:border-primary"
+            />
+            <p className="text-caption text-on-surface-variant">
+              A entrega vai para o Recebimento como pedido novo. O pagamento pode
+              ser definido depois.
+            </p>
+          </div>
+        )}
+
         {/* Desconto / acréscimo */}
         <div className="mb-sm">
           {ajuste ? (
@@ -619,6 +767,11 @@ function PainelVenda({
         </div>
 
         {/* Pagamento */}
+        {entrega && (
+          <p className="mb-1 text-label-sm text-on-surface-variant">
+            Pagamento {pagamento ? "" : "(opcional)"}
+          </p>
+        )}
         <div className="mb-sm grid grid-cols-4 gap-sm">
           {PAGAMENTOS.map((p) => (
             <button
@@ -646,14 +799,20 @@ function PainelVenda({
 
         <button
           onClick={finalizar}
-          disabled={itens.length === 0 || !pagamento}
+          disabled={
+            itens.length === 0 || faltaCliente || (!entrega && !pagamento)
+          }
           className="w-full rounded-lg bg-primary py-4 text-body-lg font-semibold text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
         >
           {itens.length === 0
             ? "Adicione produtos"
-            : !pagamento
-              ? "Escolha o pagamento"
-              : "Finalizar Venda"}
+            : entrega
+              ? faltaCliente
+                ? "Informe o cliente"
+                : "Criar entrega"
+              : !pagamento
+                ? "Escolha o pagamento"
+                : "Finalizar Venda"}
         </button>
       </div>
     </div>
@@ -1018,6 +1177,67 @@ function ModalCupom({ cupom, onFechar }: { cupom: Cupom; onFechar: () => void })
         </div>
       </div>
     </div>
+  );
+}
+
+// ---------------- Modal de entrega criada ----------------
+function ModalEntregaOk({
+  pedido,
+  onFechar,
+}: {
+  pedido: PedidoLive;
+  onFechar: () => void;
+}) {
+  const zap = (pedido.telefone ?? "").replace(/\D/g, "");
+  const link = zap ? linkWhatsApp(zap, comandaPedidoLive(pedido)) : null;
+  return (
+    <Overlay onFechar={onFechar}>
+      <div className="flex flex-col items-center text-center">
+        <span className="material-symbols-outlined text-[48px] text-tertiary">
+          local_shipping
+        </span>
+        <h3 className="mt-sm font-headline-md text-headline-md text-primary">
+          Entrega criada!
+        </h3>
+        <p className="mt-1 text-body-md text-on-surface-variant">
+          Pedido <strong className="text-on-surface">#{pedido.numero}</strong>{" "}
+          para <strong className="text-on-surface">{pedido.cliente}</strong> foi
+          para o Recebimento.
+        </p>
+        {pedido.entrega && (
+          <p className="mt-1 flex items-center gap-1 text-label-md text-on-surface-variant">
+            <span className="material-symbols-outlined text-[18px]">
+              location_on
+            </span>
+            {pedido.entrega}
+          </p>
+        )}
+        <p className="mt-sm font-headline-md text-headline-md text-primary">
+          {brl(pedido.total)}
+        </p>
+      </div>
+
+      <div className="mt-md flex gap-sm">
+        {link && (
+          <a
+            href={link}
+            target="_blank"
+            rel="noreferrer"
+            onClick={onFechar}
+            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-outline-variant py-3 text-label-md text-primary"
+          >
+            <span className="material-symbols-outlined text-[20px]">chat</span>
+            Enviar ao cliente
+          </a>
+        )}
+        <button
+          onClick={onFechar}
+          className="flex-1 rounded-lg bg-primary py-3 text-label-md font-semibold text-on-primary"
+        >
+          Nova venda
+        </button>
+      </div>
+    </Overlay>
   );
 }
 
