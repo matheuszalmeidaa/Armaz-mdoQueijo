@@ -165,6 +165,41 @@ export default function ProdutoPage() {
             </div>
           )}
 
+          {cfgP.ficha && (cfgP.ficha.fabricacao || cfgP.ficha.ingredientes) && (
+            <section className="mt-lg space-y-md">
+              {cfgP.ficha.fabricacao && (
+                <div className="flex items-start gap-sm rounded-xl border border-outline-variant/20 bg-surface-container-lowest px-md py-3">
+                  <span className="material-symbols-outlined text-secondary">
+                    factory
+                  </span>
+                  <div>
+                    <p className="text-label-sm font-semibold uppercase tracking-wide text-on-surface-variant">
+                      Como é feito
+                    </p>
+                    <p className="mt-0.5 text-body-md leading-relaxed text-on-surface">
+                      {cfgP.ficha.fabricacao}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {cfgP.ficha.ingredientes && (
+                <div className="flex items-start gap-sm rounded-xl border border-outline-variant/20 bg-surface-container-lowest px-md py-3">
+                  <span className="material-symbols-outlined text-secondary">
+                    receipt_long
+                  </span>
+                  <div>
+                    <p className="text-label-sm font-semibold uppercase tracking-wide text-on-surface-variant">
+                      Ingredientes e conservação
+                    </p>
+                    <p className="mt-0.5 text-body-md leading-relaxed text-on-surface">
+                      {cfgP.ficha.ingredientes}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
           <Detalhes produto={produto} descricao={variante?.descricao} />
         </div>
       </div>

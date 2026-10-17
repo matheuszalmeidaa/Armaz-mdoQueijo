@@ -81,6 +81,11 @@ export function FormProduto({
     { id: string; nome: string; preco: string }[]
   >([]);
   const [descricao, setDescricao] = useState(inicial?.descricao ?? "");
+  // Ficha do produto
+  const [produtor, setProdutor] = useState(inicial?.produtor ?? "");
+  const [origem, setOrigem] = useState(inicial?.origem ?? "");
+  const [fabricacao, setFabricacao] = useState("");
+  const [ingredientes, setIngredientes] = useState("");
   const [vinculadoId, setVinculadoId] = useState(inicial?.vinculadoId ?? "");
   const [custo, setCusto] = useState("");
   const [codigoBarras, setCodigoBarras] = useState("");
@@ -146,6 +151,8 @@ export function FormProduto({
     if (c.fotos && c.fotos.length) setFotos(c.fotos);
     if (c.oculto) setOculto(true);
     if (c.harmonizacao) setHarmonizacao(c.harmonizacao);
+    if (c.ficha?.fabricacao) setFabricacao(c.ficha.fabricacao);
+    if (c.ficha?.ingredientes) setIngredientes(c.ficha.ingredientes);
     if (c.adicionais?.length)
       setAdicionais(
         c.adicionais.map((a) => ({ id: a.id, nome: a.nome, preco: String(a.preco) }))
@@ -230,13 +237,13 @@ export function FormProduto({
     const base = {
       id,
       nome: nome.trim(),
-      produtor: inicial?.produtor,
+      produtor: produtor.trim() || undefined,
       categoria,
       icone: inicial?.icone ?? ICONE_CATEGORIA[categoria] ?? "nutrition",
       img: fotos[0]?.url ?? "",
       descricao: descricao.trim() || undefined,
       nota: inicial?.nota,
-      origem: inicial?.origem,
+      origem: origem.trim() || undefined,
       intensidade: inicial?.intensidade,
       novidade: novidade || undefined,
       esgotado: esgotado || undefined,
@@ -279,6 +286,13 @@ export function FormProduto({
       fotos: fotos.length ? fotos : undefined,
       oculto: oculto || undefined,
       harmonizacao: harmonizacao.trim() || undefined,
+      ficha:
+        fabricacao.trim() || ingredientes.trim()
+          ? {
+              fabricacao: fabricacao.trim() || undefined,
+              ingredientes: ingredientes.trim() || undefined,
+            }
+          : undefined,
       adicionais: adicionais
         .map((a) => ({ id: a.id, nome: a.nome.trim(), preco: num(a.preco) }))
         .filter((a) => a.nome && a.preco >= 0),
@@ -861,6 +875,54 @@ export function FormProduto({
               Adicionar complemento
             </button>
           </div>
+        </div>
+      </Secao>
+
+      {/* Ficha do produto — aparece na página de detalhe pro cliente */}
+      <Secao titulo="Ficha do produto">
+        <p className="text-label-sm text-on-surface-variant">
+          Informações que ajudam o cliente a escolher. Aparecem na página do
+          produto. Deixe em branco o que não quiser mostrar.
+        </p>
+        <Campo rotulo="Produtor / marca">
+          <input
+            value={produtor}
+            onChange={(e) => setProdutor(e.target.value)}
+            placeholder="Ex: Fazenda da Roça"
+            className="w-full bg-transparent text-body-lg outline-none placeholder:text-on-surface-variant/60"
+          />
+        </Campo>
+        <Campo rotulo="Origem">
+          <input
+            value={origem}
+            onChange={(e) => setOrigem(e.target.value)}
+            placeholder="Ex: Serra da Canastra — MG"
+            className="w-full bg-transparent text-body-lg outline-none placeholder:text-on-surface-variant/60"
+          />
+        </Campo>
+        <div>
+          <label className="block text-label-md text-on-surface">
+            Modo de fabricação / cura
+          </label>
+          <textarea
+            value={fabricacao}
+            onChange={(e) => setFabricacao(e.target.value)}
+            rows={3}
+            placeholder="Ex: Queijo artesanal de leite cru, maturado por 60 dias em tábua de madeira."
+            className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-md outline-none focus:border-primary"
+          />
+        </div>
+        <div>
+          <label className="block text-label-md text-on-surface">
+            Ingredientes / validade / conservação
+          </label>
+          <textarea
+            value={ingredientes}
+            onChange={(e) => setIngredientes(e.target.value)}
+            rows={3}
+            placeholder="Ex: Leite cru, sal e coalho. Validade 90 dias. Conservar refrigerado (até 8°C)."
+            className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-md outline-none focus:border-primary"
+          />
         </div>
       </Secao>
 
