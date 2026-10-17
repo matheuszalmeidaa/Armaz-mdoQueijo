@@ -323,8 +323,122 @@ export function FormProduto({
       ? Math.round((1 - custoNum / precoRef) * 100)
       : null;
 
+  // --- Prévia ao vivo (como o produto aparece na loja enquanto é editado) ---
+  const icone = inicial?.icone ?? ICONE_CATEGORIA[categoria] ?? "nutrition";
+  const fotoPrincipal = fotos[0]?.url;
+  const temVideo = videoUrl.trim().length > 0;
+  const adicsPreview = adicionais.filter((a) => a.nome.trim());
+
+  function Previa() {
+    return (
+      <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low p-md">
+        <div className="mb-sm flex items-center gap-1 text-label-sm font-semibold uppercase tracking-wide text-on-surface-variant">
+          <span className="material-symbols-outlined text-[18px] text-secondary">
+            visibility
+          </span>
+          Prévia na loja
+        </div>
+
+        {/* Moldura de celular com o card igual ao da vitrine */}
+        <div className="mx-auto max-w-[15rem] rounded-[1.5rem] border-[6px] border-on-surface/80 bg-background p-2">
+          <div className="overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+            <div className="relative">
+              {fotoPrincipal ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={fotoPrincipal}
+                  alt=""
+                  className={`aspect-square w-full object-cover ${esgotado ? "opacity-50 grayscale" : ""}`}
+                />
+              ) : (
+                <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-secondary-container to-primary-container/20">
+                  <span className="material-symbols-outlined text-[48px] text-primary/40">
+                    {icone}
+                  </span>
+                </div>
+              )}
+              <div className="absolute left-1.5 top-1.5 flex flex-col items-start gap-1">
+                {esgotado && (
+                  <span className="rounded-full bg-error-container px-2 py-0.5 text-[10px] font-semibold text-on-error-container shadow-sm">
+                    Esgotado
+                  </span>
+                )}
+                {novidade && !esgotado && (
+                  <span className="rounded-full bg-tertiary px-2 py-0.5 text-[10px] font-semibold text-on-tertiary shadow-sm">
+                    Novidade
+                  </span>
+                )}
+              </div>
+              {temVideo && (
+                <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white">
+                  <span className="material-symbols-outlined text-[16px]">
+                    play_arrow
+                  </span>
+                </span>
+              )}
+            </div>
+            <div className="p-sm">
+              <h4 className="line-clamp-1 text-label-md text-on-surface">
+                {nome || "Nome do produto"}
+              </h4>
+              <span className="text-caption text-on-surface-variant">
+                {categoria}
+              </span>
+              <div className="mt-1 flex flex-col leading-tight">
+                {tipo === "peso" && (
+                  <span className="text-caption text-on-surface-variant">
+                    a partir de
+                  </span>
+                )}
+                <span className="font-headline-md text-headline-md text-primary">
+                  {previewPreco > 0 ? brl(previewPreco) : "R$ —"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Resumo do que o cliente vê */}
+        <div className="mt-md space-y-1.5 text-label-sm text-on-surface-variant">
+          {descricao.trim() && (
+            <p className="line-clamp-3">
+              <span className="text-on-surface">Descrição: </span>
+              {descricao.trim()}
+            </p>
+          )}
+          {harmonizacao.trim() && (
+            <p className="flex items-start gap-1">
+              <span className="material-symbols-outlined text-[16px] text-secondary">
+                wine_bar
+              </span>
+              {harmonizacao.trim()}
+            </p>
+          )}
+          {adicsPreview.length > 0 && (
+            <p className="flex items-start gap-1">
+              <span className="material-symbols-outlined text-[16px] text-secondary">
+                add_circle
+              </span>
+              {adicsPreview.length} complemento
+              {adicsPreview.length === 1 ? "" : "s"}:{" "}
+              {adicsPreview.map((a) => a.nome.trim()).join(", ")}
+            </p>
+          )}
+          {oculto && (
+            <p className="flex items-center gap-1 text-danger-red">
+              <span className="material-symbols-outlined text-[16px]">
+                visibility_off
+              </span>
+              Oculto — não aparece para o cliente.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto max-w-[48rem] space-y-lg">
+    <div className="mx-auto max-w-[80rem] space-y-lg">
       <div className="flex items-center gap-sm">
         <Link
           href="/admin/produtos"
@@ -335,6 +449,9 @@ export function FormProduto({
         <h1 className="font-headline-lg text-headline-lg text-primary">{titulo}</h1>
       </div>
 
+      <div className="grid gap-lg xl:grid-cols-[1fr_20rem] xl:items-start">
+        {/* Coluna do formulário */}
+        <div className="min-w-0 space-y-lg">
       {/* Básico */}
       <Secao titulo="Informações básicas">
         <div>
@@ -1040,6 +1157,15 @@ export function FormProduto({
             {rotuloAcao}
           </button>
         </div>
+      </div>
+        </div>
+
+        {/* Prévia ao vivo (lado direito, fixa ao rolar) */}
+        <aside className="hidden xl:block">
+          <div className="sticky top-4">
+            <Previa />
+          </div>
+        </aside>
       </div>
     </div>
   );
