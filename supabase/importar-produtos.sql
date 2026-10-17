@@ -1,5 +1,12 @@
 -- Importa 261 produtos do CSV para a tabela relacional `produtos`.
--- Idempotente (ON CONFLICT). Rode DEPOIS do schema-produtos-relacional.sql.
+-- Idempotente (ON CONFLICT). Autossuficiente: cria as colunas necessárias.
+
+-- 0) Garante as colunas relacionais na tabela produtos (caso não existam)
+alter table produtos add column if not exists app_id  text;
+create unique index if not exists idx_produtos_app_id on produtos (app_id) where app_id is not null;
+alter table produtos add column if not exists dados   jsonb;
+alter table produtos add column if not exists cfg     jsonb;
+alter table produtos add column if not exists ordem   integer not null default 0;
 
 -- 1) Registra as categorias na config (para aparecerem na loja)
 insert into config_app (id, dados) values ('principal','{}'::jsonb) on conflict (id) do nothing;
