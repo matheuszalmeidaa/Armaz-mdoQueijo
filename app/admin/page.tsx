@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { brl } from "@/lib/catalogo";
 import { usePedidosLive, type StatusLive } from "@/lib/pedidos-store";
 
@@ -11,10 +12,20 @@ const DOT: Record<StatusLive, string> = {
   Entregue: "bg-tertiary",
 };
 
+// Filtro de canal da lista de pedidos recentes. "Delivery" = pedidos do site.
+type FiltroCanal = "Todos" | "Delivery" | "PDV" | "Atacado";
+const FILTROS: { id: FiltroCanal; label: string }[] = [
+  { id: "Todos", label: "Todos" },
+  { id: "Delivery", label: "Site (delivery)" },
+  { id: "PDV", label: "PDV" },
+  { id: "Atacado", label: "Atacado" },
+];
+
 const META_DIA = 3200;
 
 export default function AdminDashboard() {
   const pedidos = usePedidosLive();
+  const [filtro, setFiltro] = useState<FiltroCanal>("Todos");
 
   const inicioHoje = new Date();
   inicioHoje.setHours(0, 0, 0, 0);
@@ -36,7 +47,9 @@ export default function AdminDashboard() {
     { icone: "local_shipping", rotulo: "Entregas ativas", valor: String(ativas), delta: `${concluidas} concluídas`, positivo: true },
   ];
 
-  const recentes = pedidos.slice(0, 6);
+  const recentes = pedidos
+    .filter((p) => filtro === "Todos" || p.canal === filtro)
+    .slice(0, 6);
 
   return (
     <div className="space-y-lg">
@@ -66,7 +79,7 @@ export default function AdminDashboard() {
       <div className="grid gap-md lg:grid-cols-3">
         {/* Pedidos recentes */}
         <section className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-md shadow-[0_2px_8px_rgba(0,0,0,0.06)] lg:col-span-2">
-          <div className="mb-md flex items-center justify-between">
+          <div className="mb-sm flex items-center justify-between">
             <h2 className="font-headline-md text-headline-md text-primary">
               Pedidos recentes
             </h2>
@@ -74,9 +87,29 @@ export default function AdminDashboard() {
               Ver todos
             </Link>
           </div>
+
+          {/* Filtro por canal (Site = delivery) */}
+          <div className="no-scrollbar mb-md flex gap-sm overflow-x-auto">
+            {FILTROS.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setFiltro(f.id)}
+                className={`whitespace-nowrap rounded-full border px-3 py-1 text-label-sm transition-colors ${
+                  filtro === f.id
+                    ? "border-primary bg-primary text-on-primary"
+                    : "border-outline-variant text-on-surface-variant"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
           {recentes.length === 0 ? (
             <p className="py-6 text-center text-body-md text-on-surface-variant">
-              Nenhum pedido ainda. Delivery e PDV aparecem aqui.
+              {filtro === "Todos"
+                ? "Nenhum pedido ainda. Delivery e PDV aparecem aqui."
+                : `Nenhum pedido no canal ${filtro === "Delivery" ? "Site (delivery)" : filtro}.`}
             </p>
           ) : (
             <div className="overflow-x-auto">
