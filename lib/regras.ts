@@ -65,6 +65,23 @@ export function buscarCupom(
   return lista.find((c) => c.ativo && c.codigo.toUpperCase() === alvo) ?? null;
 }
 
+// Resolve o cupom do pedido: prioriza o cupom AUTOMÁTICO (quando o código
+// aplicado é o dele); senão procura o código manual na lista da loja.
+export function resolverCupom(
+  dados: DadosCheckout,
+  cupons?: CupomAplicavel[]
+): CupomAplicavel | null {
+  const codigo = dados.cupom?.trim().toUpperCase();
+  if (
+    dados.cupomAuto &&
+    codigo &&
+    dados.cupomAuto.codigo.toUpperCase() === codigo
+  ) {
+    return dados.cupomAuto;
+  }
+  return buscarCupom(dados.cupom, cupons);
+}
+
 // Config aplicada nos cálculos. Os padrões vêm de REGRAS; o lojista pode
 // sobrescrever via config-store (que passa um ConfigLoja compatível aqui).
 export type RegrasCalculo = {
@@ -96,7 +113,7 @@ export function calcularResumo(
   const frete = freteDe(dados, cfg);
   const descontoPix =
     (dados.pagamento ?? "pix") === "pix" ? subtotal * cfg.descontoPix : 0;
-  const cupom = buscarCupom(dados.cupom, cfg.cupons);
+  const cupom = resolverCupom(dados, cfg.cupons);
   const atingiuMinimo = !!cupom && subtotal >= cupom.minimo;
   const descontoCupom =
     !cupom || !atingiuMinimo

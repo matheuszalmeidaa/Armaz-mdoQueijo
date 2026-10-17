@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { CupomAplicavel } from "./regras";
 
 export type ItemCarrinho = {
   key: string; // produtoId + peso (para diferenciar pesos do mesmo produto)
@@ -36,6 +37,9 @@ export type DadosCheckout = {
   zonaId?: string;
   lojaRetiradaId?: string;
   cupom?: string;
+  // Cupom automático (1ª compra / aniversário / inativo) resolvido no checkout.
+  cupomAuto?: CupomAplicavel;
+  aniversario?: string; // data de nascimento do cliente (opcional)
 };
 
 type CartCtx = {

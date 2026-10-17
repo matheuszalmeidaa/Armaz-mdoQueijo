@@ -2,9 +2,29 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/lib/cart";
 import { useClientes } from "@/lib/pedidos-store";
+import { useConfig } from "@/lib/config-store";
+import { cupomAutomatico, CODIGOS_AUTO } from "@/lib/promocoes";
+
+// Lembra o aniversário por telefone (neste aparelho) para não pedir de novo.
+const ANIV_KEY = "armazem-aniversarios";
+function lerAniversarios(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(ANIV_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+function salvarAniversario(telDigitos: string, data: string) {
+  if (!telDigitos || !data) return;
+  try {
+    const m = lerAniversarios();
+    m[telDigitos] = data;
+    localStorage.setItem(ANIV_KEY, JSON.stringify(m));
+  } catch {}
+}
 
 // Máscara de telefone BR, limitada a 11 dígitos (DDD + número).
 function mascararTelefone(v: string) {
@@ -19,8 +39,10 @@ export default function Identificacao() {
   const router = useRouter();
   const { dados, setDados } = useCart();
   const clientes = useClientes();
+  const cfg = useConfig();
   const [telefone, setTelefone] = useState(dados.telefone ?? "");
   const [nome, setNome] = useState(dados.nome ?? "");
+  const [aniversario, setAniversario] = useState(dados.aniversario ?? "");
 
   const digitos = telefone.replace(/\D/g, "");
   // Número é o ID do cliente: se já existe (neste aparelho), reconhece.
@@ -33,12 +55,41 @@ export default function Identificacao() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existente?.chave]);
 
+  // Lembra o aniversário salvo para este número (quando ainda não preenchido).
+  useEffect(() => {
+    if (digitos.length >= 10 && !aniversario) {
+      const salvo = lerAniversarios()[digitos];
+      if (salvo) setAniversario(salvo);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [digitos]);
+
+  // Cupom automático aplicável a este cliente (1ª compra / aniversário / inativo).
+  const promo = useMemo(() => {
+    if (digitos.length < 10) return null;
+    return cupomAutomatico(cfg.promoAuto, {
+      qtdPedidos: existente?.qtdPedidos ?? 0,
+      inativoDias: existente?.inativoDias ?? 0,
+      aniversario,
+    });
+  }, [digitos, existente, aniversario, cfg.promoAuto]);
+
   const valido = nome.trim().length > 2 && digitos.length >= 10;
 
   function continuar() {
     // Sempre mantemos o primeiro nome cadastrado para este número (para nós).
     const nomeCanonico = existente?.nome ?? nome.trim();
-    setDados({ nome: nomeCanonico, telefone });
+    if (aniversario) salvarAniversario(digitos, aniversario);
+
+    // Aplica o cupom automático — sem sobrescrever um cupom manual já digitado.
+    const manualValido =
+      dados.cupom && !CODIGOS_AUTO.includes(dados.cupom.toUpperCase());
+    const extra =
+      promo && !manualValido
+        ? { cupom: promo.codigo, cupomAuto: promo }
+        : {};
+
+    setDados({ nome: nomeCanonico, telefone, aniversario, ...extra });
     // Retirada na loja não precisa de endereço.
     router.push(
       dados.modo === "retirada" ? "/checkout/revisao" : "/checkout/endereco"
@@ -121,6 +172,47 @@ export default function Identificacao() {
             className="w-full bg-transparent text-body-lg outline-none placeholder:text-on-surface-variant/60"
           />
         </div>
+
+        {/* Aniversário (opcional) — habilita o mimo de aniversário */}
+        {cfg.promoAuto?.aniversario?.ativo && (
+          <>
+            <label className="mt-lg block text-label-md text-on-surface">
+              Seu aniversário{" "}
+              <span className="text-on-surface-variant">(opcional)</span>
+            </label>
+            <div className="mt-sm flex items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-3 focus-within:border-primary">
+              <span className="material-symbols-outlined text-on-surface-variant">
+                cake
+              </span>
+              <input
+                type="date"
+                value={aniversario}
+                onChange={(e) => setAniversario(e.target.value)}
+                className="w-full bg-transparent text-body-lg outline-none"
+              />
+            </div>
+            <p className="mt-1 text-caption text-on-surface-variant">
+              Ganhe um mimo no mês do seu aniversário. 🎂
+            </p>
+          </>
+        )}
+
+        {/* Cupom automático detectado */}
+        {promo && (
+          <div className="mt-lg flex items-start gap-sm rounded-lg border border-tertiary/40 bg-tertiary/5 px-md py-3">
+            <span className="material-symbols-outlined text-tertiary">
+              redeem
+            </span>
+            <div>
+              <p className="text-label-md font-semibold text-tertiary">
+                Você ganhou um cupom!
+              </p>
+              <p className="text-body-md text-on-surface-variant">
+                {promo.descricao} — aplicado automaticamente no seu pedido.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Nota de segurança */}
         <div className="mt-lg flex items-start gap-sm rounded-lg border border-dashed border-secondary/40 bg-cream-surface px-md py-3">

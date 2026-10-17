@@ -19,6 +19,25 @@ export type CupomCfg = {
   ativo: boolean;
 };
 
+// Promoções automáticas: cupons que o sistema aplica sozinho no checkout
+// conforme o histórico do cliente (1ª compra, aniversário, cliente inativo).
+export type PromoRegra = {
+  ativo: boolean;
+  tipo: "percent" | "reais";
+  valor: number;
+  minimo: number; // 0 = sem mínimo
+};
+export type PromoAuto = {
+  primeiraCompra: PromoRegra;
+  aniversario: PromoRegra;
+  inativo: PromoRegra & { dias: number }; // inativo há N dias
+};
+export const PROMO_PADRAO: PromoAuto = {
+  primeiraCompra: { ativo: false, tipo: "percent", valor: 10, minimo: 0 },
+  aniversario: { ativo: false, tipo: "percent", valor: 15, minimo: 0 },
+  inativo: { ativo: false, tipo: "reais", valor: 20, minimo: 0, dias: 60 },
+};
+
 export type DiaHorario = { aberto: boolean; abre: string; fecha: string };
 export type Excecao = {
   data: string; // "YYYY-MM-DD"
@@ -40,6 +59,7 @@ export type ConfigLoja = {
   cashbackAtivo: boolean;
   cashbackPercent: number; // fração 0..1
   cupons: CupomCfg[];
+  promoAuto: PromoAuto; // cupons automáticos por perfil do cliente
   aceitaPedidos: boolean; // toggle mestre do delivery
   horarios: DiaHorario[]; // 0=domingo .. 6=sábado
   excecoes: Excecao[]; // dias personalizados (sobrepõem a semana)
@@ -70,6 +90,7 @@ export const CONFIG_PADRAO: ConfigLoja = {
   cashbackAtivo: REGRAS.cashback.ativo,
   cashbackPercent: REGRAS.cashback.percent,
   cupons: [], // sem cupons de exemplo — o lojista cria os seus em Configurações
+  promoAuto: PROMO_PADRAO,
   aceitaPedidos: true,
   horarios: Array.from({ length: 7 }, () => ({
     aberto: true,

@@ -8,8 +8,10 @@ import {
   salvarConfig,
   DIAS_SEMANA,
   FOTOS_VITRINE,
+  PROMO_PADRAO,
   type ConfigLoja,
   type CupomCfg,
+  type PromoAuto,
   type DiaHorario,
   type Excecao,
 } from "@/lib/config-store";
@@ -31,6 +33,7 @@ export default function Configuracoes() {
     String(Math.round(CONFIG_PADRAO.cashbackPercent * 100))
   );
   const [cupons, setCupons] = useState<CupomCfg[]>(CONFIG_PADRAO.cupons);
+  const [promoAuto, setPromoAuto] = useState<PromoAuto>(CONFIG_PADRAO.promoAuto);
   const [aceitaPedidos, setAceitaPedidos] = useState(CONFIG_PADRAO.aceitaPedidos);
   const [entregaAtiva, setEntregaAtiva] = useState(CONFIG_PADRAO.entregaAtiva);
   const [retiradaAtiva, setRetiradaAtiva] = useState(CONFIG_PADRAO.retiradaAtiva);
@@ -73,6 +76,7 @@ export default function Configuracoes() {
     setCashbackAtivo(c.cashbackAtivo);
     setCashbackPct(String(Math.round(c.cashbackPercent * 100)));
     setCupons(c.cupons);
+    setPromoAuto(c.promoAuto ?? PROMO_PADRAO);
     setAceitaPedidos(c.aceitaPedidos);
     setHorarios(c.horarios);
     setExcecoes(c.excecoes);
@@ -110,6 +114,7 @@ export default function Configuracoes() {
       cupons: cupons
         .map((cp) => ({ ...cp, codigo: cp.codigo.trim().toUpperCase() }))
         .filter((cp) => cp.codigo),
+      promoAuto,
       aceitaPedidos,
       horarios,
       excecoes: excecoes.filter((e) => e.data),
@@ -147,6 +152,13 @@ export default function Configuracoes() {
   }
   function delCupom(i: number) {
     setCupons(cupons.filter((_, j) => j !== i));
+  }
+
+  function updPromo<K extends keyof PromoAuto>(
+    chave: K,
+    patch: Partial<PromoAuto[K]>
+  ) {
+    setPromoAuto((p) => ({ ...p, [chave]: { ...p[chave], ...patch } }));
   }
 
   function updHorario(i: number, patch: Partial<DiaHorario>) {
@@ -645,6 +657,46 @@ export default function Configuracoes() {
         </div>
       </Secao>
 
+      {/* Promoções automáticas */}
+      <Secao icone="auto_awesome" titulo="Promoções automáticas">
+        <p className="text-label-sm text-on-surface-variant">
+          Cupons que o sistema aplica sozinho no checkout, de acordo com o
+          cliente. Sem precisar divulgar código.
+        </p>
+
+        <PromoBloco
+          titulo="Cupom de 1ª compra"
+          descricao="Para quem está comprando pela primeira vez."
+          regra={promoAuto.primeiraCompra}
+          onToggle={(ativo) => updPromo("primeiraCompra", { ativo })}
+          onTipo={(tipo) => updPromo("primeiraCompra", { tipo })}
+          onValor={(valor) => updPromo("primeiraCompra", { valor })}
+          onMinimo={(minimo) => updPromo("primeiraCompra", { minimo })}
+        />
+
+        <PromoBloco
+          titulo="Mimo de aniversário"
+          descricao="Vale durante todo o mês de aniversário do cliente (ele informa a data no checkout)."
+          regra={promoAuto.aniversario}
+          onToggle={(ativo) => updPromo("aniversario", { ativo })}
+          onTipo={(tipo) => updPromo("aniversario", { tipo })}
+          onValor={(valor) => updPromo("aniversario", { valor })}
+          onMinimo={(minimo) => updPromo("aniversario", { minimo })}
+        />
+
+        <PromoBloco
+          titulo="Sentimos sua falta"
+          descricao="Para clientes que não compram há um tempo."
+          regra={promoAuto.inativo}
+          onToggle={(ativo) => updPromo("inativo", { ativo })}
+          onTipo={(tipo) => updPromo("inativo", { tipo })}
+          onValor={(valor) => updPromo("inativo", { valor })}
+          onMinimo={(minimo) => updPromo("inativo", { minimo })}
+          dias={promoAuto.inativo.dias}
+          onDias={(dias) => updPromo("inativo", { dias })}
+        />
+      </Secao>
+
       {/* Produtos por peso */}
       <Secao icone="scale" titulo="Produtos por peso">
         <Campo
@@ -801,6 +853,90 @@ function ToggleLinha({
           }`}
         />
       </button>
+    </div>
+  );
+}
+
+function PromoBloco({
+  titulo,
+  descricao,
+  regra,
+  onToggle,
+  onTipo,
+  onValor,
+  onMinimo,
+  dias,
+  onDias,
+}: {
+  titulo: string;
+  descricao: string;
+  regra: { ativo: boolean; tipo: "percent" | "reais"; valor: number; minimo: number };
+  onToggle: (ativo: boolean) => void;
+  onTipo: (tipo: "percent" | "reais") => void;
+  onValor: (valor: number) => void;
+  onMinimo: (minimo: number) => void;
+  dias?: number;
+  onDias?: (dias: number) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-outline-variant/60 bg-surface-container-low p-md">
+      <ToggleLinha
+        titulo={titulo}
+        sub={descricao}
+        ativo={regra.ativo}
+        onToggle={() => onToggle(!regra.ativo)}
+      />
+      {regra.ativo && (
+        <div className="mt-sm grid grid-cols-2 gap-sm sm:grid-cols-3">
+          <label className="flex items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2">
+            <select
+              value={regra.tipo}
+              onChange={(e) => onTipo(e.target.value as "percent" | "reais")}
+              className="w-full bg-transparent text-body-md outline-none"
+            >
+              <option value="percent">Desconto %</option>
+              <option value="reais">Desconto R$</option>
+            </select>
+          </label>
+          <div className="flex items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2">
+            <span className="text-label-sm text-on-surface-variant">
+              {regra.tipo === "percent" ? "%" : "R$"}
+            </span>
+            <input
+              value={String(regra.valor)}
+              onChange={(e) => onValor(num(e.target.value))}
+              inputMode="decimal"
+              className="w-full bg-transparent text-body-md outline-none"
+            />
+          </div>
+          <div className="flex items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2">
+            <span className="text-label-sm text-on-surface-variant">
+              a partir de R$
+            </span>
+            <input
+              value={String(regra.minimo)}
+              onChange={(e) => onMinimo(num(e.target.value))}
+              inputMode="decimal"
+              placeholder="0"
+              className="w-full bg-transparent text-body-md outline-none"
+            />
+          </div>
+          {onDias && (
+            <div className="col-span-2 flex items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2 sm:col-span-3">
+              <span className="text-label-sm text-on-surface-variant">
+                inativo há pelo menos
+              </span>
+              <input
+                value={String(dias ?? 0)}
+                onChange={(e) => onDias(num(e.target.value))}
+                inputMode="numeric"
+                className="w-14 bg-transparent text-body-md outline-none"
+              />
+              <span className="text-label-sm text-on-surface-variant">dias</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
