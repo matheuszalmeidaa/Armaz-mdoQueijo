@@ -1443,11 +1443,9 @@ export function FormProduto({
       </div>
         </div>
 
-        {/* Prévia ao vivo (lado direito, acompanha o scroll) */}
-        <aside className="hidden xl:block">
-          <div className="sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto">
-            <Previa />
-          </div>
+        {/* Prévia ao vivo (lado direito, fica fixa enquanto o formulário rola) */}
+        <aside className="hidden xl:block xl:self-start xl:sticky xl:top-4 xl:max-h-[calc(100dvh-2rem)] xl:overflow-y-auto">
+          <Previa />
         </aside>
       </div>
     </div>
