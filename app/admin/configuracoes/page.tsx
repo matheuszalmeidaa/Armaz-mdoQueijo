@@ -9,6 +9,7 @@ import {
   DIAS_SEMANA,
   FOTOS_VITRINE,
   PROMO_PADRAO,
+  lojaAbertaAgora,
   type ConfigLoja,
   type CupomCfg,
   type PromoAuto,
@@ -191,6 +192,35 @@ export default function Configuracoes() {
 
       {/* Status da loja */}
       <Secao icone="storefront" titulo="Status da loja (delivery)">
+        {(() => {
+          const st = lojaAbertaAgora({
+            aceitaPedidos,
+            horarios,
+            excecoes,
+          } as ConfigLoja);
+          return (
+            <div
+              className={`flex items-start gap-sm rounded-lg px-md py-2.5 ${
+                st.aberta
+                  ? "bg-tertiary-container/30 text-tertiary"
+                  : "bg-error-container/40 text-on-error-container"
+              }`}
+            >
+              <span className="material-symbols-outlined">
+                {st.aberta ? "check_circle" : "schedule"}
+              </span>
+              <p className="text-body-md">
+                Agora para o cliente:{" "}
+                <strong>{st.aberta ? "ABERTA" : "FECHADA"}</strong>
+                {!st.aberta && st.motivo ? ` — ${st.motivo}` : ""}
+                <span className="mt-0.5 block text-label-sm opacity-80">
+                  Reflete o que está salvo. Alterou algo aqui? Clique em “Salvar
+                  configurações” no fim da página.
+                </span>
+              </p>
+            </div>
+          );
+        })()}
         <div className="flex items-center justify-between">
           <div>
             <p className="text-label-md text-on-surface">Aceitar pedidos</p>

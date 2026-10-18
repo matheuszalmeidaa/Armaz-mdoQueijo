@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useConfig, salvarConfig, lojaAbertaAgora } from "@/lib/config-store";
-import { DialogHost } from "@/components/Dialogo";
+import { DialogHost, confirmar } from "@/components/Dialogo";
 
 const NAV = [
   { href: "/admin", icon: "dashboard", label: "Dashboard" },
@@ -29,7 +29,20 @@ export default function AdminLayout({
   const status = lojaAbertaAgora(cfg);
   // Clicar liga/desliga o "aceitar pedidos" (mestre) e salva — reflete em todo
   // o app na hora.
-  const alternarLoja = () => {
+  const alternarLoja = async () => {
+    // Ao FECHAR pelo botão mestre, confirma — ele mantém a loja fechada até
+    // reabrir, mesmo dentro do horário (evita fechar sem querer e esquecer).
+    if (cfg.aceitaPedidos) {
+      const ok = await confirmar({
+        titulo: "Fechar a loja?",
+        mensagem:
+          "A loja fica fechada até você reabrir aqui — mesmo dentro do horário de atendimento. Para o abre/fecha do dia a dia, use o Horário em Configurações.",
+        okLabel: "Fechar loja",
+        cancelLabel: "Cancelar",
+        perigo: true,
+      });
+      if (!ok) return;
+    }
     salvarConfig({ ...cfg, aceitaPedidos: !cfg.aceitaPedidos });
   };
 
