@@ -6,6 +6,12 @@ import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import { CheckoutStepper } from "@/components/CheckoutStepper";
 import { ResumoPedidoMini } from "@/components/ResumoPedidoMini";
+import {
+  useEnderecos,
+  salvarEndereco,
+  removerEndereco,
+  type EnderecoSalvo,
+} from "@/lib/enderecos";
 
 // Mascara dados sensíveis, como no design ("Math***", "73998112***")
 function mascarar(valor: string, visiveis: number) {
@@ -23,9 +29,29 @@ export default function Endereco() {
   const [complemento, setComplemento] = useState(dados.complemento ?? "");
   const [bairro, setBairro] = useState(dados.bairro ?? "");
   const [referencia, setReferencia] = useState(dados.referencia ?? "");
+  const [selId, setSelId] = useState<string | null>(null);
+  const enderecos = useEnderecos();
 
   const valido =
     rua.trim().length > 2 && numero.trim().length > 0 && bairro.trim().length > 1;
+
+  function escolher(e: EnderecoSalvo) {
+    setSelId(e.id);
+    setRua(e.rua);
+    setNumero(e.numero);
+    setComplemento(e.complemento ?? "");
+    setBairro(e.bairro);
+    setReferencia(e.referencia ?? "");
+    if (e.geoLink) setDados({ geoLink: e.geoLink });
+  }
+  function novoEndereco() {
+    setSelId(null);
+    setRua("");
+    setNumero("");
+    setComplemento("");
+    setBairro("");
+    setReferencia("");
+  }
 
   function usarLocalizacao() {
     if (!navigator.geolocation) {
@@ -84,6 +110,15 @@ export default function Endereco() {
       referencia: referencia.trim(),
       endereco: enderecoStr,
     });
+    // Guarda/atualiza no catálogo de endereços deste aparelho.
+    salvarEndereco({
+      rua: rua.trim(),
+      numero: numero.trim(),
+      complemento: complemento.trim() || undefined,
+      bairro: bairro.trim(),
+      referencia: referencia.trim() || undefined,
+      geoLink: dados.geoLink,
+    });
     router.push("/checkout/revisao");
   }
 
@@ -135,6 +170,74 @@ export default function Endereco() {
           Endereço de entrega
         </h2>
 
+        {/* Endereços salvos — escolher um já cadastrado */}
+        {enderecos.length > 0 && (
+          <div className="mt-sm space-y-sm">
+            <p className="text-label-sm text-on-surface-variant">
+              Seus endereços
+            </p>
+            {enderecos.map((e) => {
+              const ativo = selId === e.id;
+              return (
+                <div
+                  key={e.id}
+                  className={`flex items-start gap-sm rounded-xl border px-md py-3 transition-colors ${
+                    ativo
+                      ? "border-primary bg-primary-container/5"
+                      : "border-outline-variant bg-surface-container-lowest"
+                  }`}
+                >
+                  <button
+                    onClick={() => escolher(e)}
+                    className="flex min-w-0 flex-grow items-start gap-sm text-left"
+                  >
+                    <span
+                      className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${
+                        ativo ? "border-primary" : "border-outline-variant"
+                      }`}
+                    >
+                      {ativo && (
+                        <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+                      )}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-label-md text-on-surface">
+                        {e.rua}, {e.numero}
+                        {e.complemento ? ` — ${e.complemento}` : ""}
+                      </span>
+                      <span className="block truncate text-caption text-on-surface-variant">
+                        {e.bairro}
+                        {e.referencia ? ` · ${e.referencia}` : ""}
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      removerEndereco(e.id);
+                      if (selId === e.id) novoEndereco();
+                    }}
+                    className="flex-shrink-0 text-danger-red active:scale-90"
+                    aria-label="Remover endereço"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">
+                      delete
+                    </span>
+                  </button>
+                </div>
+              );
+            })}
+            <button
+              onClick={novoEndereco}
+              className="flex items-center gap-1 text-label-md text-secondary"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                add_location_alt
+              </span>
+              Usar um novo endereço
+            </button>
+          </div>
+        )}
+
         <button
           onClick={usarLocalizacao}
           className="mt-sm flex w-full items-center justify-center gap-sm rounded-lg border border-primary/40 bg-primary-container/5 py-3 text-label-md font-medium text-primary active:scale-[0.99]"
@@ -166,32 +269,47 @@ export default function Endereco() {
               className="col-span-2"
               rotulo="Rua"
               valor={rua}
-              onChange={setRua}
+              onChange={(v) => {
+                setRua(v);
+                setSelId(null);
+              }}
               placeholder="Nome da rua"
             />
             <CampoEnd
               rotulo="Número"
               valor={numero}
-              onChange={setNumero}
+              onChange={(v) => {
+                setNumero(v);
+                setSelId(null);
+              }}
               placeholder="123"
             />
           </div>
           <CampoEnd
             rotulo="Complemento (opcional)"
             valor={complemento}
-            onChange={setComplemento}
+            onChange={(v) => {
+              setComplemento(v);
+              setSelId(null);
+            }}
             placeholder="Apto, bloco, casa..."
           />
           <CampoEnd
             rotulo="Bairro"
             valor={bairro}
-            onChange={setBairro}
+            onChange={(v) => {
+              setBairro(v);
+              setSelId(null);
+            }}
             placeholder="Seu bairro"
           />
           <CampoEnd
             rotulo="Ponto de referência (opcional)"
             valor={referencia}
-            onChange={setReferencia}
+            onChange={(v) => {
+              setReferencia(v);
+              setSelId(null);
+            }}
             placeholder="Perto de..., portão azul..."
           />
         </div>
