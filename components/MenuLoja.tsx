@@ -1,9 +1,31 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useConfig } from "@/lib/config-store";
-import { useMeusPedidos } from "@/lib/pedidos-store";
+import {
+  useMeusPedidos,
+  usePedidosPorTelefone,
+  type MeuPedido,
+} from "@/lib/pedidos-store";
+import { useCart } from "@/lib/cart";
 import { brl } from "@/lib/catalogo";
+
+// Máscara de telefone BR (DDD + número), até 11 dígitos.
+function mascararTel(v: string) {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
+const LABEL_STATUS: Record<string, string> = {
+  Novo: "Recebido",
+  Preparando: "Separando",
+  "Em rota": "A caminho",
+  Entregue: "Concluído",
+};
 
 export function MenuLoja({
   aberto,
@@ -13,7 +35,35 @@ export function MenuLoja({
   onFechar: () => void;
 }) {
   const cfg = useConfig();
-  const meus = useMeusPedidos();
+  const { dados, setDados } = useCart();
+  const locais = useMeusPedidos();
+  const [tel, setTel] = useState(dados.telefone ?? "");
+  const dig = tel.replace(/\D/g, "");
+  const temTel = dig.length >= 10;
+  const { pedidos: doServidor, carregando } = usePedidosPorTelefone(
+    temTel ? dig : undefined
+  );
+
+  // Itens a exibir: por telefone (qualquer aparelho) ou, sem telefone, os deste
+  // aparelho (histórico local).
+  const porTelefone = doServidor.map((p) => ({
+    id: p.id,
+    numero: p.numero,
+    criadoEm: p.criadoEm,
+    total: p.total,
+    modo: p.modo,
+    status: p.status as string,
+  }));
+  const lista: (MeuPedido & { status?: string })[] = temTel
+    ? porTelefone
+    : locais;
+
+  function salvarTel(v: string) {
+    setTel(v);
+    const d = v.replace(/\D/g, "");
+    if (d.length >= 10) setDados({ telefone: v });
+  }
+
   const zap = cfg.whatsapp.replace(/\D/g, "");
   const ig = cfg.redes?.instagram?.trim();
   const igHref = ig
@@ -58,13 +108,37 @@ export function MenuLoja({
             </span>
             Meus pedidos
           </h3>
-          {meus.length === 0 ? (
+
+          {/* Telefone = identificação do cliente (vê os pedidos em qualquer aparelho) */}
+          <div className="mb-sm flex items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 focus-within:border-primary">
+            <span className="material-symbols-outlined text-on-surface-variant">
+              call
+            </span>
+            <input
+              value={tel}
+              onChange={(e) => salvarTel(mascararTel(e.target.value))}
+              inputMode="numeric"
+              placeholder="Seu telefone (com DDD)"
+              className="w-full bg-transparent text-body-md outline-none placeholder:text-on-surface-variant/60"
+            />
+          </div>
+
+          {carregando ? (
+            <p className="mb-md flex items-center gap-2 px-1 text-body-md text-on-surface-variant">
+              <span className="material-symbols-outlined animate-spin text-[18px] text-primary">
+                progress_activity
+              </span>
+              Buscando seus pedidos…
+            </p>
+          ) : lista.length === 0 ? (
             <p className="mb-md rounded-lg bg-surface-container-low px-md py-3 text-body-md text-on-surface-variant">
-              Você ainda não fez pedidos por aqui.
+              {temTel
+                ? "Nenhum pedido encontrado para este número."
+                : "Informe seu telefone acima para ver seus pedidos de qualquer aparelho."}
             </p>
           ) : (
             <ul className="mb-md space-y-sm">
-              {meus.map((p) => (
+              {lista.map((p) => (
                 <li key={p.id}>
                   <Link
                     href={`/pedido/${p.id}`}
@@ -78,6 +152,11 @@ export function MenuLoja({
                       <span className="flex flex-col leading-tight">
                         <span className="text-label-md text-on-surface">
                           Pedido #{p.numero}
+                          {p.status && (
+                            <span className="ml-1 rounded-full bg-primary-container/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                              {LABEL_STATUS[p.status] ?? p.status}
+                            </span>
+                          )}
                         </span>
                         <span className="text-caption text-on-surface-variant">
                           {new Date(p.criadoEm).toLocaleDateString("pt-BR", {
@@ -130,8 +209,8 @@ export function MenuLoja({
         </div>
 
         <p className="border-t border-outline-variant/20 px-md py-sm text-caption text-on-surface-variant">
-          Seus pedidos ficam salvos neste aparelho. Guarde o link de cada pedido
-          para acompanhar de qualquer lugar.
+          Seus pedidos ficam atribuídos ao seu telefone — informe o número para
+          acompanhar de qualquer aparelho.
         </p>
       </aside>
     </>

@@ -490,6 +490,47 @@ export function usePedidoPorId(id: string): {
   return { pedido, carregando };
 }
 
+// Pedidos de um cliente pelo TELEFONE — "Meus pedidos" em qualquer aparelho.
+export function usePedidosPorTelefone(telefone?: string): {
+  pedidos: PedidoLive[];
+  carregando: boolean;
+} {
+  const [pedidos, setPedidos] = useState<PedidoLive[]>([]);
+  const [carregando, setCarregando] = useState(false);
+  const dig = (telefone ?? "").replace(/\D/g, "");
+
+  useEffect(() => {
+    if (dig.length < 10) {
+      setPedidos([]);
+      setCarregando(false);
+      return;
+    }
+    let vivo = true;
+    setCarregando(true);
+    async function buscar() {
+      try {
+        const res = await fetch(`/api/pedidos?telefone=${dig}`, {
+          cache: "no-store",
+        });
+        const j = await res.json();
+        if (!vivo) return;
+        setPedidos((j.pedidos ?? []).map(rowParaLive));
+      } catch {
+        // mantém o que tiver
+      }
+      if (vivo) setCarregando(false);
+    }
+    buscar();
+    const t = setInterval(buscar, 20000);
+    return () => {
+      vivo = false;
+      clearInterval(t);
+    };
+  }, [dig]);
+
+  return { pedidos, carregando };
+}
+
 // --- Clientes derivados dos pedidos ---
 export type ClienteAgg = {
   chave: string; // telefone (ou nome quando sem telefone)

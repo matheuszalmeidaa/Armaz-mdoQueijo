@@ -4,7 +4,9 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 export const dynamic = "force-dynamic";
 
 // GET /api/pedidos — lista os pedidos (gestão/recebimento).
-export async function GET() {
+// Com ?telefone=<digitos> retorna só os pedidos daquele número (cliente vê os
+// seus em qualquer aparelho). Compara por dígitos, tolerante a formatação.
+export async function GET(request: Request) {
   const db = getSupabaseAdmin();
   if (!db) return NextResponse.json({ pedidos: [], semBanco: true });
 
@@ -15,6 +17,18 @@ export async function GET() {
     .limit(300);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const tel = new URL(request.url).searchParams.get("telefone");
+  if (tel) {
+    const dig = tel.replace(/\D/g, "");
+    if (dig.length < 10) return NextResponse.json({ pedidos: [] });
+    const meus = (data ?? []).filter(
+      (p: { telefone?: string | null }) =>
+        (p.telefone ?? "").replace(/\D/g, "") === dig
+    );
+    return NextResponse.json({ pedidos: meus });
+  }
+
   return NextResponse.json({ pedidos: data });
 }
 
