@@ -378,12 +378,14 @@ function CardProduto({ produto }: { produto: Produto }) {
         )}
       </div>
       <div className="flex flex-grow flex-col p-sm">
-        <h4 className="line-clamp-1 text-label-md text-on-surface">
+        <h4 className="line-clamp-2 min-h-[2.5em] text-label-md leading-tight text-on-surface">
           {produto.nome}
         </h4>
-        <span className="text-caption text-on-surface-variant">
-          {produto.produtor}
-        </span>
+        {produto.produtor && (
+          <span className="line-clamp-1 text-caption text-on-surface-variant">
+            {produto.produtor}
+          </span>
+        )}
         <div className="mt-auto flex items-end justify-between pt-sm">
           <div className="flex flex-col leading-tight">
             {porPeso && (
