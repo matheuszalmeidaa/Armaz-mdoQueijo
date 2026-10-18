@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CATEGORIAS, brl, precoBase, type Produto } from "@/lib/catalogo";
 import { useCatalogo, useCfgMapa } from "@/lib/catalogo-store";
 import { useCart } from "@/lib/cart";
@@ -45,6 +45,32 @@ export default function LojaHome() {
   const status = lojaAbertaAgora(cfg);
   const [avisoVisto, setAvisoVisto] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
+
+  // Lê a categoria do link (ex.: /loja?categoria=Zero%20Lactose) ao abrir —
+  // permite mandar ao cliente um link já filtrado por categoria.
+  useEffect(() => {
+    const c = new URLSearchParams(window.location.search).get("categoria");
+    if (c) setCat(c);
+  }, []);
+
+  const [linkCopiado, setLinkCopiado] = useState(false);
+  // Clicar no filtro atualiza a URL (sem recarregar) para ficar compartilhável.
+  function escolherCat(c: string) {
+    setCat(c);
+    setLinkCopiado(false);
+    const url =
+      c === "Todos"
+        ? window.location.pathname
+        : `${window.location.pathname}?categoria=${encodeURIComponent(c)}`;
+    window.history.replaceState(null, "", url);
+  }
+  async function copiarLinkCategoria() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setLinkCopiado(true);
+      setTimeout(() => setLinkCopiado(false), 2000);
+    } catch {}
+  }
 
   // Só produtos visíveis ao cliente: não ocultos e categoria não escondida.
   const visiveis = CATALOGO.filter(
@@ -127,7 +153,7 @@ export default function LojaHome() {
             {["Todos", ...CATS].map((c) => (
               <button
                 key={c}
-                onClick={() => setCat(c)}
+                onClick={() => escolherCat(c)}
                 className={`flex-shrink-0 rounded-full border px-4 py-1.5 text-label-md transition-all active:scale-95 ${
                   cat === c
                     ? "border-primary bg-primary text-on-primary"
@@ -142,6 +168,23 @@ export default function LojaHome() {
 
         {/* Grade de produtos agrupada por categoria */}
         <section className="mt-lg px-md">
+          {cat !== "Todos" && (
+            <div className="mb-md flex flex-wrap items-center justify-between gap-sm rounded-lg bg-surface-container-low px-md py-2">
+              <span className="text-label-md text-on-surface">
+                Filtrando por{" "}
+                <strong className="text-primary">{cat}</strong>
+              </span>
+              <button
+                onClick={copiarLinkCategoria}
+                className="flex items-center gap-1 text-label-md text-secondary active:scale-95"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  {linkCopiado ? "check" : "link"}
+                </span>
+                {linkCopiado ? "Link copiado!" : "Copiar link desta categoria"}
+              </button>
+            </div>
+          )}
           {lista.length === 0 && (
             <div className="mx-auto max-w-[28rem] rounded-xl border border-outline-variant/40 bg-cream-surface p-lg text-center">
               <span className="material-symbols-outlined text-[40px] text-primary/40">
