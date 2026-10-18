@@ -82,7 +82,7 @@ export default function Revisao() {
     const link = linkWhatsApp(cfg.whatsapp, texto);
     if (link) window.open(link, "_blank");
 
-    router.push("/pedido");
+    router.push(`/pedido/${pedido.id}`);
     setTimeout(limpar, 400);
   }
 

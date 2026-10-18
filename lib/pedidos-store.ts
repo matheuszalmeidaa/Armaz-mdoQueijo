@@ -405,6 +405,51 @@ export function useUltimoPedido(): PedidoLive | undefined {
   return lista.find((p) => p.id === id) ?? ler().find((p) => p.id === id);
 }
 
+// Pedido por ID — para o link de acompanhamento compartilhável (/pedido/[id]).
+// Busca no cache local e no servidor (funciona em qualquer aparelho) e atualiza
+// o status a cada 15s.
+export function usePedidoPorId(id: string): {
+  pedido?: PedidoLive;
+  carregando: boolean;
+} {
+  const [pedido, setPedido] = useState<PedidoLive | undefined>(() =>
+    cacheLista.find((p) => p.id === id)
+  );
+  const [carregando, setCarregando] = useState(!pedido);
+
+  useEffect(() => {
+    let vivo = true;
+    const local = () => cacheLista.find((p) => p.id === id);
+    async function buscar() {
+      const l = local();
+      if (l && vivo) setPedido(l);
+      try {
+        const res = await fetch(`/api/pedidos/${id}`, { cache: "no-store" });
+        const j = await res.json();
+        if (!vivo) return;
+        if (j.pedido) setPedido(rowParaLive(j.pedido));
+      } catch {
+        // mantém o que tiver do cache local
+      }
+      if (vivo) setCarregando(false);
+    }
+    buscar();
+    const t = setInterval(buscar, 15000);
+    const h = () => {
+      const l = local();
+      if (l) setPedido(l);
+    };
+    window.addEventListener(EVT, h);
+    return () => {
+      vivo = false;
+      clearInterval(t);
+      window.removeEventListener(EVT, h);
+    };
+  }, [id]);
+
+  return { pedido, carregando };
+}
+
 // --- Clientes derivados dos pedidos ---
 export type ClienteAgg = {
   chave: string; // telefone (ou nome quando sem telefone)

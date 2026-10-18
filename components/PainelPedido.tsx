@@ -422,6 +422,24 @@ export function PainelPedido({
                 Imprimir comanda (térmica)
               </button>
             )}
+            {zapCliente && (
+              <button
+                onClick={() => {
+                  const link = `${window.location.origin}/pedido/${pedido.id}`;
+                  const wa = linkWhatsApp(
+                    pedido.telefone ?? "",
+                    `Olá, ${pedido.cliente}! Acompanhe seu pedido #${pedido.numero} em tempo real: ${link}`
+                  );
+                  if (wa) window.open(wa, "_blank");
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-outline-variant py-2.5 text-label-md text-primary"
+              >
+                <span className="material-symbols-outlined text-[20px]">
+                  share_location
+                </span>
+                Enviar link de acompanhamento
+              </button>
+            )}
             <button
               onClick={async () => {
                 if (
