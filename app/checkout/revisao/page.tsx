@@ -161,14 +161,19 @@ export default function Revisao() {
                 className="h-12 w-12 flex-shrink-0 rounded-lg"
                 iconSize={24}
               />
-              <div className="flex-grow leading-tight">
-                <p className="line-clamp-1 text-label-md text-on-surface">
+              <div className="min-w-0 flex-grow leading-tight">
+                <p className="line-clamp-2 text-label-md text-on-surface">
                   {it.nome}
                   {it.pesoG ? ` - ${gramas(it.pesoG)}` : ""}
                 </p>
                 <span className="text-caption text-on-surface-variant">
                   Qtd: {it.qtd}
                 </span>
+                {it.adicionais && it.adicionais.length > 0 && (
+                  <span className="block text-caption text-on-surface-variant">
+                    + {it.adicionais.map((a) => a.nome).join(", ")}
+                  </span>
+                )}
               </div>
               <span className="font-headline-md text-headline-md text-primary">
                 {brl(it.precoLinha)}
@@ -316,6 +321,14 @@ export default function Revisao() {
 
       {/* Finalizar */}
       <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
+        <div className="mb-sm flex items-center justify-between">
+          <span className="text-body-md text-on-surface-variant">
+            Total a pagar
+          </span>
+          <span className="font-display text-headline-lg text-primary">
+            {brl(r.total)}
+          </span>
+        </div>
         {podeAgendar && (
           <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-secondary">
             <span className="material-symbols-outlined text-[16px]">event</span>
@@ -331,15 +344,22 @@ export default function Revisao() {
         <button
           onClick={finalizar}
           disabled={!podeFinalizar}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-lg py-4 text-body-lg font-semibold text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
+          className="flex w-full items-center justify-between gap-2 rounded-lg bg-primary px-lg py-4 text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
         >
-          {podeFinalizar
-            ? podeAgendar
-              ? "Enviar pedido agendado pelo WhatsApp"
-              : "Enviar pedido pelo WhatsApp"
-            : "Loja fechada no momento"}
+          <span className="flex items-center gap-2 text-body-lg font-semibold">
+            {podeFinalizar && (
+              <span className="material-symbols-outlined">chat</span>
+            )}
+            {podeFinalizar
+              ? podeAgendar
+                ? "Enviar pedido agendado"
+                : "Enviar pelo WhatsApp"
+              : "Loja fechada no momento"}
+          </span>
           {podeFinalizar && (
-            <span className="material-symbols-outlined">chat</span>
+            <span className="font-headline-md text-headline-md">
+              {brl(r.total)}
+            </span>
           )}
         </button>
       </div>
