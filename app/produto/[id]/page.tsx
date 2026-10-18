@@ -109,7 +109,8 @@ export default function ProdutoPage() {
 
         <div className="px-md lg:px-0">
           <p className="text-label-sm uppercase tracking-wide text-on-surface-variant">
-            {produto.categoria} · {produto.produtor}
+            {produto.categoria}
+            {produto.produtor ? ` · ${produto.produtor}` : ""}
           </p>
           <h1 className="mt-xs font-headline-lg text-headline-lg leading-tight text-on-surface">
             {produto.nome}
@@ -219,6 +220,31 @@ function Detalhes({
   descricao?: string;
 }) {
   const texto = descricao || produto.descricao;
+  const [compartilhado, setCompartilhado] = useState(false);
+  const infos = [
+    produto.produtor && { icone: "storefront", rotulo: "Produzido por", valor: produto.produtor },
+    produto.origem && { icone: "location_on", rotulo: "Origem", valor: produto.origem },
+    produto.intensidade && { icone: "eco", rotulo: "Intensidade", valor: produto.intensidade },
+  ].filter(Boolean) as { icone: string; rotulo: string; valor: string }[];
+
+  async function compartilhar() {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const msg = `Olha esse produto no Armazém do Queijo: ${produto.nome}`;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: produto.nome, text: msg, url });
+        return;
+      } catch {
+        // cancelou ou falhou → tenta copiar
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCompartilhado(true);
+      setTimeout(() => setCompartilhado(false), 2000);
+    } catch {}
+  }
+
   return (
     <section className="mt-lg">
       {produto.nota && (
@@ -240,24 +266,22 @@ function Detalhes({
         </>
       )}
 
-      {(produto.origem || produto.intensidade) && (
+      {infos.length > 0 && (
         <div className="mt-md grid grid-cols-2 gap-sm">
-          {produto.origem && (
-            <InfoCard icone="location_on" rotulo="Origem" valor={produto.origem} />
-          )}
-          {produto.intensidade && (
-            <InfoCard
-              icone="eco"
-              rotulo="Intensidade"
-              valor={produto.intensidade}
-            />
-          )}
+          {infos.map((i) => (
+            <InfoCard key={i.rotulo} icone={i.icone} rotulo={i.rotulo} valor={i.valor} />
+          ))}
         </div>
       )}
 
-      <button className="mt-md flex w-full items-center justify-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest py-3 text-label-md text-primary active:scale-[0.99]">
-        <span className="material-symbols-outlined text-[20px]">share</span>
-        Compartilhar com amigos
+      <button
+        onClick={compartilhar}
+        className="mt-md flex w-full items-center justify-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest py-3 text-label-md text-primary active:scale-[0.99]"
+      >
+        <span className="material-symbols-outlined text-[20px]">
+          {compartilhado ? "check" : "share"}
+        </span>
+        {compartilhado ? "Link copiado!" : "Compartilhar com amigos"}
       </button>
     </section>
   );
@@ -273,13 +297,17 @@ function InfoCard({
   valor: string;
 }) {
   return (
-    <div className="flex items-center gap-sm rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-md py-3">
-      <span className="material-symbols-outlined text-secondary">{icone}</span>
-      <div className="leading-tight">
-        <span className="block text-label-sm text-on-surface-variant">
+    <div className="flex items-center gap-sm rounded-xl border border-outline-variant/20 bg-surface-container-lowest px-md py-3">
+      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-secondary-container/40 text-secondary">
+        <span className="material-symbols-outlined text-[20px]">{icone}</span>
+      </span>
+      <div className="min-w-0 leading-tight">
+        <span className="block text-caption uppercase tracking-wide text-on-surface-variant">
           {rotulo}
         </span>
-        <span className="block text-label-md text-on-surface">{valor}</span>
+        <span className="block truncate text-label-md text-on-surface">
+          {valor}
+        </span>
       </div>
     </div>
   );
@@ -423,11 +451,13 @@ function SeletorPeso({
           </span>
         )}
       </p>
-      <p className="mt-1 flex items-center gap-1 text-label-md text-tertiary">
-        <span className="material-symbols-outlined text-[16px]">qr_code_2</span>
-        {brl(total * (1 - cfg.descontoPix))} com{" "}
-        {Math.round(cfg.descontoPix * 100)}% no Pix
-      </p>
+      {cfg.descontoPix > 0 && (
+        <p className="mt-1 flex items-center gap-1 text-label-md text-tertiary">
+          <span className="material-symbols-outlined text-[16px]">qr_code_2</span>
+          {brl(total * (1 - cfg.descontoPix))} com{" "}
+          {Math.round(cfg.descontoPix * 100)}% no Pix
+        </p>
+      )}
 
       <div className="mt-lg">
         <div className="mb-sm flex items-center justify-between">
@@ -552,11 +582,13 @@ function SeletorUnidade({
         {brl(precoUnit)}
         <span className="ml-1 text-body-md text-on-surface-variant">/un</span>
       </p>
-      <p className="mt-1 flex items-center gap-1 text-label-md text-tertiary">
-        <span className="material-symbols-outlined text-[16px]">qr_code_2</span>
-        {brl(total * (1 - cfg.descontoPix))} com{" "}
-        {Math.round(cfg.descontoPix * 100)}% no Pix
-      </p>
+      {cfg.descontoPix > 0 && (
+        <p className="mt-1 flex items-center gap-1 text-label-md text-tertiary">
+          <span className="material-symbols-outlined text-[16px]">qr_code_2</span>
+          {brl(total * (1 - cfg.descontoPix))} com{" "}
+          {Math.round(cfg.descontoPix * 100)}% no Pix
+        </p>
+      )}
 
       <div className="mt-lg flex items-center gap-md">
         <h2 className="font-headline-md text-headline-md text-primary">
