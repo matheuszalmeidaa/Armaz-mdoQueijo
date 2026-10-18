@@ -25,6 +25,10 @@ export default function ProdutoPage() {
   const produto = getProduto(id);
   const cfgP = useProdutoCfg(id);
   const variantes = cfgP.variantes ?? [];
+  // Adicionais ligados a um produto do catálogo somem quando ele esgota.
+  const adicionaisDisponiveis = (cfgP.adicionais ?? []).filter(
+    (a) => !a.produtoId || !estaEsgotado(a.produtoId)
+  );
   const [varId, setVarId] = useState<string | null>(null);
   const [mostrarVideo, setMostrarVideo] = useState(false);
 
@@ -141,13 +145,13 @@ export default function ProdutoPage() {
             <SeletorPeso
               produto={produto}
               variante={variante}
-              adicionais={cfgP.adicionais ?? []}
+              adicionais={adicionaisDisponiveis}
             />
           ) : (
             <SeletorUnidade
               produto={produto}
               variante={variante}
-              adicionais={cfgP.adicionais ?? []}
+              adicionais={adicionaisDisponiveis}
             />
           )}
 

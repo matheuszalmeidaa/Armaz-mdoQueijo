@@ -8,6 +8,7 @@ import { useCatalogo, useCfgMapa } from "@/lib/catalogo-store";
 import { useCart } from "@/lib/cart";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
 import { badgesDe, BADGE_CLS, estaEsgotado } from "@/lib/badges";
+import { flyToCart } from "@/lib/anim";
 import { useConfig, lojaAbertaAgora, type Redes } from "@/lib/config-store";
 import { useProdutoCfg } from "@/lib/produto-config-store";
 
@@ -173,7 +174,10 @@ export default function LojaHome() {
             className="mx-auto flex max-w-6xl items-center justify-between gap-md rounded-xl bg-primary px-lg py-3 text-on-primary shadow-lg active:scale-[0.99]"
           >
             <span className="flex items-center gap-2">
-              <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-on-primary/15">
+              <span
+                id="barra-carrinho"
+                className="relative flex h-9 w-9 items-center justify-center rounded-full bg-on-primary/15"
+              >
                 <span className="material-symbols-outlined">shopping_basket</span>
                 <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-warning-amber px-1 text-[11px] font-bold text-on-secondary-fixed">
                   {qtdItens}
@@ -273,13 +277,14 @@ function CardProduto({ produto }: { produto: Produto }) {
   const temVariantes = (cfgP.variantes?.length ?? 0) > 0;
   const precisaEscolher = porPeso || temVariantes;
 
-  function clicarMais() {
+  function clicarMais(e: React.MouseEvent<HTMLButtonElement>) {
     if (esgotado) return;
     if (precisaEscolher) {
       router.push(`/produto/${produto.id}`);
       return;
     }
     if (produto.tipo === "unidade") {
+      flyToCart(e.currentTarget, produto.img);
       add({
         key: produto.id,
         produtoId: produto.id,

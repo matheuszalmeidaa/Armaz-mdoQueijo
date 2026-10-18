@@ -50,7 +50,12 @@ export type Atacado = {
 export type FormaVenda = { peca: boolean; kg: boolean };
 
 export type Foto = { url: string; path?: string };
-export type Adicional = { id: string; nome: string; preco: number };
+export type Adicional = {
+  id: string;
+  nome: string;
+  preco: number;
+  produtoId?: string; // quando vem de um produto do catálogo (some se esgotar)
+};
 export type ProdutoCfg = {
   videoUrl?: string;
   variantes?: Variante[];

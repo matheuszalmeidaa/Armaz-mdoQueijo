@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { CATEGORIAS, brl, type Produto, type FaixaAtacado } from "@/lib/catalogo";
+import {
+  CATEGORIAS,
+  brl,
+  precoBase,
+  type Produto,
+  type FaixaAtacado,
+} from "@/lib/catalogo";
 import { useConfig, lerConfig, salvarConfig } from "@/lib/config-store";
 import { perguntar } from "@/components/Dialogo";
 import {
@@ -96,7 +102,7 @@ export function FormProduto({
   }, []);
   const [harmonizacao, setHarmonizacao] = useState("");
   const [adicionais, setAdicionais] = useState<
-    { id: string; nome: string; preco: string }[]
+    { id: string; nome: string; preco: string; produtoId?: string }[]
   >([]);
   const [descricao, setDescricao] = useState(inicial?.descricao ?? "");
   // Ficha do produto
@@ -173,7 +179,12 @@ export function FormProduto({
     if (c.ficha?.ingredientes) setIngredientes(c.ficha.ingredientes);
     if (c.adicionais?.length)
       setAdicionais(
-        c.adicionais.map((a) => ({ id: a.id, nome: a.nome, preco: String(a.preco) }))
+        c.adicionais.map((a) => ({
+          id: a.id,
+          nome: a.nome,
+          preco: String(a.preco),
+          produtoId: a.produtoId,
+        }))
       );
     if (c.pesoMedioG) setPesoMedio(String(c.pesoMedioG));
     if (c.vendaPdv) {
@@ -312,7 +323,12 @@ export function FormProduto({
             }
           : undefined,
       adicionais: adicionais
-        .map((a) => ({ id: a.id, nome: a.nome.trim(), preco: num(a.preco) }))
+        .map((a) => ({
+          id: a.id,
+          nome: a.nome.trim(),
+          preco: num(a.preco),
+          produtoId: a.produtoId,
+        }))
         .filter((a) => a.nome && a.preco >= 0),
       pesoMedioG: num(pesoMedio) || undefined,
       vendaPdv: { peca: pdvPeca, kg: pdvKg },
@@ -557,6 +573,57 @@ export function FormProduto({
                     {tipo === "peso" ? "/kg" : "/un"}
                   </span>
                 </p>
+
+                {/* Pesos oferecidos (produto por peso) */}
+                {tipo === "peso" && pesos.length > 0 && (
+                  <div className="mt-sm">
+                    <p className="text-[10px] font-semibold text-on-surface">
+                      Escolha o peso
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {[...pesos]
+                        .sort((a, b) => a - b)
+                        .map((g) => (
+                          <span
+                            key={g}
+                            className="rounded-md border border-outline-variant px-2 py-0.5 text-[10px] text-on-surface"
+                          >
+                            {g >= 1000 ? `${g / 1000}kg` : `${g}g`}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Variantes */}
+                {variantes.filter((v) => v.nome.trim()).length > 0 && (
+                  <div className="mt-sm">
+                    <p className="text-[10px] font-semibold text-on-surface">
+                      Opções
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {variantes
+                        .filter((v) => v.nome.trim())
+                        .map((v) => (
+                          <span
+                            key={v.id}
+                            className="rounded-md border border-outline-variant px-2 py-0.5 text-[10px] text-on-surface"
+                          >
+                            {v.nome.trim()}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {atacadoAtivo && (
+                  <span className="mt-sm inline-flex items-center gap-1 rounded-full bg-secondary-container px-2 py-0.5 text-[10px] font-semibold text-on-secondary-container">
+                    <span className="material-symbols-outlined text-[12px]">
+                      inventory_2
+                    </span>
+                    Também no atacado
+                  </span>
+                )}
 
                 {harmonizacao.trim() && (
                   <div className="mt-sm flex items-start gap-1 rounded-lg border border-secondary/30 bg-cream-surface px-2 py-1.5">
@@ -1093,8 +1160,53 @@ export function FormProduto({
               className="flex items-center gap-1 text-label-md text-secondary"
             >
               <span className="material-symbols-outlined text-[18px]">add</span>
-              Adicionar complemento
+              Adicionar complemento manual
             </button>
+
+            {/* Sugerir a partir de um produto já cadastrado */}
+            <div className="mt-sm rounded-lg border border-dashed border-outline-variant/60 bg-surface-container-low p-sm">
+              <p className="mb-1 flex items-center gap-1 text-label-sm text-on-surface">
+                <span className="material-symbols-outlined text-[16px] text-secondary">
+                  inventory_2
+                </span>
+                Sugerir a partir de um produto do catálogo
+              </p>
+              <p className="mb-sm text-caption text-on-surface-variant">
+                Usa o preço do produto e, se ele esgotar, o complemento some
+                sozinho da loja.
+              </p>
+              <select
+                value=""
+                onChange={(e) => {
+                  const p = catalogo.find((x) => x.id === e.target.value);
+                  if (!p) return;
+                  if (adicionais.some((a) => a.produtoId === p.id)) return;
+                  setAdicionais([
+                    ...adicionais,
+                    {
+                      id: crypto.randomUUID(),
+                      nome: p.nome,
+                      preco: String(precoBase(p).toFixed(2)),
+                      produtoId: p.id,
+                    },
+                  ]);
+                }}
+                className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 text-body-md outline-none focus:border-primary"
+              >
+                <option value="">Escolher um produto…</option>
+                {catalogo
+                  .filter(
+                    (p) =>
+                      p.id !== inicial?.id &&
+                      !adicionais.some((a) => a.produtoId === p.id)
+                  )
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nome} — {brl(precoBase(p))}
+                    </option>
+                  ))}
+              </select>
+            </div>
           </div>
         </div>
       </Secao>
