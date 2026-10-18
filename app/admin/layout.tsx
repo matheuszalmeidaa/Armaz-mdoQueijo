@@ -37,7 +37,7 @@ export default function AdminLayout({
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
   return (
-    <div className="flex min-h-dvh bg-surface-container-low">
+    <div className="flex h-dvh overflow-hidden bg-surface-container-low">
       {/* Sidebar (desktop) */}
       <aside className="hidden w-64 flex-shrink-0 flex-col border-r border-outline-variant/30 bg-surface lg:flex">
         <div className="flex items-center gap-sm px-lg py-lg">
@@ -76,7 +76,7 @@ export default function AdminLayout({
       </aside>
 
       {/* Área principal */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/* Top bar */}
         <header className="sticky top-0 z-40 flex items-center gap-md border-b border-outline-variant/30 bg-surface px-md py-sm lg:px-lg">
           <div className="flex flex-grow items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2 lg:max-w-[28rem]">
