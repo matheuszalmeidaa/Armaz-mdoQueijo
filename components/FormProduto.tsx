@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CATEGORIAS, brl, type Produto, type FaixaAtacado } from "@/lib/catalogo";
 import { useConfig, lerConfig, salvarConfig } from "@/lib/config-store";
 import { perguntar } from "@/components/Dialogo";
@@ -79,6 +79,21 @@ export function FormProduto({
   const [previewModo, setPreviewModo] = useState<"vitrine" | "pagina">(
     "vitrine"
   );
+  // A prévia troca sozinha conforme o scroll passa da parte "vitrine" (nome,
+  // categoria, preço) para a parte "página" (descrição, ficha, etc.).
+  const sentinelaRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onScroll = () => {
+      const el = sentinelaRef.current;
+      if (!el) return;
+      setPreviewModo(
+        el.getBoundingClientRect().top < 180 ? "pagina" : "vitrine"
+      );
+    };
+    window.addEventListener("scroll", onScroll, true);
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll, true);
+  }, []);
   const [harmonizacao, setHarmonizacao] = useState("");
   const [adicionais, setAdicionais] = useState<
     { id: string; nome: string; preco: string }[]
@@ -429,37 +444,98 @@ export function FormProduto({
           </button>
         </div>
 
-        {/* Moldura de celular */}
-        <div className="mx-auto max-w-[16rem] rounded-[1.5rem] border-[6px] border-on-surface/80 bg-background p-2">
-          {previewModo === "vitrine" ? (
-            // -------- Card da vitrine --------
-            <div className="overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-              <Imagem />
-              <div className="p-sm">
-                <h4 className="line-clamp-1 text-label-md text-on-surface">
-                  {nome || "Nome do produto"}
-                </h4>
-                <span className="text-caption text-on-surface-variant">
-                  {produtor.trim() || categoria}
-                </span>
-                <div className="mt-1 flex flex-col leading-tight">
-                  {tipo === "peso" && (
-                    <span className="text-caption text-on-surface-variant">
-                      a partir de
-                    </span>
-                  )}
-                  <span className="font-headline-md text-headline-md text-primary">
-                    {previewPreco > 0 ? brl(previewPreco) : "R$ —"}
+        {/* iPhone */}
+        <style>{`
+          @keyframes previaFade {
+            from { opacity: 0; transform: translateY(10px) scale(0.985); }
+            to { opacity: 1; transform: none; }
+          }
+          .previa-fade { animation: previaFade .3s ease; }
+        `}</style>
+        <div className="relative mx-auto w-full max-w-[20rem]">
+          <div className="relative rounded-[2.6rem] border-[11px] border-neutral-900 bg-neutral-900 shadow-[0_18px_44px_rgba(0,0,0,0.28)]">
+            {/* Ilha dinâmica */}
+            <div className="absolute left-1/2 top-2 z-30 h-5 w-24 -translate-x-1/2 rounded-full bg-neutral-900" />
+
+            {/* Tela */}
+            <div className="relative aspect-[9/19] w-full overflow-hidden rounded-[1.9rem] bg-surface">
+              {/* Barra de status */}
+              <div className="flex items-center justify-between px-5 pb-1 pt-2 text-[10px] font-semibold text-on-surface">
+                <span>9:41</span>
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[13px]">
+                    signal_cellular_alt
                   </span>
+                  <span className="material-symbols-outlined text-[13px]">
+                    wifi
+                  </span>
+                  <span className="material-symbols-outlined text-[13px]">
+                    battery_full
+                  </span>
+                </span>
+              </div>
+
+              {/* Cabeçalho do app */}
+              <div className="flex items-center gap-1 border-b border-outline-variant/20 px-3 py-1.5">
+                {previewModo === "pagina" && (
+                  <span className="material-symbols-outlined text-[18px] text-primary">
+                    arrow_back
+                  </span>
+                )}
+                <span className="font-display text-label-md text-primary">
+                  Armazém do Queijo
+                </span>
+              </div>
+
+              {/* Conteúdo rolável — anima ao trocar de modo (como se clicasse) */}
+              <div
+                key={previewModo}
+                className="previa-fade h-[calc(100%-3.6rem)] overflow-y-auto"
+              >
+          {previewModo === "vitrine" ? (
+            // -------- Vitrine (mini-loja) --------
+            <div className="p-2">
+              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-on-surface">
+                {categoria}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="overflow-hidden rounded-lg border border-outline-variant/10 bg-surface-container-lowest shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+                  <Imagem />
+                  <div className="p-1.5">
+                    <h4 className="line-clamp-1 text-[11px] font-medium text-on-surface">
+                      {nome || "Nome do produto"}
+                    </h4>
+                    <span className="block truncate text-[9px] text-on-surface-variant">
+                      {produtor.trim() || categoria}
+                    </span>
+                    {tipo === "peso" && (
+                      <span className="block text-[9px] text-on-surface-variant">
+                        a partir de
+                      </span>
+                    )}
+                    <span className="font-headline-md text-label-md text-primary">
+                      {previewPreco > 0 ? brl(previewPreco) : "R$ —"}
+                    </span>
+                  </div>
                 </div>
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="overflow-hidden rounded-lg border border-outline-variant/10 bg-surface-container-lowest opacity-50"
+                  >
+                    <div className="aspect-square w-full bg-gradient-to-br from-secondary-container/40 to-primary-container/10" />
+                    <div className="space-y-1 p-1.5">
+                      <div className="h-2 w-4/5 rounded bg-outline-variant/30" />
+                      <div className="h-2 w-2/5 rounded bg-outline-variant/30" />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ) : (
             // -------- Página do produto --------
-            <div className="max-h-[70dvh] overflow-y-auto rounded-xl bg-surface">
-              <div className="overflow-hidden rounded-t-xl">
-                <Imagem grande />
-              </div>
+            <div className="bg-surface">
+              <Imagem grande />
               <div className="p-sm">
                 <h3 className="font-headline-md text-headline-md leading-tight text-on-surface">
                   {nome || "Nome do produto"}
@@ -576,6 +652,9 @@ export function FormProduto({
               </div>
             </div>
           )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {oculto && (
@@ -602,7 +681,7 @@ export function FormProduto({
         <h1 className="font-headline-lg text-headline-lg text-primary">{titulo}</h1>
       </div>
 
-      <div className="grid gap-lg xl:grid-cols-[1fr_20rem] xl:items-start">
+      <div className="grid gap-lg xl:grid-cols-[1fr_24rem] xl:items-start">
         {/* Coluna do formulário */}
         <div className="min-w-0 space-y-lg">
       {/* Básico */}
@@ -906,6 +985,9 @@ export function FormProduto({
           {margem !== null && <MargemLinha margem={margem} />}
         </Secao>
       )}
+
+      {/* A partir daqui a prévia "abre" a página do produto (como se clicasse) */}
+      <div ref={sentinelaRef} aria-hidden className="h-0" />
 
       <Secao titulo="Descrição">
         <textarea
