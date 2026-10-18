@@ -80,8 +80,51 @@ export default function Carrinho() {
     }
   }
 
+  function BlocoContinuar() {
+    return (
+      <>
+        {soVisualiza && (
+          <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-danger-red">
+            <span className="material-symbols-outlined text-[16px]">schedule</span>
+            Loja fechada — {status.motivo} Só visualização agora.
+          </p>
+        )}
+        {podeAgendar && (
+          <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-secondary">
+            <span className="material-symbols-outlined text-[16px]">event</span>
+            Loja fechada — seu pedido será enviado como AGENDADO.
+          </p>
+        )}
+        {faltaMinimo && !soVisualiza && (
+          <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-danger-red">
+            <span className="material-symbols-outlined text-[16px]">info</span>
+            Pedido mínimo de {brl(cfg.pedidoMinimo)} — faltam{" "}
+            {brl(cfg.pedidoMinimo - total)}.
+          </p>
+        )}
+        <button
+          onClick={() => router.push("/checkout/identificacao")}
+          disabled={faltaMinimo || soVisualiza}
+          className="flex w-full items-center justify-between rounded-lg bg-primary px-lg py-4 text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
+        >
+          <span className="flex items-center gap-2 text-body-lg font-semibold">
+            {soVisualiza
+              ? "Loja fechada"
+              : podeAgendar
+                ? "Agendar pedido"
+                : "Continuar"}
+            {!soVisualiza && (
+              <span className="material-symbols-outlined">arrow_forward</span>
+            )}
+          </span>
+          <span className="font-headline-md text-headline-md">{brl(total)}</span>
+        </button>
+      </>
+    );
+  }
+
   return (
-    <main className="mx-auto min-h-full max-w-[28rem] pb-40">
+    <main className="mx-auto min-h-full w-full max-w-[28rem] pb-40 lg:max-w-5xl lg:pb-10">
       <header className="sticky top-0 z-50 flex items-center justify-between border-b border-outline-variant/30 bg-surface/90 px-md py-sm backdrop-blur-md">
         <Link
           href="/loja"
@@ -117,9 +160,10 @@ export default function Carrinho() {
           </Link>
         </div>
       ) : (
-        <>
+        <div className="lg:grid lg:grid-cols-[1fr_22rem] lg:items-start lg:gap-xl lg:px-lg lg:pt-md">
+          <div className="min-w-0">
           {/* Itens */}
-          <h2 className="px-md pt-md font-headline-md text-headline-md text-on-surface">
+          <h2 className="px-md pt-md font-headline-md text-headline-md text-on-surface lg:px-0">
             Seu Carrinho{" "}
             <span className="text-label-sm text-on-surface-variant">
               {itens.length} {itens.length === 1 ? "item" : "itens"}
@@ -301,53 +345,33 @@ export default function Carrinho() {
             )}
           </section>
 
-          <p className="mt-lg px-md text-caption text-on-surface-variant">
+          <p className="mt-lg px-md text-caption text-on-surface-variant lg:px-0">
             * Itens por peso são aproximados; o valor final pode ajustar ao corte,
             dentro da faixa escolhida. Pagamento e cupom no próximo passo.
           </p>
-
-          {/* Continuar */}
-          <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md">
-            {soVisualiza && (
-              <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-danger-red">
-                <span className="material-symbols-outlined text-[16px]">schedule</span>
-                Loja fechada — {status.motivo} Só visualização agora.
-              </p>
-            )}
-            {podeAgendar && (
-              <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-secondary">
-                <span className="material-symbols-outlined text-[16px]">event</span>
-                Loja fechada — seu pedido será enviado como AGENDADO.
-              </p>
-            )}
-            {faltaMinimo && !soVisualiza && (
-              <p className="mb-sm flex items-center justify-center gap-1 text-label-sm text-danger-red">
-                <span className="material-symbols-outlined text-[16px]">info</span>
-                Pedido mínimo de {brl(cfg.pedidoMinimo)} — faltam{" "}
-                {brl(cfg.pedidoMinimo - total)}.
-              </p>
-            )}
-            <button
-              onClick={() => router.push("/checkout/identificacao")}
-              disabled={faltaMinimo || soVisualiza}
-              className="flex w-full items-center justify-between rounded-lg bg-primary px-lg py-4 text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
-            >
-              <span className="flex items-center gap-2 text-body-lg font-semibold">
-                {soVisualiza
-                  ? "Loja fechada"
-                  : podeAgendar
-                    ? "Agendar pedido"
-                    : "Continuar"}
-                {!soVisualiza && (
-                  <span className="material-symbols-outlined">arrow_forward</span>
-                )}
-              </span>
-              <span className="font-headline-md text-headline-md">
-                {brl(total)}
-              </span>
-            </button>
           </div>
-        </>
+
+          {/* Resumo fixo (desktop) */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-20 rounded-xl border border-outline-variant/15 bg-surface-container-lowest p-md shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+              <h3 className="mb-sm font-headline-md text-headline-md text-on-surface">
+                Resumo
+              </h3>
+              <div className="mb-md flex items-center justify-between text-body-md">
+                <span className="text-on-surface-variant">Subtotal</span>
+                <span className="font-headline-md text-headline-md text-primary">
+                  {brl(total)}
+                </span>
+              </div>
+              <BlocoContinuar />
+            </div>
+          </aside>
+
+          {/* Continuar (mobile) */}
+          <div className="glass-nav fixed bottom-0 left-1/2 z-50 w-full max-w-[28rem] -translate-x-1/2 border-t border-outline-variant/20 bg-surface/95 px-md py-sm backdrop-blur-md lg:hidden">
+            <BlocoContinuar />
+          </div>
+        </div>
       )}
     </main>
   );
