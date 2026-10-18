@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
+import { CheckoutStepper } from "@/components/CheckoutStepper";
 
 // Mascara dados sensíveis, como no design ("Math***", "73998112***")
 function mascarar(valor: string, visiveis: number) {
@@ -99,7 +100,9 @@ export default function Endereco() {
         </span>
       </header>
 
-      <div className="px-md pt-lg">
+      <CheckoutStepper atual="endereco" modo="entrega" />
+
+      <div className="px-md pt-sm">
         {/* Minhas informações (mascaradas) */}
         <h2 className="font-headline-md text-headline-md text-on-surface">
           Minhas informações

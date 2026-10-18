@@ -9,6 +9,7 @@ import { calcularResumo, prazoDe, buscarCupom, LOJAS_RETIRADA } from "@/lib/regr
 import { useConfig, lojaAbertaAgora } from "@/lib/config-store";
 import { adicionarPedido } from "@/lib/pedidos-store";
 import { mensagemPedido, linkWhatsApp, formatarEndereco } from "@/lib/pedido-msg";
+import { CheckoutStepper } from "@/components/CheckoutStepper";
 
 const PAG_LABEL: Record<string, string> = {
   pix: "Pix",
@@ -112,7 +113,9 @@ export default function Revisao() {
         </span>
       </header>
 
-      <div className="px-md pt-md">
+      <CheckoutStepper atual="revisao" modo={modo} />
+
+      <div className="px-md pt-sm">
         {/* Entrega ou retirada */}
         <h3 className="text-label-sm uppercase tracking-wide text-on-surface-variant">
           {modo === "retirada" ? "Retirada na loja" : "Endereço de entrega"}

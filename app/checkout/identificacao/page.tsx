@@ -7,6 +7,7 @@ import { useCart } from "@/lib/cart";
 import { useClientes } from "@/lib/pedidos-store";
 import { useConfig } from "@/lib/config-store";
 import { cupomAutomatico, CODIGOS_AUTO } from "@/lib/promocoes";
+import { CheckoutStepper } from "@/components/CheckoutStepper";
 
 // Lembra o aniversário por telefone (neste aparelho) para não pedir de novo.
 const ANIV_KEY = "armazem-aniversarios";
@@ -110,7 +111,9 @@ export default function Identificacao() {
         </span>
       </header>
 
-      <div className="px-md pt-lg">
+      <CheckoutStepper atual="identificacao" modo={dados.modo} />
+
+      <div className="px-md pt-sm">
         <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary text-on-primary">
           <span className="material-symbols-outlined text-[32px]">
             person_add
