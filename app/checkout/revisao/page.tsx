@@ -344,23 +344,16 @@ export default function Revisao() {
         <button
           onClick={finalizar}
           disabled={!podeFinalizar}
-          className="flex w-full items-center justify-between gap-2 rounded-lg bg-primary px-lg py-4 text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-lg py-4 text-body-lg font-semibold text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
         >
-          <span className="flex items-center gap-2 text-body-lg font-semibold">
-            {podeFinalizar && (
-              <span className="material-symbols-outlined">chat</span>
-            )}
-            {podeFinalizar
-              ? podeAgendar
-                ? "Enviar pedido agendado"
-                : "Enviar pelo WhatsApp"
-              : "Loja fechada no momento"}
-          </span>
           {podeFinalizar && (
-            <span className="font-headline-md text-headline-md">
-              {brl(r.total)}
-            </span>
+            <span className="material-symbols-outlined">check_circle</span>
           )}
+          {podeFinalizar
+            ? podeAgendar
+              ? "Fazer pedido agendado"
+              : "Fazer pedido"
+            : "Loja fechada no momento"}
         </button>
       </div>
     </main>
