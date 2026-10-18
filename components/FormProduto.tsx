@@ -30,6 +30,26 @@ const ICONE_CATEGORIA: Record<string, string> = {
   Charcutaria: "restaurant",
 };
 
+// Ícones disponíveis para o produto (usado quando não há foto).
+const ICONES_PRODUTO = [
+  "nutrition",
+  "icecream",
+  "water_drop",
+  "restaurant",
+  "bakery_dining",
+  "cookie",
+  "egg",
+  "liquor",
+  "wine_bar",
+  "coffee",
+  "local_pizza",
+  "set_meal",
+  "spa",
+  "agriculture",
+  "local_florist",
+  "lunch_dining",
+];
+
 function slug(s: string) {
   return (
     s
@@ -85,6 +105,10 @@ export function FormProduto({
   const [previewModo, setPreviewModo] = useState<"vitrine" | "pagina">(
     "vitrine"
   );
+  const [iconeSel, setIconeSel] = useState(inicial?.icone ?? "");
+  // Seleções do cliente DENTRO da prévia (peso e adicionais marcados).
+  const [previaPeso, setPreviaPeso] = useState<number | null>(null);
+  const [previaAdic, setPreviaAdic] = useState<Set<number>>(new Set());
   // A prévia troca sozinha conforme o scroll passa da parte "vitrine" (nome,
   // categoria, preço) para a parte "página" (descrição, ficha, etc.).
   const sentinelaRef = useRef<HTMLDivElement>(null);
@@ -268,7 +292,7 @@ export function FormProduto({
       nome: nome.trim(),
       produtor: produtor.trim() || undefined,
       categoria,
-      icone: inicial?.icone ?? ICONE_CATEGORIA[categoria] ?? "nutrition",
+      icone: iconeSel || ICONE_CATEGORIA[categoria] || "nutrition",
       img: fotos[0]?.url ?? "",
       descricao: descricao.trim() || undefined,
       nota: inicial?.nota,
@@ -372,7 +396,7 @@ export function FormProduto({
       : null;
 
   // --- Prévia ao vivo (como o produto aparece na loja enquanto é editado) ---
-  const icone = inicial?.icone ?? ICONE_CATEGORIA[categoria] ?? "nutrition";
+  const icone = iconeSel || ICONE_CATEGORIA[categoria] || "nutrition";
   const fotoPrincipal = fotos[0]?.url;
   const temVideo = videoUrl.trim().length > 0;
   const adicsPreview = adicionais
@@ -380,6 +404,24 @@ export function FormProduto({
     .map((a) => ({ nome: a.nome.trim(), preco: num(a.preco) }));
   const precoKgNum = num(precoKg);
   const cfgTemFicha = fabricacao.trim() || ingredientes.trim();
+
+  // Seleção viva do cliente na prévia (peso e adicionais) → preço do botão.
+  const pesosOrd = [...pesos].sort((a, b) => a - b);
+  const pesoSel =
+    previaPeso && pesosOrd.includes(previaPeso) ? previaPeso : pesosOrd[0];
+  const baseSel =
+    tipo === "peso" ? (precoKgNum * (pesoSel || 0)) / 1000 : previewPreco;
+  const extraSel = adicsPreview.reduce(
+    (s, a, i) => (previaAdic.has(i) ? s + a.preco : s),
+    0
+  );
+  const totalSel = baseSel + extraSel;
+  const togglePreviaAdic = (i: number) =>
+    setPreviaAdic((prev) => {
+      const n = new Set(prev);
+      n.has(i) ? n.delete(i) : n.add(i);
+      return n;
+    });
 
   // Foto/badges/vídeo — compartilhado pela vitrine e pela página.
   function Imagem({ grande }: { grande?: boolean }) {
@@ -574,23 +616,27 @@ export function FormProduto({
                   </span>
                 </p>
 
-                {/* Pesos oferecidos (produto por peso) */}
-                {tipo === "peso" && pesos.length > 0 && (
+                {/* Pesos oferecidos (clicáveis, como no celular) */}
+                {tipo === "peso" && pesosOrd.length > 0 && (
                   <div className="mt-sm">
                     <p className="text-[10px] font-semibold text-on-surface">
                       Escolha o peso
                     </p>
                     <div className="mt-1 flex flex-wrap gap-1">
-                      {[...pesos]
-                        .sort((a, b) => a - b)
-                        .map((g) => (
-                          <span
-                            key={g}
-                            className="rounded-md border border-outline-variant px-2 py-0.5 text-[10px] text-on-surface"
-                          >
-                            {g >= 1000 ? `${g / 1000}kg` : `${g}g`}
-                          </span>
-                        ))}
+                      {pesosOrd.map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setPreviaPeso(g)}
+                          className={`rounded-md border px-2 py-0.5 text-[10px] transition-all active:scale-90 ${
+                            g === pesoSel
+                              ? "border-primary bg-primary text-on-primary"
+                              : "border-outline-variant text-on-surface"
+                          }`}
+                        >
+                          {g >= 1000 ? `${g / 1000}kg` : `${g}g`}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -641,19 +687,33 @@ export function FormProduto({
                     <p className="text-label-sm font-semibold text-on-surface">
                       Adicionais
                     </p>
-                    <ul className="mt-1 space-y-0.5">
-                      {adicsPreview.map((a, i) => (
-                        <li
-                          key={i}
-                          className="flex justify-between text-caption text-on-surface-variant"
-                        >
-                          <span>+ {a.nome}</span>
-                          <span className="text-tertiary">
-                            {a.preco > 0 ? brl(a.preco) : "grátis"}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="mt-1 space-y-1">
+                      {adicsPreview.map((a, i) => {
+                        const marcado = previaAdic.has(i);
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => togglePreviaAdic(i)}
+                            className="flex w-full items-center justify-between rounded-md border border-outline-variant px-2 py-1 text-caption transition-all active:scale-[0.98]"
+                          >
+                            <span className="flex items-center gap-1 text-on-surface">
+                              <span
+                                className={`material-symbols-outlined text-[15px] ${
+                                  marcado ? "text-primary" : "text-outline"
+                                }`}
+                              >
+                                {marcado ? "check_box" : "check_box_outline_blank"}
+                              </span>
+                              {a.nome}
+                            </span>
+                            <span className="text-tertiary">
+                              {a.preco > 0 ? `+ ${brl(a.preco)}` : "grátis"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 
@@ -693,8 +753,23 @@ export function FormProduto({
                   </div>
                 )}
 
-                {/* Barra "Adicionar" (faux) */}
-                <div className="mt-sm flex items-center justify-between rounded-lg bg-primary px-3 py-2 text-on-primary">
+                {/* Barra "Adicionar" — clicável, com pulinho (como no app) */}
+                <button
+                  type="button"
+                  disabled={esgotado}
+                  onClick={(e) => {
+                    e.currentTarget.animate(
+                      [
+                        { transform: "scale(1)" },
+                        { transform: "scale(0.95)" },
+                        { transform: "scale(1.03)" },
+                        { transform: "scale(1)" },
+                      ],
+                      { duration: 320, easing: "ease-out" }
+                    );
+                  }}
+                  className="mt-sm flex w-full items-center justify-between rounded-lg bg-primary px-3 py-2 text-on-primary disabled:opacity-60"
+                >
                   {esgotado ? (
                     <span className="mx-auto flex items-center gap-1 text-label-sm font-semibold">
                       <span className="material-symbols-outlined text-[16px]">
@@ -708,14 +783,14 @@ export function FormProduto({
                         <span className="material-symbols-outlined text-[16px]">
                           add_shopping_cart
                         </span>
-                        Adicionar
+                        Adicionar{pesoSel ? ` · ${pesoSel >= 1000 ? `${pesoSel / 1000}kg` : `${pesoSel}g`}` : ""}
                       </span>
                       <span className="text-label-md font-semibold">
-                        {previewPreco > 0 ? brl(previewPreco) : "R$ —"}
+                        {totalSel > 0 ? brl(totalSel) : "R$ —"}
                       </span>
                     </>
                   )}
-                </div>
+                </button>
               </div>
             </div>
           )}
@@ -825,6 +900,35 @@ export function FormProduto({
             </label>
           </div>
         </div>
+
+        {/* Ícone — usado quando o produto não tem foto */}
+        <div>
+          <label className="block text-label-md text-on-surface">Ícone</label>
+          <p className="mb-sm text-label-sm text-on-surface-variant">
+            Aparece quando o produto não tem foto. Por padrão, segue a categoria.
+          </p>
+          <div className="flex flex-wrap gap-sm">
+            {ICONES_PRODUTO.map((ic) => {
+              const ativo = (iconeSel || ICONE_CATEGORIA[categoria]) === ic;
+              return (
+                <button
+                  key={ic}
+                  type="button"
+                  onClick={() => setIconeSel(ativo && iconeSel ? "" : ic)}
+                  title={ic}
+                  className={`flex h-11 w-11 items-center justify-center rounded-lg border transition-all active:scale-90 ${
+                    ativo
+                      ? "border-primary bg-primary text-on-primary"
+                      : "border-outline-variant bg-surface-container-lowest text-on-surface"
+                  }`}
+                >
+                  <span className="material-symbols-outlined">{ic}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <Campo rotulo="Nome do produto">
           <input
             value={nome}
