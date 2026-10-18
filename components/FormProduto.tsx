@@ -76,6 +76,9 @@ export function FormProduto({
   const [oculto, setOculto] = useState(false);
   const [esgotado, setEsgotado] = useState(inicial?.esgotado ?? false);
   const [novidade, setNovidade] = useState(inicial?.novidade ?? false);
+  const [previewModo, setPreviewModo] = useState<"vitrine" | "pagina">(
+    "vitrine"
+  );
   const [harmonizacao, setHarmonizacao] = useState("");
   const [adicionais, setAdicionais] = useState<
     { id: string; nome: string; preco: string }[]
@@ -341,7 +344,54 @@ export function FormProduto({
   const icone = inicial?.icone ?? ICONE_CATEGORIA[categoria] ?? "nutrition";
   const fotoPrincipal = fotos[0]?.url;
   const temVideo = videoUrl.trim().length > 0;
-  const adicsPreview = adicionais.filter((a) => a.nome.trim());
+  const adicsPreview = adicionais
+    .filter((a) => a.nome.trim())
+    .map((a) => ({ nome: a.nome.trim(), preco: num(a.preco) }));
+  const precoKgNum = num(precoKg);
+  const cfgTemFicha = fabricacao.trim() || ingredientes.trim();
+
+  // Foto/badges/vídeo — compartilhado pela vitrine e pela página.
+  function Imagem({ grande }: { grande?: boolean }) {
+    return (
+      <div className="relative">
+        {fotoPrincipal ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={fotoPrincipal}
+            alt=""
+            className={`aspect-square w-full object-cover ${esgotado ? "opacity-50 grayscale" : ""}`}
+          />
+        ) : (
+          <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-secondary-container to-primary-container/20">
+            <span
+              className={`material-symbols-outlined text-primary/40 ${grande ? "text-[72px]" : "text-[48px]"}`}
+            >
+              {icone}
+            </span>
+          </div>
+        )}
+        <div className="absolute left-1.5 top-1.5 flex flex-col items-start gap-1">
+          {esgotado && (
+            <span className="rounded-full bg-error-container px-2 py-0.5 text-[10px] font-semibold text-on-error-container shadow-sm">
+              Esgotado
+            </span>
+          )}
+          {novidade && !esgotado && (
+            <span className="rounded-full bg-tertiary px-2 py-0.5 text-[10px] font-semibold text-on-tertiary shadow-sm">
+              Novidade
+            </span>
+          )}
+        </div>
+        {temVideo && (
+          <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white">
+            <span className="material-symbols-outlined text-[16px]">
+              play_arrow
+            </span>
+          </span>
+        )}
+      </div>
+    );
+  }
 
   function Previa() {
     return (
@@ -353,100 +403,189 @@ export function FormProduto({
           Prévia na loja
         </div>
 
-        {/* Moldura de celular com o card igual ao da vitrine */}
-        <div className="mx-auto max-w-[15rem] rounded-[1.5rem] border-[6px] border-on-surface/80 bg-background p-2">
-          <div className="overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-            <div className="relative">
-              {fotoPrincipal ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={fotoPrincipal}
-                  alt=""
-                  className={`aspect-square w-full object-cover ${esgotado ? "opacity-50 grayscale" : ""}`}
-                />
-              ) : (
-                <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-secondary-container to-primary-container/20">
-                  <span className="material-symbols-outlined text-[48px] text-primary/40">
-                    {icone}
-                  </span>
-                </div>
-              )}
-              <div className="absolute left-1.5 top-1.5 flex flex-col items-start gap-1">
-                {esgotado && (
-                  <span className="rounded-full bg-error-container px-2 py-0.5 text-[10px] font-semibold text-on-error-container shadow-sm">
-                    Esgotado
-                  </span>
-                )}
-                {novidade && !esgotado && (
-                  <span className="rounded-full bg-tertiary px-2 py-0.5 text-[10px] font-semibold text-on-tertiary shadow-sm">
-                    Novidade
-                  </span>
-                )}
-              </div>
-              {temVideo && (
-                <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white">
-                  <span className="material-symbols-outlined text-[16px]">
-                    play_arrow
-                  </span>
-                </span>
-              )}
-            </div>
-            <div className="p-sm">
-              <h4 className="line-clamp-1 text-label-md text-on-surface">
-                {nome || "Nome do produto"}
-              </h4>
-              <span className="text-caption text-on-surface-variant">
-                {categoria}
-              </span>
-              <div className="mt-1 flex flex-col leading-tight">
-                {tipo === "peso" && (
-                  <span className="text-caption text-on-surface-variant">
-                    a partir de
-                  </span>
-                )}
-                <span className="font-headline-md text-headline-md text-primary">
-                  {previewPreco > 0 ? brl(previewPreco) : "R$ —"}
-                </span>
-              </div>
-            </div>
-          </div>
+        {/* Alterna entre a vitrine (card) e a página do produto */}
+        <div className="mb-sm flex rounded-lg border border-outline-variant p-0.5">
+          <button
+            type="button"
+            onClick={() => setPreviewModo("vitrine")}
+            className={`flex-1 rounded-md py-1 text-label-sm transition-colors ${
+              previewModo === "vitrine"
+                ? "bg-primary text-on-primary"
+                : "text-on-surface"
+            }`}
+          >
+            Vitrine
+          </button>
+          <button
+            type="button"
+            onClick={() => setPreviewModo("pagina")}
+            className={`flex-1 rounded-md py-1 text-label-sm transition-colors ${
+              previewModo === "pagina"
+                ? "bg-primary text-on-primary"
+                : "text-on-surface"
+            }`}
+          >
+            Página do produto
+          </button>
         </div>
 
-        {/* Resumo do que o cliente vê */}
-        <div className="mt-md space-y-1.5 text-label-sm text-on-surface-variant">
-          {descricao.trim() && (
-            <p className="line-clamp-3">
-              <span className="text-on-surface">Descrição: </span>
-              {descricao.trim()}
-            </p>
-          )}
-          {harmonizacao.trim() && (
-            <p className="flex items-start gap-1">
-              <span className="material-symbols-outlined text-[16px] text-secondary">
-                wine_bar
-              </span>
-              {harmonizacao.trim()}
-            </p>
-          )}
-          {adicsPreview.length > 0 && (
-            <p className="flex items-start gap-1">
-              <span className="material-symbols-outlined text-[16px] text-secondary">
-                add_circle
-              </span>
-              {adicsPreview.length} complemento
-              {adicsPreview.length === 1 ? "" : "s"}:{" "}
-              {adicsPreview.map((a) => a.nome.trim()).join(", ")}
-            </p>
-          )}
-          {oculto && (
-            <p className="flex items-center gap-1 text-danger-red">
-              <span className="material-symbols-outlined text-[16px]">
-                visibility_off
-              </span>
-              Oculto — não aparece para o cliente.
-            </p>
+        {/* Moldura de celular */}
+        <div className="mx-auto max-w-[16rem] rounded-[1.5rem] border-[6px] border-on-surface/80 bg-background p-2">
+          {previewModo === "vitrine" ? (
+            // -------- Card da vitrine --------
+            <div className="overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-lowest shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+              <Imagem />
+              <div className="p-sm">
+                <h4 className="line-clamp-1 text-label-md text-on-surface">
+                  {nome || "Nome do produto"}
+                </h4>
+                <span className="text-caption text-on-surface-variant">
+                  {produtor.trim() || categoria}
+                </span>
+                <div className="mt-1 flex flex-col leading-tight">
+                  {tipo === "peso" && (
+                    <span className="text-caption text-on-surface-variant">
+                      a partir de
+                    </span>
+                  )}
+                  <span className="font-headline-md text-headline-md text-primary">
+                    {previewPreco > 0 ? brl(previewPreco) : "R$ —"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            // -------- Página do produto --------
+            <div className="max-h-[70dvh] overflow-y-auto rounded-xl bg-surface">
+              <div className="overflow-hidden rounded-t-xl">
+                <Imagem grande />
+              </div>
+              <div className="p-sm">
+                <h3 className="font-headline-md text-headline-md leading-tight text-on-surface">
+                  {nome || "Nome do produto"}
+                </h3>
+                <p className="text-caption text-on-surface-variant">
+                  {categoria}
+                  {produtor.trim() ? ` · ${produtor.trim()}` : ""}
+                </p>
+
+                <p className="mt-sm font-headline-md text-headline-md text-primary">
+                  {tipo === "peso"
+                    ? precoKgNum > 0
+                      ? `${brl(precoKgNum)}`
+                      : "R$ —"
+                    : previewPreco > 0
+                      ? brl(previewPreco)
+                      : "R$ —"}
+                  <span className="ml-1 text-caption font-normal text-on-surface-variant">
+                    {tipo === "peso" ? "/kg" : "/un"}
+                  </span>
+                </p>
+
+                {harmonizacao.trim() && (
+                  <div className="mt-sm flex items-start gap-1 rounded-lg border border-secondary/30 bg-cream-surface px-2 py-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-secondary">
+                      wine_bar
+                    </span>
+                    <p className="text-caption text-on-surface">
+                      {harmonizacao.trim()}
+                    </p>
+                  </div>
+                )}
+
+                {adicsPreview.length > 0 && (
+                  <div className="mt-sm">
+                    <p className="text-label-sm font-semibold text-on-surface">
+                      Adicionais
+                    </p>
+                    <ul className="mt-1 space-y-0.5">
+                      {adicsPreview.map((a, i) => (
+                        <li
+                          key={i}
+                          className="flex justify-between text-caption text-on-surface-variant"
+                        >
+                          <span>+ {a.nome}</span>
+                          <span className="text-tertiary">
+                            {a.preco > 0 ? brl(a.preco) : "grátis"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {descricao.trim() && (
+                  <div className="mt-sm">
+                    <p className="text-label-sm font-semibold text-primary">
+                      Sobre este produto
+                    </p>
+                    <p className="mt-0.5 text-caption leading-relaxed text-on-surface-variant">
+                      {descricao.trim()}
+                    </p>
+                  </div>
+                )}
+
+                {cfgTemFicha && (
+                  <div className="mt-sm space-y-1">
+                    {fabricacao.trim() && (
+                      <div className="rounded-lg border border-outline-variant/20 px-2 py-1.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant">
+                          Como é feito
+                        </p>
+                        <p className="text-caption text-on-surface">
+                          {fabricacao.trim()}
+                        </p>
+                      </div>
+                    )}
+                    {ingredientes.trim() && (
+                      <div className="rounded-lg border border-outline-variant/20 px-2 py-1.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant">
+                          Ingredientes e conservação
+                        </p>
+                        <p className="text-caption text-on-surface">
+                          {ingredientes.trim()}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Barra "Adicionar" (faux) */}
+                <div className="mt-sm flex items-center justify-between rounded-lg bg-primary px-3 py-2 text-on-primary">
+                  {esgotado ? (
+                    <span className="mx-auto flex items-center gap-1 text-label-sm font-semibold">
+                      <span className="material-symbols-outlined text-[16px]">
+                        block
+                      </span>
+                      Esgotado
+                    </span>
+                  ) : (
+                    <>
+                      <span className="flex items-center gap-1 text-label-sm font-semibold">
+                        <span className="material-symbols-outlined text-[16px]">
+                          add_shopping_cart
+                        </span>
+                        Adicionar
+                      </span>
+                      <span className="text-label-md font-semibold">
+                        {previewPreco > 0 ? brl(previewPreco) : "R$ —"}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
         </div>
+
+        {oculto && (
+          <p className="mt-sm flex items-center gap-1 text-label-sm text-danger-red">
+            <span className="material-symbols-outlined text-[16px]">
+              visibility_off
+            </span>
+            Oculto — não aparece para o cliente.
+          </p>
+        )}
       </div>
     );
   }
@@ -1222,9 +1361,9 @@ export function FormProduto({
       </div>
         </div>
 
-        {/* Prévia ao vivo (lado direito, fixa ao rolar) */}
+        {/* Prévia ao vivo (lado direito, acompanha o scroll) */}
         <aside className="hidden xl:block">
-          <div className="sticky top-4">
+          <div className="sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <Previa />
           </div>
         </aside>
