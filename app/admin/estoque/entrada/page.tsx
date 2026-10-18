@@ -10,26 +10,28 @@ import { useLojas } from "@/lib/lojas-store";
 
 const num = (v: string) => Number(String(v).replace(",", ".")) || 0;
 
-type Linha = { qtd: string; validade: string; codigo: string };
+type Linha = { qtd: string; validade: string; codigo: string; lojaId: string };
 
 export default function ChegadaMercadoria() {
   const router = useRouter();
   const catalogo = useCatalogo();
   const { lojas } = useLojas();
-  const [lojaId, setLojaId] = useState("");
   const [produtoId, setProdutoId] = useState("");
   const [linhas, setLinhas] = useState<Linha[]>([
-    { qtd: "", validade: "", codigo: "" },
+    { qtd: "", validade: "", codigo: "", lojaId: "" },
   ]);
   const [salvo, setSalvo] = useState(false);
 
   const un = produtoId ? unidadeDe(produtoId) : "un";
   const totalRecebido = linhas.reduce((s, l) => s + num(l.qtd), 0);
   const precisaLoja = lojas.length > 0;
-  const pode = produtoId && totalRecebido > 0 && (!precisaLoja || lojaId);
+  // Toda linha com quantidade precisa de loja (quando há lojas cadastradas).
+  const lojasOk =
+    !precisaLoja || linhas.every((l) => num(l.qtd) <= 0 || l.lojaId);
+  const pode = produtoId && totalRecebido > 0 && lojasOk;
 
   function addLinha() {
-    setLinhas([...linhas, { qtd: "", validade: "", codigo: "" }]);
+    setLinhas([...linhas, { qtd: "", validade: "", codigo: "", lojaId: "" }]);
   }
   function updLinha(i: number, patch: Partial<Linha>) {
     setLinhas(linhas.map((l, j) => (j === i ? { ...l, ...patch } : l)));
@@ -40,17 +42,24 @@ export default function ChegadaMercadoria() {
 
   function finalizar() {
     if (!pode) return;
-    registrarChegada(
-      produtoId,
-      linhas
-        .filter((l) => num(l.qtd) > 0)
-        .map((l) => ({
+    const validas = linhas.filter((l) => num(l.qtd) > 0);
+    // Agrupa por loja — cada loja recebe seus lotes (estoque real por loja).
+    const porLoja = new Map<string, Linha[]>();
+    for (const l of validas) {
+      const k = l.lojaId || "";
+      porLoja.set(k, [...(porLoja.get(k) ?? []), l]);
+    }
+    for (const [k, ls] of porLoja) {
+      registrarChegada(
+        produtoId,
+        ls.map((l) => ({
           qtd: num(l.qtd),
           validade: l.validade || undefined,
           codigo: l.codigo || undefined,
         })),
-      lojaId || undefined
-    );
+        k || undefined
+      );
+    }
     setSalvo(true);
     setTimeout(() => router.push("/admin/estoque"), 800);
   }
@@ -81,26 +90,6 @@ export default function ChegadaMercadoria() {
         </div>
       ) : (
         <div className="space-y-md rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-lg shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-          {precisaLoja && (
-            <div>
-              <label className="block text-label-md text-on-surface">Loja</label>
-              <select
-                value={lojaId}
-                onChange={(e) => setLojaId(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-md py-2.5 text-body-lg outline-none focus:border-primary"
-              >
-                <option value="">Escolha a loja</option>
-                {lojas.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.nome}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-label-sm text-on-surface-variant">
-                O estoque entra nesta loja. O saldo total é a soma de todas.
-              </p>
-            </div>
-          )}
           <div>
             <label className="block text-label-md text-on-surface">Produto</label>
             <select
@@ -124,8 +113,9 @@ export default function ChegadaMercadoria() {
                   Lotes recebidos ({un})
                 </label>
                 <p className="mb-sm text-label-sm text-on-surface-variant">
-                  Uma linha por validade. Ex.: 15 un vencendo 15/09 e 30 un
-                  vencendo 30/09 → duas linhas.
+                  {precisaLoja
+                    ? "Uma linha por validade e por loja. Ex.: 10 un → Loja Centro e 15 un → Loja Bairro são duas linhas."
+                    : "Uma linha por validade. Ex.: 15 un vencendo 15/09 e 30 un vencendo 30/09 → duas linhas."}
                 </p>
                 <div className="space-y-sm">
                   {linhas.map((l, i) => (
@@ -153,6 +143,31 @@ export default function ChegadaMercadoria() {
                           className="mt-1 w-40 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2 text-body-md outline-none focus:border-primary"
                         />
                       </div>
+                      {precisaLoja && (
+                        <div>
+                          <label className="block text-label-sm text-on-surface-variant">
+                            Loja
+                          </label>
+                          <select
+                            value={l.lojaId}
+                            onChange={(e) =>
+                              updLinha(i, { lojaId: e.target.value })
+                            }
+                            className={`mt-1 w-40 rounded-lg border bg-surface-container-lowest px-2 py-2 text-body-md outline-none focus:border-primary ${
+                              num(l.qtd) > 0 && !l.lojaId
+                                ? "border-danger-red"
+                                : "border-outline-variant"
+                            }`}
+                          >
+                            <option value="">Escolha…</option>
+                            {lojas.map((lo) => (
+                              <option key={lo.id} value={lo.id}>
+                                {lo.nome}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                       <div className="flex-grow">
                         <label className="block text-label-sm text-on-surface-variant">
                           Lote (opcional)

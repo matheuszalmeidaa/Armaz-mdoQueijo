@@ -51,13 +51,26 @@ export default function AdminEstoque() {
             Controle por lotes e validade. Sincroniza com delivery, PDV e atacado.
           </p>
         </div>
-        <Link
-          href="/admin/estoque/entrada"
-          className="flex items-center gap-1 rounded-lg bg-primary px-md py-2.5 text-label-md text-on-primary shadow active:scale-[0.98]"
-        >
-          <span className="material-symbols-outlined text-[20px]">local_shipping</span>
-          Chegada de mercadoria
-        </Link>
+        <div className="flex flex-wrap gap-sm">
+          {lojas.length > 1 && (
+            <Link
+              href="/admin/estoque/transferencia"
+              className="flex items-center gap-1 rounded-lg border border-outline-variant px-md py-2.5 text-label-md text-primary active:scale-[0.98]"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                swap_horiz
+              </span>
+              Transferir entre lojas
+            </Link>
+          )}
+          <Link
+            href="/admin/estoque/entrada"
+            className="flex items-center gap-1 rounded-lg bg-primary px-md py-2.5 text-label-md text-on-primary shadow active:scale-[0.98]"
+          >
+            <span className="material-symbols-outlined text-[20px]">local_shipping</span>
+            Chegada de mercadoria
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-md">

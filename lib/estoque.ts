@@ -18,14 +18,30 @@ export type Lote = {
   codigo?: string; // código do lote, se houver
 };
 
+// Movimentação de estoque (histórico): entrada, transferência entre lojas, etc.
+export type Movimento = {
+  id: string;
+  tipo: "entrada" | "transferencia";
+  produtoId: string;
+  qtd: number;
+  origemLojaId?: string; // de onde saiu (transferência)
+  destinoLojaId?: string; // para onde foi (entrada/transferência)
+  em: number; // timestamp
+};
+
 export type EstoqueDados = {
   lotes: Lote[];
   minimos: Record<string, number>; // produtoId -> nível mínimo p/ alerta
+  movimentos: Movimento[]; // histórico de entradas e transferências
 };
 
-let LIVE: EstoqueDados = { lotes: [], minimos: {} };
+let LIVE: EstoqueDados = { lotes: [], minimos: {}, movimentos: [] };
 export function setEstoqueLive(d: EstoqueDados) {
-  LIVE = { lotes: d.lotes ?? [], minimos: d.minimos ?? {} };
+  LIVE = {
+    lotes: d.lotes ?? [],
+    minimos: d.minimos ?? {},
+    movimentos: d.movimentos ?? [],
+  };
 }
 export function estoqueLive(): EstoqueDados {
   return LIVE;

@@ -7,14 +7,16 @@
 import { useEffect, useState } from "react";
 import {
   setEstoqueLive,
+  restanteLote,
   type EstoqueDados,
   type Lote,
+  type Movimento,
 } from "./estoque";
 
 const EVT = "estoque-change";
 
 let modoServidor: boolean | null = null;
-let cache: EstoqueDados = { lotes: [], minimos: {} };
+let cache: EstoqueDados = { lotes: [], minimos: {}, movimentos: [] };
 let timer: ReturnType<typeof setInterval> | null = null;
 let assinantes = 0;
 
@@ -30,6 +32,7 @@ function normalizar(bruto: unknown): EstoqueDados {
     return {
       lotes: d.lotes as Lote[],
       minimos: (d.minimos as Record<string, number>) ?? {},
+      movimentos: (d.movimentos as Movimento[]) ?? [],
     };
   }
   // Formato antigo → migra
@@ -49,7 +52,7 @@ function normalizar(bruto: unknown): EstoqueDados {
     }
     if (typeof s?.min === "number" && s.min > 0) minimos[produtoId] = s.min;
   }
-  return { lotes, minimos };
+  return { lotes, minimos, movimentos: [] };
 }
 
 async function refetch() {
@@ -100,8 +103,101 @@ export function registrarChegada(
       codigo: e.codigo || undefined,
     }));
   if (!novos.length) return;
-  cache = { ...cache, lotes: [...cache.lotes, ...novos] };
+  const mov: Movimento = {
+    id: crypto.randomUUID(),
+    tipo: "entrada",
+    produtoId,
+    qtd: novos.reduce((s, l) => s + l.qtd, 0),
+    destinoLojaId: lojaId || undefined,
+    em: Date.now(),
+  };
+  cache = {
+    ...cache,
+    lotes: [...cache.lotes, ...novos],
+    movimentos: [mov, ...cache.movimentos],
+  };
   publicar();
+}
+
+// Transfere `qtd` de um produto da loja ORIGEM para a loja DESTINO.
+// Consome os lotes da origem em FEFO (validade mais próxima primeiro),
+// REDUZINDO a quantidade deles (não conta como venda), e cria lotes
+// equivalentes na loja destino — mantendo o estoque real de cada loja.
+export function transferirEstoque(
+  produtoId: string,
+  origemLojaId: string | undefined,
+  destinoLojaId: string | undefined,
+  qtd: number
+): { ok: boolean; motivo?: string } {
+  if (qtd <= 0) return { ok: false, motivo: "Quantidade inválida." };
+  if ((origemLojaId ?? "") === (destinoLojaId ?? ""))
+    return { ok: false, motivo: "Origem e destino não podem ser iguais." };
+
+  // Lotes da origem com saldo, em FEFO (validade asc, depois entrada asc).
+  const origem = cache.lotes
+    .filter(
+      (l) =>
+        l.produtoId === produtoId &&
+        (l.lojaId ?? "") === (origemLojaId ?? "") &&
+        restanteLote(l) > 0
+    )
+    .sort(
+      (a, b) =>
+        (a.validade ?? "9999").localeCompare(b.validade ?? "9999") ||
+        a.entradaEm - b.entradaEm
+    );
+
+  const disponivel = origem.reduce((s, l) => s + restanteLote(l), 0);
+  if (qtd > disponivel + 1e-9)
+    return {
+      ok: false,
+      motivo: `Saldo insuficiente na origem (disponível: ${disponivel}).`,
+    };
+
+  let restante = qtd;
+  const lotesAtualizados = [...cache.lotes];
+  const novosDestino: Lote[] = [];
+
+  for (const l of origem) {
+    if (restante <= 1e-9) break;
+    const pega = Math.min(restanteLote(l), restante);
+    // Reduz a quantidade do lote de origem (mantém o "usado" já vendido).
+    const idx = lotesAtualizados.findIndex((x) => x.id === l.id);
+    lotesAtualizados[idx] = { ...l, qtd: l.qtd - pega };
+    // Cria lote equivalente no destino (preserva validade/código).
+    novosDestino.push({
+      id: crypto.randomUUID(),
+      produtoId,
+      lojaId: destinoLojaId || undefined,
+      qtd: pega,
+      usado: 0,
+      entradaEm: Date.now(),
+      validade: l.validade,
+      codigo: l.codigo,
+    });
+    restante -= pega;
+  }
+
+  const mov: Movimento = {
+    id: crypto.randomUUID(),
+    tipo: "transferencia",
+    produtoId,
+    qtd,
+    origemLojaId: origemLojaId || undefined,
+    destinoLojaId: destinoLojaId || undefined,
+    em: Date.now(),
+  };
+
+  cache = {
+    ...cache,
+    // Remove lotes de origem que zeraram (qtd 0 e sem usado) para não poluir.
+    lotes: [...lotesAtualizados, ...novosDestino].filter(
+      (l) => l.qtd > 0 || l.usado > 0
+    ),
+    movimentos: [mov, ...cache.movimentos],
+  };
+  publicar();
+  return { ok: true };
 }
 
 export function definirMinimo(produtoId: string, min: number) {
