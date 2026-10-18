@@ -9,8 +9,8 @@ import { linkWhatsApp } from "@/lib/pedido-msg";
 type Etapa = { icone: string; titulo: string; sub: string };
 
 const ETAPAS_ENTREGA: Etapa[] = [
-  { icone: "receipt_long", titulo: "Pedido recebido", sub: "Aguardando a loja aceitar" },
-  { icone: "inventory_2", titulo: "Pedido separado", sub: "Montando sua cesta com carinho" },
+  { icone: "receipt_long", titulo: "Pedido recebido", sub: "Aguardando o Armazém confirmar" },
+  { icone: "inventory_2", titulo: "Pedido separado", sub: "Preparando seu pedido com cuidado" },
   { icone: "local_shipping", titulo: "Saiu para entrega", sub: "A caminho do seu endereço" },
   { icone: "home", titulo: "Entregue", sub: "Bom apetite!" },
 ];
@@ -21,14 +21,14 @@ const PASSO_ENTREGA: Record<StatusLive, number> = {
   Entregue: 3,
 };
 const HERO_ENTREGA: Record<StatusLive, Etapa> = {
-  Novo: { titulo: "Pedido recebido!", sub: "Estamos confirmando com a loja.", icone: "receipt_long" },
-  Preparando: { titulo: "Separando seu pedido...", sub: "O produtor está selecionando e embalando.", icone: "inventory_2" },
+  Novo: { titulo: "Pedido recebido!", sub: "O Armazém já vai confirmar seu pedido.", icone: "receipt_long" },
+  Preparando: { titulo: "Preparando seu pedido...", sub: "Estamos selecionando e embalando com cuidado.", icone: "inventory_2" },
   "Em rota": { titulo: "Saiu para entrega!", sub: "Seu pedido está a caminho.", icone: "local_shipping" },
-  Entregue: { titulo: "Pedido entregue 🎉", sub: "Bom apetite! Obrigado pela preferência.", icone: "home" },
+  Entregue: { titulo: "Pedido entregue 🎉", sub: "Bom apetite! Obrigado por comprar no Armazém.", icone: "home" },
 };
 
 const ETAPAS_RETIRADA: Etapa[] = [
-  { icone: "receipt_long", titulo: "Pedido recebido", sub: "Aguardando a loja aceitar" },
+  { icone: "receipt_long", titulo: "Pedido recebido", sub: "Aguardando o Armazém confirmar" },
   { icone: "inventory_2", titulo: "Pedido separado", sub: "Pronto para retirar no balcão" },
   { icone: "storefront", titulo: "Retirado", sub: "Obrigado pela preferência!" },
 ];
@@ -39,8 +39,8 @@ const PASSO_RETIRADA: Record<StatusLive, number> = {
   Entregue: 2,
 };
 const HERO_RETIRADA: Record<StatusLive, Etapa> = {
-  Novo: { titulo: "Pedido recebido!", sub: "Estamos confirmando com a loja.", icone: "receipt_long" },
-  Preparando: { titulo: "Separando seu pedido...", sub: "Já avisamos quando estiver pronto.", icone: "inventory_2" },
+  Novo: { titulo: "Pedido recebido!", sub: "O Armazém já vai confirmar seu pedido.", icone: "receipt_long" },
+  Preparando: { titulo: "Preparando seu pedido...", sub: "Avisamos assim que estiver pronto.", icone: "inventory_2" },
   "Em rota": { titulo: "Pronto para retirar! 🎉", sub: "Pode vir buscar no balcão.", icone: "storefront" },
   Entregue: { titulo: "Pedido retirado 🎉", sub: "Obrigado pela preferência!", icone: "storefront" },
 };
@@ -131,7 +131,7 @@ export function AcompanhamentoView({
       {/* Timeline */}
       <section className="px-md pt-lg">
         <h2 className="mb-md font-headline-md text-headline-md text-on-surface">
-          Etapas da sua cesta
+          Acompanhe seu pedido
         </h2>
         <ol className="relative">
           {ETAPAS.map((e, i) => {
@@ -195,6 +195,13 @@ export function AcompanhamentoView({
           <span className="material-symbols-outlined text-tertiary">chat</span>
           Precisa de ajuda? Falar no WhatsApp
         </a>
+        <Link
+          href="/loja"
+          className="flex items-center justify-center gap-sm rounded-lg bg-primary px-md py-3 text-body-md font-semibold text-on-primary shadow-lg active:scale-[0.99]"
+        >
+          <span className="material-symbols-outlined">storefront</span>
+          Voltar ao catálogo
+        </Link>
       </section>
     </main>
   );

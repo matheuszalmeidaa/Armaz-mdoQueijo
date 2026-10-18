@@ -40,7 +40,7 @@ export default function Home() {
           Armazém do Queijo
         </h1>
         <p className="mt-1 text-body-md text-primary-fixed">
-          Queijos artesanais e iguarias da roça
+          Queijos artesanais e iguarias selecionadas
         </p>
 
         <span

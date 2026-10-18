@@ -1325,7 +1325,7 @@ export function FormProduto({
           <input
             value={produtor}
             onChange={(e) => setProdutor(e.target.value)}
-            placeholder="Ex: Fazenda da Roça"
+            placeholder="Ex: Fazenda Serra Azul"
             className="w-full bg-transparent text-body-lg outline-none placeholder:text-on-surface-variant/60"
           />
         </Campo>

@@ -123,11 +123,10 @@ export default function Identificacao() {
           </span>
         </div>
         <h1 className="mt-md font-headline-lg text-headline-lg text-on-surface">
-          Bem-vindo à Roça!
+          Bem-vindo ao Armazém!
         </h1>
         <p className="mt-xs text-body-md text-on-surface-variant">
-          Para continuarmos sua entrega, precisamos te conhecer um pouquinho
-          melhor.
+          Para continuar seu pedido, precisamos te conhecer um pouquinho melhor.
         </p>
 
         {/* Telefone (é o identificador do cliente) */}
@@ -227,7 +226,7 @@ export default function Identificacao() {
           </span>
           <p className="text-body-md text-on-surface-variant">
             Seus dados estão seguros conosco. Usamos seu telefone apenas para
-            atualizações do seu pedido de queijos e iguarias da roça.
+            atualizações do seu pedido no Armazém do Queijo.
           </p>
         </div>
       </div>
