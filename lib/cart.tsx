@@ -14,6 +14,7 @@ export type ItemCarrinho = {
   produtoId: string;
   nome: string;
   icone: string;
+  img?: string; // foto do produto (para exibir no carrinho/checkout)
   pesoG?: number; // presente em produtos por peso
   qtd: number; // produtos por unidade
   precoLinha: number; // preço já calculado desta linha (inclui adicionais)

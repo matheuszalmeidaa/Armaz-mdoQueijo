@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
-import { brl, gramas } from "@/lib/catalogo";
+import { brl, gramas, getProduto } from "@/lib/catalogo";
+import { ProdutoImagem } from "@/components/ProdutoImagem";
 import { calcularResumo, prazoDe, buscarCupom, LOJAS_RETIRADA } from "@/lib/regras";
 import { useConfig, lojaAbertaAgora } from "@/lib/config-store";
 import { adicionarPedido } from "@/lib/pedidos-store";
@@ -153,11 +154,13 @@ export default function Revisao() {
         <ul className="mt-sm divide-y divide-outline-variant/20 rounded-xl bg-surface-container-lowest px-md shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
           {itens.map((it) => (
             <li key={it.key} className="flex items-center gap-md py-md">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-secondary-container to-primary-container/20">
-                <span className="material-symbols-outlined text-[24px] text-primary/40">
-                  {it.icone}
-                </span>
-              </div>
+              <ProdutoImagem
+                src={it.img || getProduto(it.produtoId)?.img || ""}
+                alt={it.nome}
+                icone={it.icone}
+                className="h-12 w-12 flex-shrink-0 rounded-lg"
+                iconSize={24}
+              />
               <div className="flex-grow leading-tight">
                 <p className="line-clamp-1 text-label-md text-on-surface">
                   {it.nome}
@@ -185,7 +188,7 @@ export default function Revisao() {
           Forma de pagamento
         </h3>
         <div className="mt-sm flex flex-col gap-sm">
-          <PagBtn ativo={pagamento === "pix"} onClick={() => setDados({ pagamento: "pix" })} icone="qr_code_2" titulo="Pix" sub="5% de desconto extra" />
+          <PagBtn ativo={pagamento === "pix"} onClick={() => setDados({ pagamento: "pix" })} icone="qr_code_2" titulo="Pix" sub={cfg.descontoPix > 0 ? `${Math.round(cfg.descontoPix * 100)}% de desconto` : "Pagamento instantâneo"} />
           <PagBtn ativo={pagamento === "cartao"} onClick={() => setDados({ pagamento: "cartao" })} icone="credit_card" titulo="Cartão (maquineta na entrega)" sub="Débito ou crédito" />
           <PagBtn ativo={pagamento === "dinheiro"} onClick={() => setDados({ pagamento: "dinheiro" })} icone="payments" titulo="Dinheiro" sub="Pague na entrega" />
         </div>
@@ -294,7 +297,7 @@ export default function Revisao() {
           />
           {r.descontoPix > 0 && (
             <Linha
-              rotulo="Desconto Pix (5%)"
+              rotulo={`Desconto Pix (${Math.round(cfg.descontoPix * 100)}%)`}
               valor={`- ${brl(r.descontoPix)}`}
               verde
             />

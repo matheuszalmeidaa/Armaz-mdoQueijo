@@ -12,6 +12,7 @@ import {
   type Produto,
 } from "@/lib/catalogo";
 import { useCatalogo } from "@/lib/catalogo-store";
+import { ProdutoImagem } from "@/components/ProdutoImagem";
 import { calcularResumo, buscarCupom, LOJAS_RETIRADA } from "@/lib/regras";
 import { useConfig, lojaAbertaAgora } from "@/lib/config-store";
 
@@ -172,11 +173,13 @@ export default function Carrinho() {
           <ul className="divide-y divide-outline-variant/20 px-md">
             {itens.map((it) => (
               <li key={it.key} className="flex items-center gap-md py-md">
-                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-secondary-container to-primary-container/20">
-                  <span className="material-symbols-outlined text-[32px] text-primary/40">
-                    {it.icone}
-                  </span>
-                </div>
+                <ProdutoImagem
+                  src={it.img || getProduto(it.produtoId)?.img || ""}
+                  alt={it.nome}
+                  icone={it.icone}
+                  className="h-16 w-16 flex-shrink-0 rounded-lg"
+                  iconSize={32}
+                />
                 <div className="flex-grow">
                   <h4 className="line-clamp-1 text-label-md text-on-surface">
                     {it.nome}
@@ -248,11 +251,13 @@ export default function Carrinho() {
                     key={p.id}
                     className="flex flex-col overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-sm"
                   >
-                    <div className="mb-sm flex aspect-video items-center justify-center rounded-lg bg-gradient-to-br from-secondary-container to-primary-container/20">
-                      <span className="material-symbols-outlined text-[32px] text-primary/40">
-                        {p.icone}
-                      </span>
-                    </div>
+                    <ProdutoImagem
+                      src={p.img}
+                      alt={p.nome}
+                      icone={p.icone}
+                      className="mb-sm aspect-video rounded-lg"
+                      iconSize={32}
+                    />
                     <h4 className="line-clamp-1 text-label-md text-on-surface">
                       {p.nome}
                     </h4>
@@ -276,6 +281,7 @@ export default function Carrinho() {
                               produtoId: p.id,
                               nome: p.nome,
                               icone: p.icone,
+                              img: p.img,
                               qtd: 1,
                               precoLinha: p.preco,
                             })

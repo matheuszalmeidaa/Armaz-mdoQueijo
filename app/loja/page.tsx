@@ -298,6 +298,7 @@ function CardProduto({ produto }: { produto: Produto }) {
         produtoId: produto.id,
         nome: produto.nome,
         icone: produto.icone,
+        img: produto.img,
         qtd: 1,
         precoLinha: produto.preco,
       });

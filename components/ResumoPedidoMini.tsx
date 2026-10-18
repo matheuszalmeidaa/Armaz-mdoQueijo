@@ -6,7 +6,8 @@
 
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
-import { brl, gramas } from "@/lib/catalogo";
+import { brl, gramas, getProduto } from "@/lib/catalogo";
+import { ProdutoImagem } from "@/components/ProdutoImagem";
 
 export function ResumoPedidoMini() {
   const { itens, total } = useCart();
@@ -52,11 +53,13 @@ export function ResumoPedidoMini() {
           <ul className="divide-y divide-outline-variant/15">
             {itens.map((it) => (
               <li key={it.key} className="flex items-center gap-sm py-2">
-                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-secondary-container to-primary-container/20">
-                  <span className="material-symbols-outlined text-[22px] text-primary/40">
-                    {it.icone}
-                  </span>
-                </span>
+                <ProdutoImagem
+                  src={it.img || getProduto(it.produtoId)?.img || ""}
+                  alt={it.nome}
+                  icone={it.icone}
+                  className="h-10 w-10 flex-shrink-0 rounded-lg"
+                  iconSize={22}
+                />
                 <span className="min-w-0 flex-grow">
                   <span className="block truncate text-label-md text-on-surface">
                     {it.nome}
