@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import { CheckoutStepper } from "@/components/CheckoutStepper";
+import { ResumoPedidoMini } from "@/components/ResumoPedidoMini";
 
 // Mascara dados sensíveis, como no design ("Math***", "73998112***")
 function mascarar(valor: string, visiveis: number) {
@@ -101,6 +102,8 @@ export default function Endereco() {
       </header>
 
       <CheckoutStepper atual="endereco" modo="entrega" />
+
+      <ResumoPedidoMini />
 
       <div className="px-md pt-sm">
         {/* Minhas informações (mascaradas) */}
