@@ -9,6 +9,7 @@ import { useCart } from "@/lib/cart";
 import { ProdutoImagem } from "@/components/ProdutoImagem";
 import { badgesDe, BADGE_CLS, estaEsgotado } from "@/lib/badges";
 import { flyToCart } from "@/lib/anim";
+import { MenuLoja } from "@/components/MenuLoja";
 import { useConfig, lojaAbertaAgora, type Redes } from "@/lib/config-store";
 import { useProdutoCfg } from "@/lib/produto-config-store";
 
@@ -43,6 +44,7 @@ export default function LojaHome() {
   );
   const status = lojaAbertaAgora(cfg);
   const [avisoVisto, setAvisoVisto] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
 
   // Só produtos visíveis ao cliente: não ocultos e categoria não escondida.
   const visiveis = CATALOGO.filter(
@@ -56,7 +58,11 @@ export default function LojaHome() {
       {/* Cabeçalho (barra full-width, conteúdo centralizado) */}
       <header className="sticky top-0 z-50 border-b border-outline-variant/30 bg-surface/90 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-md py-sm">
-          <button className="flex h-9 w-9 items-center justify-center rounded-full text-primary active:scale-95">
+          <button
+            onClick={() => setMenuAberto(true)}
+            aria-label="Abrir menu"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-primary active:scale-95"
+          >
             <span className="material-symbols-outlined">menu</span>
           </button>
           <span className="font-display text-headline-lg tracking-tight text-primary">
@@ -263,6 +269,8 @@ export default function LojaHome() {
           </div>
         </div>
       )}
+
+      <MenuLoja aberto={menuAberto} onFechar={() => setMenuAberto(false)} />
     </main>
   );
 }

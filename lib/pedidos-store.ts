@@ -52,7 +52,45 @@ export type PedidoLive = {
 
 const KEY = "armazem-pedidos-live";
 const KEY_ULTIMO = "armazem-ultimo-pedido";
+const KEY_MEUS = "armazem-meus-pedidos";
 const EVT = "pedidos-live-change";
+
+// Histórico leve dos pedidos DESTE aparelho (para o cliente ver "Meus pedidos").
+export type MeuPedido = {
+  id: string;
+  numero: string;
+  criadoEm: number;
+  total: number;
+  modo: "entrega" | "retirada";
+};
+export function registrarMeuPedido(p: PedidoLive) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem(KEY_MEUS);
+    const lista: MeuPedido[] = raw ? JSON.parse(raw) : [];
+    const nova = [
+      {
+        id: p.id,
+        numero: p.numero,
+        criadoEm: p.criadoEm,
+        total: p.total,
+        modo: p.modo,
+      },
+      ...lista.filter((x) => x.id !== p.id),
+    ].slice(0, 20);
+    localStorage.setItem(KEY_MEUS, JSON.stringify(nova));
+  } catch {}
+}
+export function useMeusPedidos(): MeuPedido[] {
+  const [lista, setLista] = useState<MeuPedido[]>([]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(KEY_MEUS);
+      if (raw) setLista(JSON.parse(raw));
+    } catch {}
+  }, []);
+  return lista;
+}
 
 // --- localStorage (cache / reserva sem banco) ---
 function ler(): PedidoLive[] {
@@ -235,7 +273,9 @@ function inserir(
 
 // Pedido do DELIVERY: entra como "Novo" e vira o "último pedido" acompanhado.
 export function adicionarPedido(p: NovoPedido) {
-  return inserir(p, { status: "Novo", marcarUltimo: true });
+  const pedido = inserir(p, { status: "Novo", marcarUltimo: true });
+  registrarMeuPedido(pedido); // guarda no histórico do aparelho do cliente
+  return pedido;
 }
 
 // Venda do PDV: já concluída — entra como "Entregue"; não é o pedido acompanhado.
