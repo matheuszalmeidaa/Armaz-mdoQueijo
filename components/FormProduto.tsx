@@ -681,7 +681,7 @@ export function FormProduto({
         <h1 className="font-headline-lg text-headline-lg text-primary">{titulo}</h1>
       </div>
 
-      <div className="grid gap-lg xl:grid-cols-[1fr_24rem] xl:items-start">
+      <div className="grid gap-lg xl:grid-cols-[1fr_24rem]">
         {/* Coluna do formulário */}
         <div className="min-w-0 space-y-lg">
       {/* Básico */}
