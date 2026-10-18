@@ -26,6 +26,7 @@ export default function Revisao() {
   const cfg = useConfig();
   const [cupomInput, setCupomInput] = useState(dados.cupom ?? "");
   const [cupomErro, setCupomErro] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
   function aplicarCupom() {
     const c = buscarCupom(cupomInput, cfg.cupons);
@@ -44,7 +45,8 @@ export default function Revisao() {
   const lojaRetirada = LOJAS_RETIRADA.find((l) => l.id === dados.lojaRetiradaId);
 
   function finalizar() {
-    if (!podeFinalizar) return;
+    if (!podeFinalizar || enviando) return;
+    setEnviando(true);
 
     const itensMsg = itens.map((it) => ({
       nome: it.nome,
@@ -83,8 +85,11 @@ export default function Revisao() {
     const link = linkWhatsApp(cfg.whatsapp, texto);
     if (link) window.open(link, "_blank");
 
-    router.push(`/pedido/${pedido.id}`);
-    setTimeout(limpar, 400);
+    // Pequena pausa para o cliente ver o "Enviando..." antes do acompanhamento.
+    setTimeout(() => {
+      router.push(`/pedido/${pedido.id}`);
+      setTimeout(limpar, 600);
+    }, 700);
   }
 
   if (itens.length === 0) {
@@ -343,17 +348,28 @@ export default function Revisao() {
         )}
         <button
           onClick={finalizar}
-          disabled={!podeFinalizar}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-lg py-4 text-body-lg font-semibold text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-40"
+          disabled={!podeFinalizar || enviando}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-lg py-4 text-body-lg font-semibold text-on-primary shadow-lg transition-transform active:scale-[0.98] disabled:opacity-60"
         >
-          {podeFinalizar && (
-            <span className="material-symbols-outlined">check_circle</span>
+          {enviando ? (
+            <>
+              <span className="material-symbols-outlined animate-spin">
+                progress_activity
+              </span>
+              Enviando seu pedido...
+            </>
+          ) : (
+            <>
+              {podeFinalizar && (
+                <span className="material-symbols-outlined">check_circle</span>
+              )}
+              {podeFinalizar
+                ? podeAgendar
+                  ? "Fazer pedido agendado"
+                  : "Fazer pedido"
+                : "Loja fechada no momento"}
+            </>
           )}
-          {podeFinalizar
-            ? podeAgendar
-              ? "Fazer pedido agendado"
-              : "Fazer pedido"
-            : "Loja fechada no momento"}
         </button>
       </div>
     </main>

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { type PedidoLive, type StatusLive } from "@/lib/pedidos-store";
 import { useConfig } from "@/lib/config-store";
 import { linkWhatsApp } from "@/lib/pedido-msg";
+import { AnimacaoPedido } from "@/components/AnimacaoPedido";
 
 type Etapa = { icone: string; titulo: string; sub: string };
 
@@ -118,9 +119,15 @@ export function AcompanhamentoView({
       {/* Status atual */}
       <section className="px-md pt-md">
         <div className="flex flex-col items-center rounded-xl bg-surface-container-lowest p-lg text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/30 bg-primary-container/5 text-primary">
-            <span className="material-symbols-outlined text-[32px]">{hero.icone}</span>
-          </div>
+          {status === "Entregue" ? (
+            <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-tertiary/40 bg-tertiary/10 text-tertiary">
+              <span className="material-symbols-outlined text-[32px]">
+                {retirada ? "storefront" : "home"}
+              </span>
+            </div>
+          ) : (
+            <AnimacaoPedido modo={retirada ? "retirada" : "entrega"} />
+          )}
           <h1 className="mt-md font-headline-lg text-headline-lg text-primary">
             {hero.titulo}
           </h1>
